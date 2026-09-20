@@ -299,18 +299,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
       </div>
 
-      {/* iOS App Installation Guide */}
+      {/* App Installation Guide (iPhone & Android) */}
       <div className="ios-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
           <Smartphone size={20} color="var(--accent-primary)" />
-          <h4 style={{ fontSize: '15px', fontWeight: 700 }}>How to Install on iPhone</h4>
+          <h4 style={{ fontSize: '15px', fontWeight: 700 }}>How to Install as App (iPhone &amp; Android)</h4>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-          1. Open this website URL in <strong>Safari on your iPhone</strong>.<br />
-          2. Tap the <strong>Share</strong> button (box with an upward arrow at the bottom).<br />
-          3. Scroll down and tap <strong>"Add to Home Screen"</strong>.<br />
-          4. The app icon will appear right on your iPhone home screen with native full-screen experience and offline caching!
-        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {/* iPhone */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
+            <div style={{ fontWeight: 700, fontSize: '13px', color: '#38bdf8', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span>🍎 iPhone (Safari)</span>
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.6', margin: 0 }}>
+              1. Open URL in <strong>Safari</strong>.<br />
+              2. Tap the <strong>Share</strong> button (box with upward arrow).<br />
+              3. Tap <strong>"Add to Home Screen"</strong>.<br />
+              4. Launches full-screen like a native iOS app!
+            </p>
+          </div>
+
+          {/* Android */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
+            <div style={{ fontWeight: 700, fontSize: '13px', color: '#34d399', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span>🤖 Android (Chrome)</span>
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.6', margin: 0 }}>
+              1. Open URL in <strong>Chrome</strong>.<br />
+              2. Tap the <strong>three dots (⋮)</strong> at top right.<br />
+              3. Tap <strong>"Install app"</strong> (or "Add to Home screen").<br />
+              4. Installs into your app drawer with an app icon!
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Custom Firebase Config Modal */}

@@ -32,6 +32,7 @@ import { NewPackageModal } from './components/package/NewPackageModal';
 import { ExpenseBreakdown } from './components/analytics/ExpenseBreakdown';
 import { SettingsView } from './components/settings/SettingsView';
 import { MfaModal } from './components/common/MfaModal';
+import { ProfileModal } from './components/common/ProfileModal';
 
 import './styles/ios-theme.css';
 
@@ -42,6 +43,8 @@ export const App: React.FC = () => {
   const [activePackage, setActivePackage] = useState<PackagePlan | null>(loadLocalPackage);
   const [records, setRecords] = useState<Record<string, DayRecord>>(loadLocalRecords);
   const [isNewPackageModalOpen, setIsNewPackageModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileRevision, setProfileRevision] = useState(0);
   const [editingPackage, setEditingPackage] = useState<PackagePlan | null>(null);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
 
@@ -177,9 +180,10 @@ export const App: React.FC = () => {
     <div className="app-container">
       {/* iOS Top Navigation Header */}
       <IosHeader
+        key={profileRevision}
         user={user}
         onLogin={handleGoogleLogin}
-        onLogout={handleLogout}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
         packageTitle={activePackage ? `${activePackage.title}` : undefined}
       />
 
@@ -261,6 +265,16 @@ export const App: React.FC = () => {
             setIsNewPackageModalOpen(false);
             setEditingPackage(null);
           }}
+        />
+      )}
+
+      {/* User Profile & Account Modal */}
+      {isProfileModalOpen && (
+        <ProfileModal
+          user={user}
+          onLogout={handleLogout}
+          onClose={() => setIsProfileModalOpen(false)}
+          onProfileUpdated={() => setProfileRevision((r) => r + 1)}
         />
       )}
 

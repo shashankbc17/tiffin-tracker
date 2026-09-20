@@ -1,31 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { LogIn, LogOut, Sparkles, Cloud, CloudOff } from 'lucide-react';
+import { LogIn, Cloud } from 'lucide-react';
 
 interface IosHeaderProps {
   user: User | null;
   onLogin: () => void;
-  onLogout: () => void;
+  onOpenProfile: () => void;
   packageTitle?: string;
 }
 
 export const IosHeader: React.FC<IosHeaderProps> = ({
   user,
   onLogin,
-  onLogout,
+  onOpenProfile,
   packageTitle,
 }) => {
+  // Read local custom photo/letter preferences
+  const customName = localStorage.getItem('tiffin_custom_name') || user?.displayName || 'User';
+  const avatarMode = localStorage.getItem('tiffin_avatar_mode') || (user?.photoURL ? 'photo' : 'letter');
+  const customPhoto = localStorage.getItem('tiffin_custom_photo') || user?.photoURL || null;
+
+  const initialLetter = (customName || 'U').trim()[0].toUpperCase();
+
   return (
     <header className="ios-header">
       <div className="ios-header-title">
         <span style={{ fontSize: '24px' }}>🍱</span>
         <div>
-          <span className="brand-gradient" style={{ fontWeight: 800 }}>TiffinFlow</span>
-          {packageTitle && (
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
-              {packageTitle}
-            </div>
-          )}
+          <span className="brand-gradient" style={{ fontWeight: 800, fontSize: '18px' }}>
+            MealSync
+          </span>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
+            {packageTitle || 'Breakfast & Lunch Service'}
+          </div>
         </div>
       </div>
 
@@ -36,9 +43,9 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: '6px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                gap: '5px',
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
                 padding: '4px 8px',
                 borderRadius: 'var(--radius-full)',
                 fontSize: '11px',
@@ -49,42 +56,54 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
               <Cloud size={12} />
               <span>Cloud Sync</span>
             </div>
-            {user.photoURL ? (
-              <img 
-                src={user.photoURL} 
-                alt={user.displayName || 'User'} 
-                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1.5px solid var(--accent-primary)' }}
-              />
-            ) : (
-              <div 
-                style={{ 
-                  width: '28px', 
-                  height: '28px', 
-                  borderRadius: '50%', 
-                  background: 'var(--accent-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '12px'
-                }}
-              >
-                {user.displayName ? user.displayName[0].toUpperCase() : 'U'}
-              </div>
-            )}
-            <button 
-              onClick={onLogout}
+
+            {/* Tap Avatar to Open Profile Modal */}
+            <button
+              onClick={onOpenProfile}
+              title="My Profile & Settings"
               style={{
-                background: 'transparent',
+                background: 'none',
                 border: 'none',
-                color: 'var(--text-muted)',
+                padding: 0,
                 cursor: 'pointer',
                 display: 'flex',
-                padding: '4px'
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
-              title="Sign Out"
             >
-              <LogOut size={16} />
+              {avatarMode === 'photo' && customPhoto ? (
+                <img 
+                  src={customPhoto} 
+                  alt={customName} 
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '50%', 
+                    border: '2px solid var(--accent-primary)',
+                    objectFit: 'cover',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  }}
+                />
+              ) : (
+                <div 
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '50%', 
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: '1.5px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    color: '#ffffff'
+                  }}
+                >
+                  {initialLetter}
+                </div>
+              )}
             </button>
           </div>
         ) : (
@@ -101,3 +120,4 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
     </header>
   );
 };
+
