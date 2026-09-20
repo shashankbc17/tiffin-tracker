@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { RateConfig } from '../../types';
-import { Save, RefreshCw, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Save, RefreshCw, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { getSavedFirebaseConfig, saveFirebaseConfig, initFirebase, DEFAULT_FIREBASE_CONFIG } from '../../services/firebase';
 
 interface SettingsViewProps {
   config: RateConfig;
   onSaveConfig: (cfg: RateConfig) => void;
-  onResetData: () => void;
+  onResetData?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -17,6 +17,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [formData, setFormData] = useState<RateConfig>(config);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showFirebaseModal, setShowFirebaseModal] = useState(false);
+  const [showDevSettings, setShowDevSettings] = useState(false);
 
   const [firebaseJson, setFirebaseJson] = useState(() => 
     JSON.stringify(getSavedFirebaseConfig(), null, 2)
@@ -199,65 +200,90 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </button>
       </form>
 
-      {/* Google Sign In & Firebase Cloud Configuration */}
+      {/* Cloud Sync & Backup Card */}
       <div className="ios-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Cloud size={18} color="var(--accent-primary)" />
-            <h4 style={{ fontSize: '15px', fontWeight: 700 }}>Google Sign-In & Firebase</h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', padding: '8px', borderRadius: '50%' }}>
+              <Cloud size={18} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '15px', fontWeight: 700 }}>Cloud Sync & Backup</h4>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                Your meals & plans are automatically synced across your devices
+              </p>
+            </div>
           </div>
           <span className="badge badge-lunch" style={{ fontSize: '11px' }}>
             <ShieldCheck size={12} /> Active
           </span>
         </div>
 
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.5' }}>
-          Connected to project: <strong>tiffinflow-shashank</strong>.<br />
-          For Google popup to succeed, Firebase requires your domain to be authorized.
-        </p>
-
-        {/* Authorized Domain Step */}
-        <div style={{ background: 'rgba(255, 255, 255, 0.04)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border)', marginBottom: '12px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-            Current Testing Domain:
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <code style={{ fontSize: '13px', color: '#34d399', fontWeight: 700 }}>{currentHost}</code>
-            <button 
-              type="button" 
-              onClick={handleCopyHost}
-              className="ios-btn ios-btn-secondary" 
-              style={{ padding: '4px 10px', fontSize: '11px' }}
-            >
-              {copiedDomain ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
-              <span>{copiedDomain ? 'Copied!' : 'Copy'}</span>
-            </button>
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Ensure <code>{currentHost}</code> and <code>localhost</code> are in <strong>Firebase Console → Auth → Settings → Authorized Domains</strong>.
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
+        {/* Expandable Developer Section */}
+        <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--glass-border)' }}>
           <button
             type="button"
-            onClick={() => setShowFirebaseModal(true)}
-            className="ios-btn ios-btn-secondary"
-            style={{ flex: 1, fontSize: '12px', padding: '10px' }}
+            onClick={() => setShowDevSettings(!showDevSettings)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              cursor: 'pointer',
+              padding: '4px 0'
+            }}
           >
-            <Key size={14} />
-            <span>Configure Firebase Keys</span>
+            <span>Developer & Firebase Settings</span>
+            {showDevSettings ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
 
-          <a
-            href="https://console.firebase.google.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ios-btn ios-btn-secondary"
-            style={{ textDecoration: 'none', fontSize: '12px', padding: '10px 14px' }}
-          >
-            <ExternalLink size={14} />
-          </a>
+          {showDevSettings && (
+            <div style={{ marginTop: '12px' }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border)', marginBottom: '10px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  Authorized Domain:
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <code style={{ fontSize: '12px', color: '#34d399', fontWeight: 700 }}>{currentHost}</code>
+                  <button 
+                    type="button" 
+                    onClick={handleCopyHost}
+                    className="ios-btn ios-btn-secondary" 
+                    style={{ padding: '4px 8px', fontSize: '10px' }}
+                  >
+                    {copiedDomain ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                    <span>{copiedDomain ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowFirebaseModal(true)}
+                  className="ios-btn ios-btn-secondary"
+                  style={{ flex: 1, fontSize: '11px', padding: '8px' }}
+                >
+                  <Key size={13} />
+                  <span>Configure Keys</span>
+                </button>
+
+                <a
+                  href="https://console.firebase.google.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ios-btn ios-btn-secondary"
+                  style={{ textDecoration: 'none', fontSize: '11px', padding: '8px 12px' }}
+                >
+                  <ExternalLink size={13} />
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -273,23 +299,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           3. Scroll down and tap <strong>"Add to Home Screen"</strong>.<br />
           4. The app icon will appear right on your iPhone home screen with native full-screen experience and offline caching!
         </p>
-      </div>
-
-      {/* Cloud Sync & Reset */}
-      <div className="ios-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h4 style={{ fontSize: '15px', fontWeight: 700 }}>Demo Data</h4>
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-          Reset local storage to starter demo plan (30-day package with delivered and carried-over days).
-        </p>
-
-        <button 
-          onClick={onResetData}
-          className="ios-btn ios-btn-secondary" 
-          style={{ borderColor: 'rgba(239, 68, 68, 0.3)', color: '#f87171', fontSize: '12px' }}
-        >
-          <RefreshCw size={14} />
-          <span>Reset to Demo Sample Data</span>
-        </button>
       </div>
 
       {/* Custom Firebase Config Modal */}
