@@ -496,13 +496,32 @@ body {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 16px; /* 16px prevents iOS Safari from auto-zooming on focus */
   outline: none;
   transition: border-color 0.2s;
   font-family: inherit;
+  width: 100%;
 }
 
 .ios-input:focus {
   border-color: var(--accent-primary);
   background: rgba(255, 255, 255, 0.08);
+}
+
+/* Mobile Viewport Optimizations (iPhone 14 / 390px width) */
+@media (max-width: 420px) {
+  .app-content {
+    padding: 12px 14px 120px 14px;
+    gap: 14px;
+  }
+
+  .ios-card {
+    padding: 15px 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .ios-header {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
 }

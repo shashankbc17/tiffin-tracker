@@ -130,21 +130,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           Meal Rates & Caterer Settings
         </h3>
 
-        {/* Currency & Persons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '10px' }}>
+        {/* Currency & Default Persons (50/50 Symmetrical Grid) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="ios-input-group">
-            <label className="ios-label">Currency</label>
+            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>Currency Symbol</label>
             <input 
               type="text" 
               className="ios-input" 
               value={formData.currency} 
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })} 
+              placeholder="e.g. ₹"
               required 
             />
           </div>
 
           <div className="ios-input-group">
-            <label className="ios-label">Default Persons</label>
+            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>Default Persons</label>
             <input 
               type="number" 
               min={1} 
@@ -156,28 +157,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Breakfast Rate */}
-        <div className="ios-input-group">
-          <label className="ios-label">🍳 Default Breakfast Rate (per meal / per person)</label>
-          <input 
-            type="number" 
-            className="ios-input" 
-            value={formData.defaultBreakfastRate} 
-            onChange={(e) => setFormData({ ...formData, defaultBreakfastRate: Number(e.target.value) })} 
-            required 
-          />
-        </div>
+        {/* Meal Rates (50/50 Symmetrical Grid) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="ios-input-group">
+            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍳 Breakfast ({formData.currency}/p)</label>
+            <input 
+              type="number" 
+              className="ios-input" 
+              value={formData.defaultBreakfastRate} 
+              onChange={(e) => setFormData({ ...formData, defaultBreakfastRate: Number(e.target.value) })} 
+              required 
+            />
+          </div>
 
-        {/* Lunch Rate */}
-        <div className="ios-input-group">
-          <label className="ios-label">🍱 Default Lunch Rate (per meal / per person)</label>
-          <input 
-            type="number" 
-            className="ios-input" 
-            value={formData.defaultLunchRate} 
-            onChange={(e) => setFormData({ ...formData, defaultLunchRate: Number(e.target.value) })} 
-            required 
-          />
+          <div className="ios-input-group">
+            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍱 Lunch ({formData.currency}/p)</label>
+            <input 
+              type="number" 
+              className="ios-input" 
+              value={formData.defaultLunchRate} 
+              onChange={(e) => setFormData({ ...formData, defaultLunchRate: Number(e.target.value) })} 
+              required 
+            />
+          </div>
         </div>
 
         {/* Caterer Name */}

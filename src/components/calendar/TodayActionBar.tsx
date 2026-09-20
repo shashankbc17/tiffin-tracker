@@ -144,11 +144,11 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
       />
 
       {/* Top Header Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Clock size={16} color="var(--accent-primary)" />
-          <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.2px' }}>
-            Today: {formattedToday}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexShrink: 0 }}>
+          <Clock size={15} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.2px', whiteSpace: 'nowrap' }}>
+            {formattedToday}
           </span>
         </div>
 
@@ -161,11 +161,13 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               color: '#60a5fa',
               background: 'rgba(59, 130, 246, 0.15)',
               border: '1px solid rgba(59, 130, 246, 0.3)',
-              padding: '2px 8px',
+              padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             ⏳ {daysUntilStart === 1 ? 'Starts Tomorrow' : `Starts ${formattedStartDate}`}
@@ -180,14 +182,16 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               color: '#fbbf24',
               background: 'rgba(245, 158, 11, 0.16)',
               border: '1px solid rgba(245, 158, 11, 0.35)',
-              padding: '2px 8px',
+              padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            🌅 {incBreakfast ? 'Arrives 8:00–10:00 AM' : 'Arrives 12:30–2:30 PM'}
+            🌅 {incBreakfast ? '8:00–10:00 AM IST' : '12:30–2:30 PM IST'}
           </span>
         )}
 
@@ -199,14 +203,16 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               color: '#c4b5fd',
               background: 'rgba(139, 92, 246, 0.15)',
               border: '1px solid rgba(139, 92, 246, 0.3)',
-              padding: '2px 8px',
+              padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            🏖️ Scheduled Off-Day
+            🏖️ Off-Day
           </span>
         )}
 
@@ -218,11 +224,13 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               color: '#34d399',
               background: 'rgba(16, 185, 129, 0.18)',
               border: '1px solid rgba(16, 185, 129, 0.35)',
-              padding: '2px 8px',
+              padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             🍱 Delivery Day
@@ -236,14 +244,16 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               fontWeight: 600,
               color: '#34d399',
               background: 'rgba(16, 185, 129, 0.18)',
-              padding: '2px 8px',
+              padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            ✅ Confirmed
+            ✅ Logged
           </span>
         )}
       </div>

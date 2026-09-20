@@ -130,60 +130,53 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+        {/* Row 1: Status Badge & Action Toolbar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '8px' }}>
           <div>
             {isEarlyMorningFirstDay ? (
               <span 
                 style={{ 
-                  marginBottom: '6px', 
                   background: 'rgba(245, 158, 11, 0.18)', 
                   color: '#fbbf24', 
                   border: '1px solid rgba(245, 158, 11, 0.35)',
                   fontSize: '11px',
                   fontWeight: 600,
-                  padding: '3px 8px',
+                  padding: '4px 10px',
                   borderRadius: 'var(--radius-full)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px'
+                  gap: '5px',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                <Clock size={12} /> Activates Today (8:00 AM IST)
+                <Clock size={12} /> Starts Today 8 AM
               </span>
             ) : isUpcomingDate ? (
               <span 
                 style={{ 
-                  marginBottom: '6px', 
                   background: 'rgba(59, 130, 246, 0.18)', 
                   color: '#60a5fa', 
                   border: '1px solid rgba(59, 130, 246, 0.35)',
                   fontSize: '11px',
                   fontWeight: 600,
-                  padding: '3px 8px',
+                  padding: '4px 10px',
                   borderRadius: 'var(--radius-full)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px'
+                  gap: '5px',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                <Clock size={12} /> {daysUntilStart === 1 ? 'Activates Tomorrow' : `Activates on ${formattedStartDate}`}
+                <Clock size={12} /> {daysUntilStart === 1 ? 'Starts Tomorrow' : `Starts ${formattedStartDate}`}
               </span>
             ) : (
-              <span className="badge badge-carryover" style={{ marginBottom: '6px' }}>
+              <span className="badge badge-carryover" style={{ whiteSpace: 'nowrap' }}>
                 <ShieldCheck size={12} /> Active Plan
               </span>
             )}
-            <h3 style={{ fontSize: '17px', fontWeight: 700 }}>{pkg.title}</h3>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {isEarlyMorningFirstDay
-                ? `Starts Today, ${pkg.startDate} (First delivery: 8:00 AM – 10:00 AM IST)`
-                : isUpcomingDate 
-                ? `Starts ${pkg.startDate} (${pkg.totalDays} Days · in ${daysUntilStart === 1 ? '1 day' : `${daysUntilStart} days`})`
-                : `Started ${pkg.startDate} (${pkg.totalDays} Days)`}
-            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {onEditPackage && (
               <button 
                 onClick={onEditPackage}
@@ -194,12 +187,13 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
                   color: '#93c5fd',
                   fontSize: '11px',
                   fontWeight: 600,
-                  padding: '5px 10px',
+                  padding: '4px 9px',
                   borderRadius: 'var(--radius-full)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '4px',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 <Edit3 size={11} />
@@ -214,12 +208,14 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
                 border: 'none', 
                 color: 'var(--text-secondary)',
                 fontSize: '11px',
-                padding: '5px 10px',
+                fontWeight: 500,
+                padding: '4px 9px',
                 borderRadius: 'var(--radius-full)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
-              + New Plan
+              + Plan
             </button>
 
             {onDeletePackage && (
@@ -236,12 +232,27 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  flexShrink: 0
                 }}
               >
-                <Trash2 size={13} />
+                <Trash2 size={12} />
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Row 2: Package Title & Subtitle */}
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px', lineHeight: 1.25 }}>
+            {pkg.title}
+          </h3>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            {isEarlyMorningFirstDay
+              ? `Starts Today, ${pkg.startDate} · First delivery: 8:00 AM – 10:00 AM IST`
+              : isUpcomingDate 
+              ? `Starts ${pkg.startDate} (${pkg.totalDays} Days · in ${daysUntilStart === 1 ? '1 day' : `${daysUntilStart} days`})`
+              : `Started ${pkg.startDate} (${pkg.totalDays} Days)`}
           </div>
         </div>
 
@@ -266,35 +277,101 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           </div>
         </div>
 
-        {/* 4-Grid Key Metrics */}
+        {/* 4-Grid Key Metrics: Perfectly Equal Containers */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Remaining Days</div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+          {/* Card 1: Remaining */}
+          <div 
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.03)', 
+              padding: '12px 14px', 
+              borderRadius: 'var(--radius-md)', 
+              border: '1px solid var(--glass-border)',
+              minHeight: '84px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Remaining Days
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1, margin: '3px 0' }}>
               {stats.remainingDays}
             </div>
-            <div style={{ fontSize: '10px', color: '#10b981' }}>Valid till {stats.extendedEndDate}</div>
+            <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Valid till {stats.extendedEndDate}
+            </div>
           </div>
 
-          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Carry-over Days</div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: '#a78bfa', marginTop: '2px' }}>
+          {/* Card 2: Carry-over */}
+          <div 
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.03)', 
+              padding: '12px 14px', 
+              borderRadius: 'var(--radius-md)', 
+              border: '1px solid var(--glass-border)',
+              minHeight: '84px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Carry-over Days
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: 800, color: '#a78bfa', lineHeight: 1.1, margin: '3px 0' }}>
               +{stats.carryOverDays}
             </div>
-            <div style={{ fontSize: '10px', color: '#a78bfa' }}>Worth {currency}{stats.carriedOverValue}</div>
-          </div>
-
-          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Breakfasts Served</div>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: '#fbbf24', marginTop: '2px' }}>
-              {stats.breakfastDelivered} <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({stats.breakfastSkipped} skipped)</span>
+            <div style={{ fontSize: '11px', color: '#a78bfa', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Worth {currency}{stats.carriedOverValue}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Lunches Served</div>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: '#34d399', marginTop: '2px' }}>
-              {stats.lunchDelivered} <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({stats.lunchSkipped} skipped)</span>
+          {/* Card 3: Breakfasts */}
+          <div 
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.03)', 
+              padding: '12px 14px', 
+              borderRadius: 'var(--radius-md)', 
+              border: '1px solid var(--glass-border)',
+              minHeight: '84px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Breakfasts Served
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: 800, color: '#fbbf24', lineHeight: 1.1, margin: '3px 0' }}>
+              {stats.breakfastDelivered}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+              {stats.breakfastSkipped} skipped
+            </div>
+          </div>
+
+          {/* Card 4: Lunches */}
+          <div 
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.03)', 
+              padding: '12px 14px', 
+              borderRadius: 'var(--radius-md)', 
+              border: '1px solid var(--glass-border)',
+              minHeight: '84px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Lunches Served
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: 800, color: '#34d399', lineHeight: 1.1, margin: '3px 0' }}>
+              {stats.lunchDelivered}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+              {stats.lunchSkipped} skipped
             </div>
           </div>
         </div>
