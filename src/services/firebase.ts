@@ -8,7 +8,12 @@ import {
   signOut, 
   onAuthStateChanged, 
   User,
-  Auth
+  Auth,
+  getMultiFactorResolver,
+  MultiFactorResolver,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator,
+  RecaptchaVerifier
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -47,6 +52,7 @@ export function saveFirebaseConfig(cfg: any) {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let currentRecaptcha: RecaptchaVerifier | null = null;
 
 export function initFirebase(customConfig?: any) {
   const config = customConfig || getSavedFirebaseConfig();
@@ -85,8 +91,16 @@ export async function loginWithGoogle(): Promise<User | null> {
   } catch (error: any) {
     console.error("Google Sign-In error details:", error);
 
+    // Multi-Factor Authentication Required (SMS / Phone second factor)
+    if (error.code === 'auth/multi-factor-auth-required') {
+      const resolver = getMultiFactorResolver(auth, error);
+      const mfaErr: any = new Error("SMS Multi-Factor Authentication required.");
+      mfaErr.code = 'auth/multi-factor-auth-required';
+      mfaErr.resolver = resolver;
+      throw mfaErr;
+    }
+
     if (error.code === 'auth/popup-blocked') {
-      // If popup was blocked by Safari / mobile browser, try redirect flow
       try {
         await signInWithRedirect(auth, provider);
         return null;
@@ -105,11 +119,61 @@ export async function loginWithGoogle(): Promise<User | null> {
     } else if (error.code === 'auth/operation-not-allowed') {
       throw new Error("Google Sign-In is not enabled in Firebase Console. Go to Firebase Console -> Authentication -> Sign-in method -> Enable Google.");
     } else if (error.code === 'auth/popup-closed-by-user') {
-      return null; // User cancelled, no need to show scary error
+      return null;
     } else {
       throw new Error(error.message || "Failed to sign in with Google.");
     }
   }
+}
+
+/**
+ * Trigger SMS verification code sending for Firebase MFA
+ */
+export async function sendMfaSmsCode(
+  resolver: MultiFactorResolver,
+  containerId: string = 'recaptcha-container'
+): Promise<{ verificationId: string; hintPhone: string }> {
+  if (!auth) throw new Error("Firebase Auth not initialized");
+
+  const phoneInfoOptions = {
+    multiFactorHint: resolver.hints[0],
+    session: resolver.session,
+  };
+
+  // Clear previous recaptcha verifier if any
+  if (currentRecaptcha) {
+    try {
+      currentRecaptcha.clear();
+    } catch {}
+  }
+
+  currentRecaptcha = new RecaptchaVerifier(auth, containerId, {
+    size: 'invisible',
+  });
+
+  const phoneAuthProvider = new PhoneAuthProvider(auth);
+  const verificationId = await phoneAuthProvider.verifyPhoneNumber(
+    phoneInfoOptions,
+    currentRecaptcha
+  );
+
+  const hint = resolver.hints[0] as any;
+  const hintPhone = hint.displayName || hint.phoneNumber || 'your registered phone number';
+  return { verificationId, hintPhone };
+}
+
+/**
+ * Complete MFA sign-in by submitting the SMS OTP code
+ */
+export async function submitMfaVerificationCode(
+  resolver: MultiFactorResolver,
+  verificationId: string,
+  verificationCode: string
+): Promise<User> {
+  const cred = PhoneAuthProvider.credential(verificationId, verificationCode);
+  const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
+  const userCredential = await resolver.resolveSignIn(multiFactorAssertion);
+  return userCredential.user;
 }
 
 export async function checkRedirectAuth(): Promise<User | null> {
@@ -117,7 +181,14 @@ export async function checkRedirectAuth(): Promise<User | null> {
   try {
     const result = await getRedirectResult(auth);
     return result ? result.user : null;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === 'auth/multi-factor-auth-required') {
+      const resolver = getMultiFactorResolver(auth, error);
+      const mfaErr: any = new Error("SMS Multi-Factor Authentication required.");
+      mfaErr.code = 'auth/multi-factor-auth-required';
+      mfaErr.resolver = resolver;
+      throw mfaErr;
+    }
     console.error("Redirect auth error:", error);
     return null;
   }

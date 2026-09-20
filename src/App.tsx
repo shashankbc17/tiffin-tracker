@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User } from 'firebase/auth';
+import { User, MultiFactorResolver } from 'firebase/auth';
 import { DayRecord, PackagePlan, RateConfig, MealStatus } from './types';
 import { 
   loadLocalConfig, 
@@ -31,6 +31,7 @@ import { PackageSummaryCard } from './components/package/PackageSummaryCard';
 import { NewPackageModal } from './components/package/NewPackageModal';
 import { ExpenseBreakdown } from './components/analytics/ExpenseBreakdown';
 import { SettingsView } from './components/settings/SettingsView';
+import { MfaModal } from './components/common/MfaModal';
 
 import './styles/ios-theme.css';
 
@@ -41,12 +42,20 @@ export const App: React.FC = () => {
   const [activePackage, setActivePackage] = useState<PackagePlan | null>(loadLocalPackage);
   const [records, setRecords] = useState<Record<string, DayRecord>>(loadLocalRecords);
   const [isNewPackageModalOpen, setIsNewPackageModalOpen] = useState(false);
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
 
   const todayStr = formatDate(new Date());
 
   // Subscribe to Firebase Auth
   useEffect(() => {
-    checkRedirectAuth().catch(console.error);
+    checkRedirectAuth().then((u) => {
+      if (u) setUser(u);
+    }).catch((err: any) => {
+      if (err.code === 'auth/multi-factor-auth-required' && err.resolver) {
+        setMfaResolver(err.resolver);
+      }
+    });
+
     const unsubscribe = subscribeToAuthChanges(async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -139,6 +148,10 @@ export const App: React.FC = () => {
     try {
       await loginWithGoogle();
     } catch (err: any) {
+      if (err.code === 'auth/multi-factor-auth-required' && err.resolver) {
+        setMfaResolver(err.resolver);
+        return;
+      }
       alert(`Google Sign In note: ${err.message || 'Please configure Firebase in Settings for cloud sync, or continue using fast offline storage!'}`);
     }
   };
@@ -227,6 +240,18 @@ export const App: React.FC = () => {
           config={config}
           onSavePackage={handleSavePackage}
           onClose={() => setIsNewPackageModalOpen(false)}
+        />
+      )}
+
+      {/* SMS Multi-Factor Authentication Modal */}
+      {mfaResolver && (
+        <MfaModal
+          resolver={mfaResolver}
+          onSuccess={(authenticatedUser) => {
+            setUser(authenticatedUser);
+            setMfaResolver(null);
+          }}
+          onClose={() => setMfaResolver(null)}
         />
       )}
     </div>
