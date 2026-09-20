@@ -14,7 +14,8 @@ import {
 } from './services/storage';
 import { 
   formatDate, 
-  calculateCarryOver 
+  calculateCarryOver,
+  getIstNow
 } from './services/carryOverEngine';
 import { 
   loginWithGoogle, 
@@ -44,7 +45,7 @@ export const App: React.FC = () => {
   const [editingPackage, setEditingPackage] = useState<PackagePlan | null>(null);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
 
-  const todayStr = formatDate(new Date());
+  const todayStr = getIstNow().dateStr;
 
   // Subscribe to Firebase Auth
   useEffect(() => {

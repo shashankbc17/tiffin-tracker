@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PackagePlan, CarryOverStats, RateConfig } from '../../types';
-import { formatDate } from '../../services/carryOverEngine';
+import { formatDate, getIstNow } from '../../services/carryOverEngine';
 import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock } from 'lucide-react';
 
 interface PackageSummaryCardProps {
@@ -23,11 +23,22 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   const currency = config.currency || '₹';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const todayStr = formatDate(new Date());
-  const isUpcoming = Boolean(pkg && todayStr < pkg.startDate);
+  const { dateStr: todayStr, hour: istHour } = getIstNow();
+  const isUpcomingDate = Boolean(pkg && todayStr < pkg.startDate);
+  
+  // Early morning on Day 1 (starts today, but before 8:00 AM IST delivery window)
+  const isEarlyMorningFirstDay = Boolean(
+    pkg &&
+    todayStr === pkg.startDate &&
+    stats.effectiveDaysConsumed === 0 &&
+    istHour < 8
+  );
+
+  const isNotActiveYet = isUpcomingDate || isEarlyMorningFirstDay;
+
   let daysUntilStart = 0;
   let formattedStartDate = '';
-  if (isUpcoming && pkg) {
+  if (isUpcomingDate && pkg) {
     const d1 = new Date(todayStr + 'T00:00:00');
     const d2 = new Date(pkg.startDate + 'T00:00:00');
     daysUntilStart = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
@@ -88,7 +99,7 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
       {/* Main Package Glass Card */}
       <div className="ios-card">
         {/* Coming Soon Countdown Banner if plan has not started yet */}
-        {isUpcoming && (
+        {isNotActiveYet && (
           <div 
             style={{ 
               display: 'flex', 
@@ -106,10 +117,14 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd' }}>
-                Countdown to First Delivery! ⏳
+                {isEarlyMorningFirstDay ? 'First Delivery This Morning! ⏳' : 'Countdown to First Delivery! ⏳'}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                Zenitsu & Tanjiro are counting down. Your meal plan will activate on <strong style={{ color: '#f8fafc' }}>{formattedStartDate}</strong>!
+                {isEarlyMorningFirstDay ? (
+                  <>Zenitsu & Tanjiro are counting down. Your first breakfast will arrive between <strong style={{ color: '#f8fafc' }}>8:00 AM and 10:00 AM IST</strong>!</>
+                ) : (
+                  <>Zenitsu & Tanjiro are counting down. Your meal plan will activate on <strong style={{ color: '#f8fafc' }}>{formattedStartDate}</strong>!</>
+                )}
               </div>
             </div>
           </div>
@@ -117,7 +132,25 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
           <div>
-            {isUpcoming ? (
+            {isEarlyMorningFirstDay ? (
+              <span 
+                style={{ 
+                  marginBottom: '6px', 
+                  background: 'rgba(245, 158, 11, 0.18)', 
+                  color: '#fbbf24', 
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <Clock size={12} /> Activates Today (8:00 AM IST)
+              </span>
+            ) : isUpcomingDate ? (
               <span 
                 style={{ 
                   marginBottom: '6px', 
@@ -142,7 +175,9 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             )}
             <h3 style={{ fontSize: '17px', fontWeight: 700 }}>{pkg.title}</h3>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {isUpcoming 
+              {isEarlyMorningFirstDay
+                ? `Starts Today, ${pkg.startDate} (First delivery: 8:00 AM – 10:00 AM IST)`
+                : isUpcomingDate 
                 ? `Starts ${pkg.startDate} (${pkg.totalDays} Days · in ${daysUntilStart === 1 ? '1 day' : `${daysUntilStart} days`})`
                 : `Started ${pkg.startDate} (${pkg.totalDays} Days)`}
             </div>

@@ -11,6 +11,42 @@ export function formatDate(date: Date): string {
 }
 
 /**
+ * Get current date & time information strictly in Indian Standard Time (IST - Asia/Kolkata)
+ */
+export function getIstNow(): {
+  dateStr: string;
+  formattedDate: string;
+  dayOfWeek: number;
+  hour: number;
+  minute: number;
+} {
+  const now = new Date();
+  const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+  const formattedDate = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(now);
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour12: false,
+    hour: 'numeric',
+    minute: 'numeric',
+  }).formatToParts(now);
+
+  const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+  const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const istDateObj = new Date(y, m - 1, d);
+  const dayOfWeek = istDateObj.getDay();
+
+  return { dateStr, formattedDate, dayOfWeek, hour, minute };
+}
+
+/**
  * Check if a date string falls on an active delivery day of the week
  * 0 = Sunday, 1 = Monday, ... 6 = Saturday
  */

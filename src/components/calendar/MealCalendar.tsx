@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DayRecord, RateConfig, PackagePlan } from '../../types';
-import { formatDate } from '../../services/carryOverEngine';
+import { formatDate, getIstNow } from '../../services/carryOverEngine';
 import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
 import { TodayActionBar } from './TodayActionBar';
@@ -20,7 +20,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
   onSaveRecord,
   onClearRecord,
 }) => {
-  const todayStr = formatDate(new Date());
+  const todayStr = getIstNow().dateStr;
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 

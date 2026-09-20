@@ -1,6 +1,6 @@
 import React from 'react';
 import { DayRecord, PackagePlan, RateConfig, MealStatus } from '../../types';
-import { formatDate } from '../../services/carryOverEngine';
+import { formatDate, getIstNow } from '../../services/carryOverEngine';
 import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -19,22 +19,14 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   onConfirmToday,
   onOpenDayDetails,
 }) => {
-  const todayDate = new Date();
-  const todayStr = formatDate(todayDate);
-  const formattedToday = todayDate.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-
-  const todayDayOfWeek = todayDate.getDay();
+  const { dateStr: todayStr, formattedDate: formattedToday, dayOfWeek: todayDayOfWeek, hour: istHour } = getIstNow();
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const todayDayName = dayNames[todayDayOfWeek];
 
   // 1. Is there an active package?
   const hasPackage = Boolean(activePackage);
 
-  // 2. Future plan check (Starts in the future, e.g. starts Sep 21 while today is Sep 20)
+  // 2. Future plan check (Starts in future date)
   const isFuturePlan = Boolean(activePackage && todayStr < activePackage.startDate);
   
   let daysUntilStart = 0;
@@ -60,7 +52,14 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   const incBreakfast = activePackage ? activePackage.includesBreakfast !== false : true;
   const incLunch = activePackage ? activePackage.includesLunch !== false : true;
 
-  // 5. Existing record logs for today
+  // 5. IST Delivery Timing Windows:
+  // Breakfast delivery window: 8:00 AM to 10:00 AM IST
+  // Lunch delivery window: 12:30 PM to 2:30 PM IST
+  const isBeforeBreakfastWindow = incBreakfast && istHour < 8;
+  const isBeforeLunchWindowOnly = !incBreakfast && incLunch && istHour < 12;
+  const isPreDeliveryWindow = isBeforeBreakfastWindow || isBeforeLunchWindowOnly;
+
+  // 6. Existing record logs for today
   const bStatus = todayRecord?.breakfast?.status;
   const lStatus = todayRecord?.lunch?.status;
   const isCookOff = todayRecord?.isCookOff;
@@ -83,8 +82,8 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   };
 
   // Determine which UI State we are in
-  // Priority: Logged > Future Plan > Scheduled Off > Active Delivery
-  let stateKind: 'LOGGED' | 'FUTURE' | 'OFF_DAY' | 'ACTIVE_DELIVERY' | 'NO_PLAN' = 'NO_PLAN';
+  // Priority: Logged > Future Plan Date > Scheduled Off Day > Pre-Delivery Window (< 8 AM IST) > Active Delivery
+  let stateKind: 'LOGGED' | 'FUTURE' | 'OFF_DAY' | 'PRE_WINDOW' | 'ACTIVE_DELIVERY' | 'NO_PLAN' = 'NO_PLAN';
 
   if (!hasPackage) {
     stateKind = 'NO_PLAN';
@@ -94,6 +93,8 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
     stateKind = 'FUTURE';
   } else if (isScheduledOff) {
     stateKind = 'OFF_DAY';
+  } else if (isPreDeliveryWindow) {
+    stateKind = 'PRE_WINDOW';
   } else {
     stateKind = 'ACTIVE_DELIVERY';
   }
@@ -112,12 +113,16 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
             ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.88) 100%)'
             : stateKind === 'FUTURE'
             ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.14) 0%, rgba(15, 23, 42, 0.88) 100%)'
+            : stateKind === 'PRE_WINDOW'
+            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(15, 23, 42, 0.92) 100%)'
             : 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(15, 23, 42, 0.88) 100%)',
         border:
           stateKind === 'ACTIVE_DELIVERY'
             ? '1px solid rgba(16, 185, 129, 0.35)'
             : stateKind === 'FUTURE'
             ? '1px solid rgba(59, 130, 246, 0.3)'
+            : stateKind === 'PRE_WINDOW'
+            ? '1px solid rgba(245, 158, 11, 0.35)'
             : '1px solid var(--glass-border)',
       }}
     >
@@ -164,6 +169,25 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
             }}
           >
             ⏳ {daysUntilStart === 1 ? 'Starts Tomorrow' : `Starts ${formattedStartDate}`}
+          </span>
+        )}
+
+        {stateKind === 'PRE_WINDOW' && (
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#fbbf24',
+              background: 'rgba(245, 158, 11, 0.16)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-full)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            🌅 {incBreakfast ? 'Arrives 8:00–10:00 AM' : 'Arrives 12:30–2:30 PM'}
           </span>
         )}
 
@@ -240,6 +264,8 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                 ? '2px solid #10b981'
                 : stateKind === 'FUTURE'
                 ? '2px solid #3b82f6'
+                : stateKind === 'PRE_WINDOW'
+                ? '2px solid #f59e0b'
                 : '2px solid #8b5cf6',
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
             background: '#090d16',
@@ -265,12 +291,41 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               letterSpacing: '0.5px',
             }}
           >
-            {stateKind === 'FUTURE' ? 'REST' : stateKind === 'OFF_DAY' ? 'OFF' : 'UMAI!'}
+            {stateKind === 'FUTURE' || stateKind === 'PRE_WINDOW' ? 'PREP' : stateKind === 'OFF_DAY' ? 'OFF' : 'UMAI!'}
           </div>
         </div>
 
         {/* Dynamic Contextual Text & Buttons */}
         <div style={{ flex: 1 }}>
+          {/* CASE: Pre-Delivery Window in IST (Early morning before 8 AM for breakfast or before 12 PM for lunch) */}
+          {stateKind === 'PRE_WINDOW' && (
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px' }}>
+                {incBreakfast ? 'Breakfast Arrives 8:00 AM – 10:00 AM IST 🍳' : 'Lunch Arrives 12:30 PM – 2:30 PM IST 🍱'}
+              </div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4, marginBottom: '10px' }}>
+                {incBreakfast
+                  ? 'It is currently early morning in IST. Breakfast delivery is between 8:00 AM and 10:00 AM. Tanjiro is prepping the kitchen!'
+                  : 'It is morning in IST. Lunch delivery begins at 12:30 PM. Have a great morning!'}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => onOpenDayDetails(todayStr)}
+                  className="ios-btn ios-btn-secondary"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '11px',
+                    color: '#fbbf24',
+                    borderColor: 'rgba(245, 158, 11, 0.35)',
+                  }}
+                >
+                  <span>Received early? Log meal</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* CASE 1: Future Plan (Not Started Yet) */}
           {stateKind === 'FUTURE' && (
             <div>
