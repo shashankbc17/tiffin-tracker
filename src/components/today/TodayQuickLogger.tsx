@@ -1,7 +1,7 @@
 import React from 'react';
 import { DayRecord, MealStatus, RateConfig, PackagePlan } from '../../types';
 import { formatDate } from '../../services/carryOverEngine';
-import { Check, X, Users, AlertCircle, Sparkles, Coffee, UtensilsCrossed } from 'lucide-react';
+import { Check, X, Users, AlertCircle, Sparkles, Coffee, UtensilsCrossed, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface TodayQuickLoggerProps {
@@ -9,6 +9,7 @@ interface TodayQuickLoggerProps {
   config: RateConfig;
   activePackage: PackagePlan | null;
   onUpdateRecord: (updated: DayRecord) => void;
+  onResetToday?: () => void;
 }
 
 export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
@@ -16,6 +17,7 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
   config,
   activePackage,
   onUpdateRecord,
+  onResetToday,
 }) => {
   const currency = config.currency || '₹';
   const todayDateObj = new Date();
@@ -104,25 +106,50 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
           </h2>
         </div>
 
-        <button
-          onClick={toggleCookOff}
-          style={{
-            background: todayRecord.isCookOff ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-            border: todayRecord.isCookOff ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid var(--glass-border)',
-            color: todayRecord.isCookOff ? '#f87171' : 'var(--text-secondary)',
-            borderRadius: 'var(--radius-full)',
-            padding: '6px 12px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <AlertCircle size={14} />
-          <span>{todayRecord.isCookOff ? 'Cook Off (All Carried Over)' : 'Cook Holiday?'}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {onResetToday && (breakfastStatus !== 'none' || lunchStatus !== 'none' || todayRecord.isCookOff) && (
+            <button
+              onClick={onResetToday}
+              title="Reset today's logged meals"
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid var(--glass-border)',
+                color: 'var(--text-muted)',
+                borderRadius: 'var(--radius-full)',
+                padding: '6px 10px',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <RotateCcw size={12} />
+              <span>Reset</span>
+            </button>
+          )}
+
+          <button
+            onClick={toggleCookOff}
+            style={{
+              background: todayRecord.isCookOff ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+              border: todayRecord.isCookOff ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid var(--glass-border)',
+              color: todayRecord.isCookOff ? '#f87171' : 'var(--text-secondary)',
+              borderRadius: 'var(--radius-full)',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <AlertCircle size={14} />
+            <span>{todayRecord.isCookOff ? 'Cook Off (Carried)' : 'Cook Off?'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Scheduled Off Day Notice */}

@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PackagePlan, CarryOverStats, RateConfig } from '../../types';
-import { CalendarClock, Sparkles, FastForward, CheckCircle, ShieldCheck } from 'lucide-react';
+import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X } from 'lucide-react';
 
 interface PackageSummaryCardProps {
   pkg: PackagePlan | null;
   stats: CarryOverStats;
   config: RateConfig;
   onOpenNewPackage: () => void;
+  onDeletePackage?: (deleteLogs: boolean) => void;
 }
 
 export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
@@ -14,8 +15,10 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   stats,
   config,
   onOpenNewPackage,
+  onDeletePackage,
 }) => {
   const currency = config.currency || '₹';
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!pkg) {
     return (
@@ -77,20 +80,43 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             </div>
           </div>
 
-          <button 
-            onClick={onOpenNewPackage}
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.08)', 
-              border: 'none', 
-              color: 'var(--text-secondary)',
-              fontSize: '11px',
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-full)',
-              cursor: 'pointer'
-            }}
-          >
-            + New Plan
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button 
+              onClick={onOpenNewPackage}
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.08)', 
+                border: 'none', 
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                padding: '5px 10px',
+                borderRadius: 'var(--radius-full)',
+                cursor: 'pointer'
+              }}
+            >
+              + New Plan
+            </button>
+
+            {onDeletePackage && (
+              <button 
+                onClick={() => setShowDeleteConfirm(true)}
+                title="Delete or cancel this plan"
+                style={{ 
+                  background: 'rgba(239, 68, 68, 0.12)', 
+                  border: '1px solid rgba(239, 68, 68, 0.3)', 
+                  color: '#f87171',
+                  borderRadius: 'var(--radius-full)',
+                  width: '26px',
+                  height: '26px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -177,6 +203,68 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Delete / Reset Plan Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle" />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '8px', borderRadius: '50%' }}>
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 700 }}>Delete Current Plan?</h3>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {pkg.title} ({pkg.totalDays} Days)
+                </div>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
+              Made a mistake when setting up this package? You can delete it and start a new one right away.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeletePackage?.(false);
+                  setShowDeleteConfirm(false);
+                }}
+                className="ios-btn"
+                style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#f87171', width: '100%' }}
+              >
+                <Trash2 size={16} />
+                <span>Delete Plan (Keep Meal History)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onDeletePackage?.(true);
+                  setShowDeleteConfirm(false);
+                }}
+                className="ios-btn"
+                style={{ background: 'rgba(239, 68, 68, 0.35)', border: '1px solid #ef4444', color: '#ffffff', width: '100%' }}
+              >
+                <Trash2 size={16} />
+                <span>Delete Plan & Clear All Logs (Fresh Start)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="ios-btn ios-btn-secondary"
+                style={{ width: '100%', marginTop: '4px' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

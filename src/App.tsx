@@ -144,6 +144,36 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleDeletePackage = (deleteLogs: boolean) => {
+    setActivePackage(null);
+    saveLocalPackage(null);
+    if (deleteLogs) {
+      setRecords({});
+      saveLocalRecords({});
+    }
+    if (user) {
+      syncUserDataToCloud(user.uid, config, null, deleteLogs ? {} : records);
+    }
+  };
+
+  const handleResetToday = () => {
+    const updated: DayRecord = {
+      date: todayStr,
+      breakfast: {
+        status: 'none',
+        persons: config.defaultPersons || 1,
+        rate: activePackage?.breakfastRate || config.defaultBreakfastRate,
+      },
+      lunch: {
+        status: 'none',
+        persons: config.defaultPersons || 1,
+        rate: activePackage?.lunchRate || config.defaultLunchRate,
+      },
+      isCookOff: false,
+    };
+    handleUpdateRecord(updated);
+  };
+
   const handleGoogleLogin = async () => {
     try {
       await loginWithGoogle();
@@ -179,12 +209,14 @@ export const App: React.FC = () => {
               config={config}
               activePackage={activePackage}
               onUpdateRecord={handleUpdateRecord}
+              onResetToday={handleResetToday}
             />
             <PackageSummaryCard
               pkg={activePackage}
               stats={stats}
               config={config}
               onOpenNewPackage={() => setIsNewPackageModalOpen(true)}
+              onDeletePackage={handleDeletePackage}
             />
           </>
         )}
@@ -205,6 +237,7 @@ export const App: React.FC = () => {
               stats={stats}
               config={config}
               onOpenNewPackage={() => setIsNewPackageModalOpen(true)}
+              onDeletePackage={handleDeletePackage}
             />
           </div>
         )}
