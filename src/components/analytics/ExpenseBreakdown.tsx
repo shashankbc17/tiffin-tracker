@@ -40,16 +40,30 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Total Spent Hero Banner */}
-      <div className="ios-card" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Total Value Consumed
-        </div>
-        <div style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#34d399', margin: '4px 0 10px 0' }}>
-          {currency}{stats.totalSpent.toLocaleString()}
+      {/* Total Spent Hero Banner with Anime Wealth Icon */}
+      <div className="ios-card" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(15, 23, 42, 0.85) 100%)', borderColor: 'rgba(16, 185, 129, 0.35)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+          <div>
+            <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: 'var(--radius-full)', display: 'inline-block', marginBottom: '6px' }}>
+              💰 Financial Analytics & Savings
+            </span>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              Total Value Consumed
+            </div>
+            <div style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#34d399', margin: '2px 0 6px 0' }}>
+              {currency}{stats.totalSpent.toLocaleString()}
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#c4b5fd' }}>
+              ✨ Saved {currency}{stats.carriedOverValue} through {stats.carryOverDays} carried-over skips!
+            </div>
+          </div>
+
+          <div style={{ width: '64px', height: '64px', borderRadius: '18px', overflow: 'hidden', flexShrink: 0, border: '2px solid #fbbf24', boxShadow: '0 4px 14px rgba(251, 191, 36, 0.3)' }}>
+            <img src="./assets/anime_analytics.jpg" alt="Nezuko Savings" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px solid var(--glass-border)', fontSize: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', paddingTop: '12px', marginTop: '12px', borderTop: '1px solid var(--glass-border)', fontSize: '12px' }}>
           <div style={{ color: 'var(--text-secondary)' }}>
             🍳 Breakfasts: <strong style={{ color: '#fbbf24' }}>{stats.breakfastDelivered}</strong>
           </div>

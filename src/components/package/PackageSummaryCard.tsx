@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PackagePlan, CarryOverStats, RateConfig } from '../../types';
-import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3 } from 'lucide-react';
+import { formatDate } from '../../services/carryOverEngine';
+import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock } from 'lucide-react';
 
 interface PackageSummaryCardProps {
   pkg: PackagePlan | null;
@@ -21,6 +22,21 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
 }) => {
   const currency = config.currency || '₹';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const todayStr = formatDate(new Date());
+  const isUpcoming = Boolean(pkg && todayStr < pkg.startDate);
+  let daysUntilStart = 0;
+  let formattedStartDate = '';
+  if (isUpcoming && pkg) {
+    const d1 = new Date(todayStr + 'T00:00:00');
+    const d2 = new Date(pkg.startDate + 'T00:00:00');
+    daysUntilStart = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
+    formattedStartDate = d2.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
 
   if (!pkg) {
     return (
@@ -71,14 +87,64 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
 
       {/* Main Package Glass Card */}
       <div className="ios-card">
+        {/* Coming Soon Countdown Banner if plan has not started yet */}
+        {isUpcoming && (
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              marginBottom: '16px', 
+              padding: '10px 14px', 
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%)', 
+              borderRadius: 'var(--radius-md)', 
+              border: '1px solid rgba(59, 130, 246, 0.3)' 
+            }}
+          >
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', overflow: 'hidden', flexShrink: 0, border: '2px solid #60a5fa', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
+              <img src="./assets/anime_coming_soon.jpg" alt="Coming Soon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd' }}>
+                Countdown to First Delivery! ⏳
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                Zenitsu & Tanjiro are counting down. Your meal plan will activate on <strong style={{ color: '#f8fafc' }}>{formattedStartDate}</strong>!
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
           <div>
-            <span className="badge badge-carryover" style={{ marginBottom: '6px' }}>
-              <ShieldCheck size={12} /> Active Plan
-            </span>
+            {isUpcoming ? (
+              <span 
+                style={{ 
+                  marginBottom: '6px', 
+                  background: 'rgba(59, 130, 246, 0.18)', 
+                  color: '#60a5fa', 
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <Clock size={12} /> {daysUntilStart === 1 ? 'Activates Tomorrow' : `Activates on ${formattedStartDate}`}
+              </span>
+            ) : (
+              <span className="badge badge-carryover" style={{ marginBottom: '6px' }}>
+                <ShieldCheck size={12} /> Active Plan
+              </span>
+            )}
             <h3 style={{ fontSize: '17px', fontWeight: 700 }}>{pkg.title}</h3>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Started {pkg.startDate} ({pkg.totalDays} Days)
+              {isUpcoming 
+                ? `Starts ${pkg.startDate} (${pkg.totalDays} Days · in ${daysUntilStart === 1 ? '1 day' : `${daysUntilStart} days`})`
+                : `Started ${pkg.startDate} (${pkg.totalDays} Days)`}
             </div>
           </div>
 

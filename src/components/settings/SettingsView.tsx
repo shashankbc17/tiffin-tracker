@@ -63,6 +63,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Anime Workshop Header */}
+      <div 
+        className="ios-card" 
+        style={{ 
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)', 
+          borderColor: 'rgba(245, 158, 11, 0.35)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '14px', 
+          padding: '16px 18px' 
+        }}
+      >
+        <div 
+          style={{ 
+            width: '60px', 
+            height: '60px', 
+            borderRadius: '18px', 
+            overflow: 'hidden', 
+            flexShrink: 0, 
+            border: '2px solid #f59e0b', 
+            boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)' 
+          }}
+        >
+          <img 
+            src="./assets/anime_settings.jpg" 
+            alt="Inosuke Workshop" 
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+          />
+        </div>
+        <div>
+          <span 
+            style={{ 
+              fontSize: '10px', 
+              color: '#fbbf24', 
+              fontWeight: 700, 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.05em' 
+            }}
+          >
+            ⚙️ Beast Workshop & Config
+          </span>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', margin: '2px 0' }}>
+            Settings & Catering Preferences
+          </h3>
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+            Configure default prices, caterer contact, phone MFA, and cloud backups.
+          </p>
+        </div>
+      </div>
+
       {/* Meal Rates & Cook Information */}
       <form onSubmit={handleSubmit} className="ios-card">
         <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', fontFamily: 'var(--font-heading)' }}>
