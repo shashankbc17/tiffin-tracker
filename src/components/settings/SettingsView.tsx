@@ -162,7 +162,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.5' }}>
-          Connected to project: <strong>heirloom-cookbook-io</strong>.<br />
+          Connected to project: <strong>tiffinflow-shashank</strong>.<br />
           For Google popup to succeed, Firebase requires your domain to be authorized.
         </p>
 

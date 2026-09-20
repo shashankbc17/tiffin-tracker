@@ -18,15 +18,14 @@ import {
   Firestore 
 } from 'firebase/firestore';
 
-// Heirloom / TiffinFlow Firebase Default Configuration
+// Dedicated TiffinFlow Firebase Configuration
 export const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCcE9n2kuUelaEAMnbccx4CMbJ9NAQO1g0",
-  authDomain: "heirloom-cookbook-io.firebaseapp.com",
-  projectId: "heirloom-cookbook-io",
-  storageBucket: "heirloom-cookbook-io.firebasestorage.app",
-  messagingSenderId: "1075282950451",
-  appId: "1:1075282950451:web:47558ddb0bdad5c1742646",
-  measurementId: "G-T3LLN4JRFG"
+  apiKey: "AIzaSyAPrKkU_rpUsJjJdQ3tKu25ah3V23FIQsw",
+  authDomain: "tiffinflow-shashank.firebaseapp.com",
+  projectId: "tiffinflow-shashank",
+  storageBucket: "tiffinflow-shashank.firebasestorage.app",
+  messagingSenderId: "87467508107",
+  appId: "1:87467508107:web:d007007b82f147e207ef8e"
 };
 
 const STORAGE_KEY_FIREBASE = 'tiffinflow_firebase_config';
