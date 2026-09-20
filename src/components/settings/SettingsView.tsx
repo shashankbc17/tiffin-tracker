@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
+import { User } from 'firebase/auth';
 import { RateConfig } from '../../types';
 import { Save, RefreshCw, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { getSavedFirebaseConfig, saveFirebaseConfig, initFirebase, DEFAULT_FIREBASE_CONFIG } from '../../services/firebase';
 
 interface SettingsViewProps {
   config: RateConfig;
+  currentUser?: User | null;
   onSaveConfig: (cfg: RateConfig) => void;
   onResetData?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   config,
+  currentUser,
   onSaveConfig,
   onResetData,
 }) => {
@@ -18,6 +21,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showFirebaseModal, setShowFirebaseModal] = useState(false);
   const [showDevSettings, setShowDevSettings] = useState(false);
+
+  const isDev = Boolean(
+    currentUser &&
+    currentUser.email &&
+    (currentUser.email.toLowerCase() === 'shashankbc17@gmail.com' ||
+     currentUser.email.toLowerCase().includes('shashank'))
+  );
 
   const [firebaseJson, setFirebaseJson] = useState(() => 
     JSON.stringify(getSavedFirebaseConfig(), null, 2)
@@ -219,72 +229,74 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </span>
         </div>
 
-        {/* Expandable Developer Section */}
-        <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--glass-border)' }}>
-          <button
-            type="button"
-            onClick={() => setShowDevSettings(!showDevSettings)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              cursor: 'pointer',
-              padding: '4px 0'
-            }}
-          >
-            <span>Developer & Firebase Settings</span>
-            {showDevSettings ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+        {/* Expandable Developer Section (Only visible when logged in as Developer) */}
+        {isDev && (
+          <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--glass-border)' }}>
+            <button
+              type="button"
+              onClick={() => setShowDevSettings(!showDevSettings)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                cursor: 'pointer',
+                padding: '4px 0'
+              }}
+            >
+              <span>Developer & Firebase Settings</span>
+              {showDevSettings ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
 
-          {showDevSettings && (
-            <div style={{ marginTop: '12px' }}>
-              <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border)', marginBottom: '10px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  Authorized Domain:
+            {showDevSettings && (
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border)', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    Authorized Domain:
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <code style={{ fontSize: '12px', color: '#34d399', fontWeight: 700 }}>{currentHost}</code>
+                    <button 
+                      type="button" 
+                      onClick={handleCopyHost}
+                      className="ios-btn ios-btn-secondary" 
+                      style={{ padding: '4px 8px', fontSize: '10px' }}
+                    >
+                      {copiedDomain ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                      <span>{copiedDomain ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <code style={{ fontSize: '12px', color: '#34d399', fontWeight: 700 }}>{currentHost}</code>
-                  <button 
-                    type="button" 
-                    onClick={handleCopyHost}
-                    className="ios-btn ios-btn-secondary" 
-                    style={{ padding: '4px 8px', fontSize: '10px' }}
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowFirebaseModal(true)}
+                    className="ios-btn ios-btn-secondary"
+                    style={{ flex: 1, fontSize: '11px', padding: '8px' }}
                   >
-                    {copiedDomain ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
-                    <span>{copiedDomain ? 'Copied' : 'Copy'}</span>
+                    <Key size={13} />
+                    <span>Configure Keys</span>
                   </button>
+
+                  <a
+                    href="https://console.firebase.google.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ios-btn ios-btn-secondary"
+                    style={{ textDecoration: 'none', fontSize: '11px', padding: '8px 12px' }}
+                  >
+                    <ExternalLink size={13} />
+                  </a>
                 </div>
               </div>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowFirebaseModal(true)}
-                  className="ios-btn ios-btn-secondary"
-                  style={{ flex: 1, fontSize: '11px', padding: '8px' }}
-                >
-                  <Key size={13} />
-                  <span>Configure Keys</span>
-                </button>
-
-                <a
-                  href="https://console.firebase.google.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ios-btn ios-btn-secondary"
-                  style={{ textDecoration: 'none', fontSize: '11px', padding: '8px 12px' }}
-                >
-                  <ExternalLink size={13} />
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* iOS App Installation Guide */}

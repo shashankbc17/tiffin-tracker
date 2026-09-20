@@ -132,59 +132,89 @@ export function calculateCarryOver(
   const recordDates = Object.keys(records).sort();
   let fullDaysSkipped = 0;
 
+  const planPersons = pkg.defaultPersons || 1;
+
   for (const dateStr of recordDates) {
     if (dateStr < pkg.startDate) continue;
 
     const day = records[dateStr];
     const isScheduledActive = isDayActiveInPackage(dateStr, activeDaysOfWeek);
 
+    // Cook holiday check
+    if (day.isCookOff && isScheduledActive) {
+      if (pkg.includesBreakfast) {
+        bSkipped += planPersons;
+        const bRate = day.breakfast?.rate || pkg.breakfastRate || config.defaultBreakfastRate;
+        carriedOverValue += bRate * planPersons;
+      }
+      if (pkg.includesLunch) {
+        lSkipped += planPersons;
+        const lRate = day.lunch?.rate || pkg.lunchRate || config.defaultLunchRate;
+        carriedOverValue += lRate * planPersons;
+      }
+      continue;
+    }
+
     // Breakfast calculation
     if (pkg.includesBreakfast && day.breakfast) {
+      const bRate = day.breakfast.rate || pkg.breakfastRate || config.defaultBreakfastRate;
       if (day.breakfast.status === 'delivered' || day.breakfast.status === 'extra') {
-        bDelivered += day.breakfast.persons || 1;
-        const rate = day.breakfast.rate || pkg.breakfastRate || config.defaultBreakfastRate;
-        totalSpent += rate * (day.breakfast.persons || 1);
-      } else if (day.breakfast.status === 'skipped') {
-        bSkipped += day.breakfast.persons || 1;
-        const rate = day.breakfast.rate || pkg.breakfastRate || config.defaultBreakfastRate;
-        carriedOverValue += rate * (day.breakfast.persons || 1);
+        const deliveredCount = day.breakfast.persons || planPersons;
+        bDelivered += deliveredCount;
+        totalSpent += bRate * deliveredCount;
+
+        // Partial delivery carryover: If fewer persons were delivered on a scheduled day
+        if (day.breakfast.status === 'delivered' && deliveredCount < planPersons && isScheduledActive) {
+          const missedPersons = planPersons - deliveredCount;
+          bSkipped += missedPersons;
+          carriedOverValue += bRate * missedPersons;
+        }
+      } else if (day.breakfast.status === 'skipped' && isScheduledActive) {
+        const skippedCount = day.breakfast.persons || planPersons;
+        bSkipped += skippedCount;
+        carriedOverValue += bRate * skippedCount;
       }
     }
 
     // Lunch calculation
     if (pkg.includesLunch && day.lunch) {
+      const lRate = day.lunch.rate || pkg.lunchRate || config.defaultLunchRate;
       if (day.lunch.status === 'delivered' || day.lunch.status === 'extra') {
-        lDelivered += day.lunch.persons || 1;
-        const rate = day.lunch.rate || pkg.lunchRate || config.defaultLunchRate;
-        totalSpent += rate * (day.lunch.persons || 1);
-      } else if (day.lunch.status === 'skipped') {
-        lSkipped += day.lunch.persons || 1;
-        const rate = day.lunch.rate || pkg.lunchRate || config.defaultLunchRate;
-        carriedOverValue += rate * (day.lunch.persons || 1);
-      }
-    }
+        const deliveredCount = day.lunch.persons || planPersons;
+        lDelivered += deliveredCount;
+        totalSpent += lRate * deliveredCount;
 
-    // Only active scheduled days count as skips towards carry-over
-    if (isScheduledActive) {
-      const bIsSkipped = !pkg.includesBreakfast || day.breakfast?.status === 'skipped';
-      const lIsSkipped = !pkg.includesLunch || day.lunch?.status === 'skipped';
-      if (day.isCookOff || (bIsSkipped && lIsSkipped)) {
-        fullDaysSkipped++;
+        // Partial delivery carryover: If fewer persons were delivered on a scheduled day
+        if (day.lunch.status === 'delivered' && deliveredCount < planPersons && isScheduledActive) {
+          const missedPersons = planPersons - deliveredCount;
+          lSkipped += missedPersons;
+          carriedOverValue += lRate * missedPersons;
+        }
+      } else if (day.lunch.status === 'skipped' && isScheduledActive) {
+        const skippedCount = day.lunch.persons || planPersons;
+        lSkipped += skippedCount;
+        carriedOverValue += lRate * skippedCount;
       }
     }
   }
 
-  // Effective days consumed based on max delivered portions
-  const avgPersons = pkg.defaultPersons || 1;
-  const bDays = Math.ceil(bDelivered / avgPersons);
-  const lDays = Math.ceil(lDelivered / avgPersons);
-  const effectiveDaysConsumed = Math.max(bDays, lDays);
+  // Daily expected portions across active meal types in the plan
+  const activeMealCount = (pkg.includesBreakfast ? 1 : 0) + (pkg.includesLunch ? 1 : 0);
+  const dailyTotalPortions = Math.max(1, activeMealCount * planPersons);
 
-  const carryOverDays = fullDaysSkipped;
-  const remainingDays = Math.max(0, pkg.totalDays - effectiveDaysConsumed);
+  const totalSkippedPortions = (pkg.includesBreakfast ? bSkipped : 0) + (pkg.includesLunch ? lSkipped : 0);
+  const totalDeliveredPortions = (pkg.includesBreakfast ? bDelivered : 0) + (pkg.includesLunch ? lDelivered : 0);
 
-  // Extended end date pushes out by carryOverDays across active days of the week
-  const extendedEndDate = addActiveDays(pkg.startDate, pkg.totalDays + carryOverDays, activeDaysOfWeek);
+  // Carry-over days (supports fractional person portions e.g. 0.5 days)
+  const carryOverDays = Math.round((totalSkippedPortions / dailyTotalPortions) * 10) / 10;
+  
+  // Effective days consumed (supports fractional days)
+  const effectiveDaysConsumed = Math.round((totalDeliveredPortions / dailyTotalPortions) * 10) / 10;
+  const remainingDays = Math.max(0, Math.round((pkg.totalDays - effectiveDaysConsumed) * 10) / 10);
+
+  // Extended end date pushes out by Math.ceil(carryOverDays) across active days of the week
+  const daysToExtend = Math.ceil(carryOverDays);
+  const extendedEndDate = addActiveDays(pkg.startDate, pkg.totalDays + daysToExtend, activeDaysOfWeek);
 
   return {
     totalPackageDays: pkg.totalDays,

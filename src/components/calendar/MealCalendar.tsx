@@ -68,17 +68,19 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
       lStatus = incLunch ? status : 'none';
     }
 
+    const planPersons = activePackage?.defaultPersons || config.defaultPersons || 1;
+
     const updated: DayRecord = {
       date: todayStr,
       breakfast: {
         status: bStatus,
-        persons: existing?.breakfast?.persons || config.defaultPersons || 1,
+        persons: existing?.breakfast?.persons || planPersons,
         rate: existing?.breakfast?.rate || activePackage?.breakfastRate || config.defaultBreakfastRate,
         notes: bStatus === 'skipped' ? 'Carried over' : existing?.breakfast?.notes,
       },
       lunch: {
         status: lStatus,
-        persons: existing?.lunch?.persons || config.defaultPersons || 1,
+        persons: existing?.lunch?.persons || planPersons,
         rate: existing?.lunch?.rate || activePackage?.lunchRate || config.defaultLunchRate,
         notes: lStatus === 'skipped' ? 'Carried over' : existing?.lunch?.notes,
       },
