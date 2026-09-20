@@ -40,20 +40,47 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
     setCurrentMonthDate(new Date(year, month + 1, 1));
   };
 
-  const handleQuickConfirmToday = (status: 'delivered' | 'skipped') => {
+  const handleQuickConfirmToday = (
+    status: 'delivered' | 'skipped',
+    meal?: 'both' | 'breakfast' | 'lunch'
+  ) => {
+    const incBreakfast = activePackage ? activePackage.includesBreakfast !== false : true;
+    const incLunch = activePackage ? activePackage.includesLunch !== false : true;
+
+    // Current or fallback meal entries
+    const existing = records[todayStr];
+
+    let bStatus: 'delivered' | 'skipped' | 'extra' | 'none' = 'none';
+    if (meal === 'breakfast') {
+      bStatus = status;
+    } else if (meal === 'lunch') {
+      bStatus = existing?.breakfast?.status || 'none';
+    } else {
+      bStatus = incBreakfast ? status : 'none';
+    }
+
+    let lStatus: 'delivered' | 'skipped' | 'extra' | 'none' = 'none';
+    if (meal === 'lunch') {
+      lStatus = status;
+    } else if (meal === 'breakfast') {
+      lStatus = existing?.lunch?.status || 'none';
+    } else {
+      lStatus = incLunch ? status : 'none';
+    }
+
     const updated: DayRecord = {
       date: todayStr,
       breakfast: {
-        status,
-        persons: config.defaultPersons || 1,
-        rate: activePackage?.breakfastRate || config.defaultBreakfastRate,
-        notes: status === 'skipped' ? 'Carried over' : undefined,
+        status: bStatus,
+        persons: existing?.breakfast?.persons || config.defaultPersons || 1,
+        rate: existing?.breakfast?.rate || activePackage?.breakfastRate || config.defaultBreakfastRate,
+        notes: bStatus === 'skipped' ? 'Carried over' : existing?.breakfast?.notes,
       },
       lunch: {
-        status,
-        persons: config.defaultPersons || 1,
-        rate: activePackage?.lunchRate || config.defaultLunchRate,
-        notes: status === 'skipped' ? 'Carried over' : undefined,
+        status: lStatus,
+        persons: existing?.lunch?.persons || config.defaultPersons || 1,
+        rate: existing?.lunch?.rate || activePackage?.lunchRate || config.defaultLunchRate,
+        notes: lStatus === 'skipped' ? 'Carried over' : existing?.lunch?.notes,
       },
       isCookOff: false,
       updatedAt: new Date().toISOString(),
