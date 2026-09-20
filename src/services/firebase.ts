@@ -98,6 +98,10 @@ export async function loginWithGoogle(): Promise<User | null> {
       throw new Error(
         `Domain not authorized in Firebase! Please go to Firebase Console -> Authentication -> Settings -> Authorized Domains, and add '${currentHost}'.`
       );
+    } else if (error.code === 'auth/configuration-not-found' || error.message?.includes('configuration-not-found')) {
+      throw new Error(
+        "Authentication is not activated yet in Firebase! Go to Firebase Console -> Build -> Authentication -> Click 'Get started' -> Enable 'Google' sign-in provider."
+      );
     } else if (error.code === 'auth/operation-not-allowed') {
       throw new Error("Google Sign-In is not enabled in Firebase Console. Go to Firebase Console -> Authentication -> Sign-in method -> Enable Google.");
     } else if (error.code === 'auth/popup-closed-by-user') {
