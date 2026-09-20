@@ -1,7 +1,7 @@
 import React from 'react';
-import { Calendar, CheckCircle2, PackageCheck, BarChart3, Settings } from 'lucide-react';
+import { Calendar, PackageCheck, BarChart3, Settings } from 'lucide-react';
 
-export type TabKey = 'today' | 'calendar' | 'package' | 'analytics' | 'settings';
+export type TabKey = 'calendar' | 'package' | 'analytics' | 'settings';
 
 interface IosTabBarProps {
   activeTab: TabKey;
@@ -15,11 +15,10 @@ export const IosTabBar: React.FC<IosTabBarProps> = ({
   carryOverCount = 0,
 }) => {
   const tabs = [
-    { key: 'today' as TabKey, label: 'Today', icon: CheckCircle2 },
     { key: 'calendar' as TabKey, label: 'Calendar', icon: Calendar },
     { 
       key: 'package' as TabKey, 
-      label: 'Package', 
+      label: 'Plan', 
       icon: PackageCheck,
       badge: carryOverCount > 0 ? `+${carryOverCount}` : undefined 
     },

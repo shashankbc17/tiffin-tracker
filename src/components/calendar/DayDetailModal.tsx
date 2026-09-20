@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DayRecord, MealStatus, RateConfig, PackagePlan } from '../../types';
-import { X, Coffee, UtensilsCrossed, Users, Check, AlertCircle } from 'lucide-react';
+import { X, Coffee, UtensilsCrossed, Users, Check, AlertCircle, Trash2 } from 'lucide-react';
 
 interface DayDetailModalProps {
   dateStr: string;
@@ -8,6 +8,7 @@ interface DayDetailModalProps {
   config: RateConfig;
   activePackage: PackagePlan | null;
   onSave: (updatedRecord: DayRecord) => void;
+  onClear?: (dateStr: string) => void;
   onClose: () => void;
 }
 
@@ -17,6 +18,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   config,
   activePackage,
   onSave,
+  onClear,
   onClose,
 }) => {
   const [bStatus, setBStatus] = useState<MealStatus>(record?.breakfast?.status || 'delivered');
@@ -66,6 +68,24 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     onClose();
   };
 
+  const handleClear = () => {
+    if (onClear) {
+      onClear(dateStr);
+    } else {
+      onSave({
+        date: dateStr,
+        breakfast: { status: 'none', persons: 1, rate: config.defaultBreakfastRate },
+        lunch: { status: 'none', persons: 1, rate: config.defaultLunchRate },
+        isCookOff: false,
+      });
+    }
+    onClose();
+  };
+
+  const hasLoggedMeals = (record?.breakfast?.status && record.breakfast.status !== 'none') ||
+    (record?.lunch?.status && record.lunch.status !== 'none') ||
+    record?.isCookOff;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
@@ -73,7 +93,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Edit Date</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Confirm Date</div>
             <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{formattedDate}</h3>
           </div>
           <button 
@@ -139,7 +159,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   cursor: 'pointer'
                 }}
               >
-                {st === 'skipped' ? 'Skip ⏭️' : st}
+                {st === 'skipped' ? 'Skip ⏭️' : st === 'none' ? 'Unlog' : st}
               </button>
             ))}
           </div>
@@ -176,7 +196,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   cursor: 'pointer'
                 }}
               >
-                {st === 'skipped' ? 'Skip ⏭️' : st}
+                {st === 'skipped' ? 'Skip ⏭️' : st === 'none' ? 'Unlog' : st}
               </button>
             ))}
           </div>
@@ -194,14 +214,30 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           />
         </div>
 
-        <button 
-          onClick={handleSave} 
-          className="ios-btn ios-btn-primary" 
-          style={{ width: '100%', marginTop: '8px' }}
-        >
-          <Check size={16} />
-          <span>Save Changes</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          {hasLoggedMeals && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="ios-btn ios-btn-secondary"
+              style={{ color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '12px 14px' }}
+              title="Clear meals for this date"
+            >
+              <Trash2 size={16} />
+              <span>Clear</span>
+            </button>
+          )}
+
+          <button 
+            type="button"
+            onClick={handleSave} 
+            className="ios-btn ios-btn-primary" 
+            style={{ flex: 1 }}
+          >
+            <Check size={16} />
+            <span>Confirm & Save</span>
+          </button>
+        </div>
       </div>
     </div>
   );

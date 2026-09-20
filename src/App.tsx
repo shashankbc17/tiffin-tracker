@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, MultiFactorResolver } from 'firebase/auth';
-import { DayRecord, PackagePlan, RateConfig, MealStatus } from './types';
+import { DayRecord, PackagePlan, RateConfig } from './types';
 import { 
   loadLocalConfig, 
   saveLocalConfig, 
@@ -25,7 +25,6 @@ import {
 
 import { IosHeader } from './components/common/IosHeader';
 import { IosTabBar, TabKey } from './components/common/IosTabBar';
-import { TodayQuickLogger } from './components/today/TodayQuickLogger';
 import { MealCalendar } from './components/calendar/MealCalendar';
 import { PackageSummaryCard } from './components/package/PackageSummaryCard';
 import { NewPackageModal } from './components/package/NewPackageModal';
@@ -36,12 +35,13 @@ import { MfaModal } from './components/common/MfaModal';
 import './styles/ios-theme.css';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('today');
+  const [activeTab, setActiveTab] = useState<TabKey>('calendar');
   const [user, setUser] = useState<User | null>(null);
   const [config, setConfig] = useState<RateConfig>(loadLocalConfig);
   const [activePackage, setActivePackage] = useState<PackagePlan | null>(loadLocalPackage);
   const [records, setRecords] = useState<Record<string, DayRecord>>(loadLocalRecords);
   const [isNewPackageModalOpen, setIsNewPackageModalOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<PackagePlan | null>(null);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
 
   const todayStr = formatDate(new Date());
@@ -87,30 +87,18 @@ export const App: React.FC = () => {
   // Compute live carry-over and stats
   const stats = calculateCarryOver(activePackage, records, config);
 
-  // Helper for Today's record
-  const getTodayRecord = (): DayRecord => {
-    if (records[todayStr]) {
-      return records[todayStr];
-    }
-    // Default today record initialized
-    return {
-      date: todayStr,
-      breakfast: {
-        status: 'delivered',
-        persons: config.defaultPersons || 1,
-        rate: activePackage?.breakfastRate || config.defaultBreakfastRate,
-      },
-      lunch: {
-        status: 'delivered',
-        persons: config.defaultPersons || 1,
-        rate: activePackage?.lunchRate || config.defaultLunchRate,
-      },
-      isCookOff: false,
-    };
-  };
-
   const handleUpdateRecord = (updated: DayRecord) => {
     const next = { ...records, [updated.date]: updated };
+    setRecords(next);
+    saveLocalRecords(next);
+    if (user) {
+      syncUserDataToCloud(user.uid, config, activePackage, next);
+    }
+  };
+
+  const handleClearRecord = (dateStr: string) => {
+    const next = { ...records };
+    delete next[dateStr];
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
@@ -121,26 +109,10 @@ export const App: React.FC = () => {
   const handleSavePackage = (newPkg: PackagePlan) => {
     setActivePackage(newPkg);
     saveLocalPackage(newPkg);
+    setIsNewPackageModalOpen(false);
+    setEditingPackage(null);
     if (user) {
       syncUserDataToCloud(user.uid, config, newPkg, records);
-    }
-  };
-
-  const handleSaveConfig = (newConfig: RateConfig) => {
-    setConfig(newConfig);
-    saveLocalConfig(newConfig);
-    if (user) {
-      syncUserDataToCloud(user.uid, newConfig, activePackage, records);
-    }
-  };
-
-  const handleResetData = () => {
-    if (window.confirm('Reset app data to sample tiffin subscription with 12 days history?')) {
-      const sample = generateSampleData();
-      setActivePackage(sample.defaultPkg);
-      saveLocalPackage(sample.defaultPkg);
-      setRecords(sample.records);
-      saveLocalRecords(sample.records);
     }
   };
 
@@ -156,22 +128,22 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleResetToday = () => {
-    const updated: DayRecord = {
-      date: todayStr,
-      breakfast: {
-        status: 'none',
-        persons: config.defaultPersons || 1,
-        rate: activePackage?.breakfastRate || config.defaultBreakfastRate,
-      },
-      lunch: {
-        status: 'none',
-        persons: config.defaultPersons || 1,
-        rate: activePackage?.lunchRate || config.defaultLunchRate,
-      },
-      isCookOff: false,
-    };
-    handleUpdateRecord(updated);
+  const handleSaveConfig = (newConfig: RateConfig) => {
+    setConfig(newConfig);
+    saveLocalConfig(newConfig);
+    if (user) {
+      syncUserDataToCloud(user.uid, newConfig, activePackage, records);
+    }
+  };
+
+  const handleResetData = () => {
+    if (window.confirm('Reset app data to sample tiffin subscription?')) {
+      const sample = generateSampleData();
+      setActivePackage(sample.defaultPkg);
+      saveLocalPackage(sample.defaultPkg);
+      setRecords(sample.records);
+      saveLocalRecords(sample.records);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -190,6 +162,16 @@ export const App: React.FC = () => {
     await logoutUser();
   };
 
+  const handleOpenCreateModal = () => {
+    setEditingPackage(null);
+    setIsNewPackageModalOpen(true);
+  };
+
+  const handleOpenEditModal = () => {
+    setEditingPackage(activePackage);
+    setIsNewPackageModalOpen(true);
+  };
+
   return (
     <div className="app-container">
       {/* iOS Top Navigation Header */}
@@ -202,46 +184,45 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="app-content">
-        {activeTab === 'today' && (
-          <>
-            <TodayQuickLogger
-              todayRecord={getTodayRecord()}
-              config={config}
-              activePackage={activePackage}
-              onUpdateRecord={handleUpdateRecord}
-              onResetToday={handleResetToday}
-            />
+        {/* Calendar / Tracker is the primary main view */}
+        {activeTab === 'calendar' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Active Plan Card */}
             <PackageSummaryCard
               pkg={activePackage}
               stats={stats}
               config={config}
-              onOpenNewPackage={() => setIsNewPackageModalOpen(true)}
+              onOpenNewPackage={handleOpenCreateModal}
+              onEditPackage={handleOpenEditModal}
               onDeletePackage={handleDeletePackage}
             />
-          </>
+
+            {/* Interactive Calendar with 1-Tap Confirmation Bar */}
+            <MealCalendar
+              records={records}
+              config={config}
+              activePackage={activePackage}
+              onSaveRecord={handleUpdateRecord}
+              onClearRecord={handleClearRecord}
+            />
+          </div>
         )}
 
-        {activeTab === 'calendar' && (
-          <MealCalendar
-            records={records}
-            config={config}
-            activePackage={activePackage}
-            onSaveRecord={handleUpdateRecord}
-          />
-        )}
-
+        {/* Dedicated Plan Details Tab */}
         {activeTab === 'package' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <PackageSummaryCard
               pkg={activePackage}
               stats={stats}
               config={config}
-              onOpenNewPackage={() => setIsNewPackageModalOpen(true)}
+              onOpenNewPackage={handleOpenCreateModal}
+              onEditPackage={handleOpenEditModal}
               onDeletePackage={handleDeletePackage}
             />
           </div>
         )}
 
+        {/* Financial & WhatsApp Statement Tab */}
         {activeTab === 'analytics' && (
           <ExpenseBreakdown
             stats={stats}
@@ -251,6 +232,7 @@ export const App: React.FC = () => {
           />
         )}
 
+        {/* Settings Tab */}
         {activeTab === 'settings' && (
           <SettingsView
             config={config}
@@ -267,12 +249,16 @@ export const App: React.FC = () => {
         carryOverCount={stats.carryOverDays}
       />
 
-      {/* New Package Modal */}
+      {/* Create / Edit Plan Modal */}
       {isNewPackageModalOpen && (
         <NewPackageModal
           config={config}
+          initialPackage={editingPackage}
           onSavePackage={handleSavePackage}
-          onClose={() => setIsNewPackageModalOpen(false)}
+          onClose={() => {
+            setIsNewPackageModalOpen(false);
+            setEditingPackage(null);
+          }}
         />
       )}
 

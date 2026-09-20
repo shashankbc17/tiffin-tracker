@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { PackagePlan, CarryOverStats, RateConfig } from '../../types';
-import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X } from 'lucide-react';
+import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3 } from 'lucide-react';
 
 interface PackageSummaryCardProps {
   pkg: PackagePlan | null;
   stats: CarryOverStats;
   config: RateConfig;
   onOpenNewPackage: () => void;
+  onEditPackage?: () => void;
   onDeletePackage?: (deleteLogs: boolean) => void;
 }
 
@@ -15,6 +16,7 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   stats,
   config,
   onOpenNewPackage,
+  onEditPackage,
   onDeletePackage,
 }) => {
   const currency = config.currency || '₹';
@@ -81,6 +83,29 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {onEditPackage && (
+              <button 
+                onClick={onEditPackage}
+                title="Edit active plan"
+                style={{ 
+                  background: 'rgba(59, 130, 246, 0.15)', 
+                  border: '1px solid rgba(59, 130, 246, 0.35)', 
+                  color: '#93c5fd',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '5px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Edit3 size={11} />
+                <span>Edit</span>
+              </button>
+            )}
+
             <button 
               onClick={onOpenNewPackage}
               style={{ 

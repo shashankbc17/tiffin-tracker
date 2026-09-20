@@ -3,12 +3,14 @@ import { DayRecord, RateConfig, PackagePlan } from '../../types';
 import { formatDate } from '../../services/carryOverEngine';
 import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
+import { TodayActionBar } from './TodayActionBar';
 
 interface MealCalendarProps {
   records: Record<string, DayRecord>;
   config: RateConfig;
   activePackage: PackagePlan | null;
   onSaveRecord: (record: DayRecord) => void;
+  onClearRecord?: (dateStr: string) => void;
 }
 
 export const MealCalendar: React.FC<MealCalendarProps> = ({
@@ -16,6 +18,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
   config,
   activePackage,
   onSaveRecord,
+  onClearRecord,
 }) => {
   const todayStr = formatDate(new Date());
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
@@ -37,6 +40,27 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
     setCurrentMonthDate(new Date(year, month + 1, 1));
   };
 
+  const handleQuickConfirmToday = (status: 'delivered' | 'skipped') => {
+    const updated: DayRecord = {
+      date: todayStr,
+      breakfast: {
+        status,
+        persons: config.defaultPersons || 1,
+        rate: activePackage?.breakfastRate || config.defaultBreakfastRate,
+        notes: status === 'skipped' ? 'Carried over' : undefined,
+      },
+      lunch: {
+        status,
+        persons: config.defaultPersons || 1,
+        rate: activePackage?.lunchRate || config.defaultLunchRate,
+        notes: status === 'skipped' ? 'Carried over' : undefined,
+      },
+      isCookOff: false,
+      updatedAt: new Date().toISOString(),
+    };
+    onSaveRecord(updated);
+  };
+
   // Calendar Grid Calculation
   const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sun
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -51,6 +75,15 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* 1-Tap Today Confirmation Bar */}
+      <TodayActionBar
+        todayRecord={records[todayStr]}
+        activePackage={activePackage}
+        config={config}
+        onConfirmToday={handleQuickConfirmToday}
+        onOpenDayDetails={(dateStr) => setSelectedDate(dateStr)}
+      />
+
       {/* Month Navigation Card */}
       <div className="ios-card" style={{ padding: '16px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -99,6 +132,8 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
               ? !activePackage.activeDaysOfWeek.includes(dayOfWeek)
               : false;
 
+            const hasConfirmedDelivery = (bStatus && bStatus !== 'none') || (lStatus && lStatus !== 'none') || isCookOff;
+
             return (
               <div
                 key={curDateStr}
@@ -107,16 +142,18 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
                 style={{
                   background: isCookOff 
                     ? 'rgba(239, 68, 68, 0.12)' 
-                    : isScheduledOff && !bStatus && !lStatus
+                    : isScheduledOff && !hasConfirmedDelivery
                     ? 'rgba(255, 255, 255, 0.015)'
                     : undefined,
                   borderColor: isCookOff 
                     ? 'rgba(239, 68, 68, 0.3)' 
+                    : isToday 
+                    ? 'var(--accent-primary)' 
                     : undefined,
-                  opacity: isScheduledOff && !bStatus && !lStatus ? 0.45 : 1
+                  opacity: isScheduledOff && !hasConfirmedDelivery ? 0.45 : 1
                 }}
               >
-                <span className="calendar-day-number" style={{ color: isToday ? 'var(--accent-primary)' : 'inherit' }}>
+                <span className="calendar-day-number" style={{ color: isToday ? 'var(--accent-primary)' : 'inherit', fontWeight: isToday ? 800 : 600 }}>
                   {dayNum}
                 </span>
 
@@ -126,7 +163,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
                     <span style={{ fontSize: '10px' }}>🏖️</span>
                   ) : (
                     <>
-                      {/* Breakfast dot */}
+                      {/* Breakfast dot - only shows when confirmed */}
                       {bStatus && bStatus !== 'none' && (
                         <div 
                           className={`dot-indicator ${
@@ -140,7 +177,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
                         />
                       )}
 
-                      {/* Lunch dot */}
+                      {/* Lunch dot - only shows when confirmed */}
                       {lStatus && lStatus !== 'none' && (
                         <div 
                           className={`dot-indicator ${
@@ -165,16 +202,16 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
       {/* Calendar Color Legend */}
       <div className="ios-card" style={{ padding: '14px 18px' }}>
         <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>
-          Calendar Legend:
+          Calendar Guide:
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', color: 'var(--text-secondary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div className="dot-indicator dot-breakfast" />
-            <span>🍳 Breakfast Served</span>
+            <span>🍳 Breakfast Confirmed</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div className="dot-indicator dot-lunch" />
-            <span>🍱 Lunch Served</span>
+            <span>🍱 Lunch Confirmed</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div className="dot-indicator dot-carryover" />
@@ -183,9 +220,9 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span>🏖️ Cook Holiday</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ opacity: 0.5 }}>📅 Scheduled Off-Day</span>
-          </div>
+        </div>
+        <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--text-muted)' }}>
+          💡 Tap any date on the calendar to mark, skip, or adjust portions for that day.
         </div>
       </div>
 
@@ -197,6 +234,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
           config={config}
           activePackage={activePackage}
           onSave={onSaveRecord}
+          onClear={onClearRecord}
           onClose={() => setSelectedDate(null)}
         />
       )}

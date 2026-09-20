@@ -22,17 +22,14 @@ export const DEFAULT_CONFIG: RateConfig = {
  */
 export function generateSampleData() {
   const today = new Date();
-  const startDate = new Date();
-  startDate.setDate(today.getDate() - 12); // started 12 days ago
-
-  const y = startDate.getFullYear();
-  const m = String(startDate.getMonth() + 1).padStart(2, '0');
-  const d = String(startDate.getDate()).padStart(2, '0');
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
   const startStr = `${y}-${m}-${d}`;
 
   const defaultPkg: PackagePlan = {
     id: 'pkg_active_1',
-    title: 'Monthly Breakfast & Lunch Plan',
+    title: 'My Meal Subscription',
     startDate: startStr,
     totalDays: 30,
     activeDaysOfWeek: [1, 2, 3, 4, 5, 6], // Mon - Sat (Skip Sunday)
@@ -43,53 +40,9 @@ export function generateSampleData() {
     defaultPersons: 1,
     totalAmountPaid: 4500,
     status: 'active',
-    notes: 'Pure vegetarian home-style meals',
   };
 
   const records: Record<string, DayRecord> = {};
-
-  for (let i = 0; i <= 12; i++) {
-    const curDate = new Date(startDate);
-    curDate.setDate(startDate.getDate() + i);
-    const dateStr = curDate.toISOString().split('T')[0];
-
-    // Simulate 2 skipped days (carried over!) and 1 cook off
-    if (i === 4) {
-      // Cook took leave
-      records[dateStr] = {
-        date: dateStr,
-        breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Cook holiday (Carried over)' },
-        lunch: { status: 'skipped', persons: 1, rate: 90, notes: 'Cook holiday (Carried over)' },
-        isCookOff: true,
-        notes: 'Cook out of station',
-      };
-    } else if (i === 8) {
-      // Office lunch event, breakfast taken, lunch skipped
-      records[dateStr] = {
-        date: dateStr,
-        breakfast: { status: 'delivered', persons: 1, rate: 60 },
-        lunch: { status: 'skipped', persons: 1, rate: 90, notes: 'Office team lunch (Carried over)' },
-        isCookOff: false,
-      };
-    } else if (i === 11) {
-      // Guest visited! Extra portion taken
-      records[dateStr] = {
-        date: dateStr,
-        breakfast: { status: 'delivered', persons: 2, rate: 60, notes: 'Guest breakfast' },
-        lunch: { status: 'delivered', persons: 2, rate: 90, notes: 'Guest lunch' },
-        isCookOff: false,
-      };
-    } else {
-      // Normal delivery
-      records[dateStr] = {
-        date: dateStr,
-        breakfast: { status: 'delivered', persons: 1, rate: 60 },
-        lunch: { status: 'delivered', persons: 1, rate: 90 },
-        isCookOff: false,
-      };
-    }
-  }
-
   return { defaultPkg, records };
 }
 

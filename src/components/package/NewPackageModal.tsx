@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { PackagePlan, RateConfig } from '../../types';
 import { formatDate, addActiveDays } from '../../services/carryOverEngine';
-import { X, Sparkles, Check, CalendarDays } from 'lucide-react';
+import { X, Sparkles, Check, CalendarDays, Edit3 } from 'lucide-react';
 
 interface NewPackageModalProps {
   config: RateConfig;
   onSavePackage: (pkg: PackagePlan) => void;
   onClose: () => void;
+  initialPackage?: PackagePlan | null;
 }
 
 const DAYS_META = [
@@ -23,25 +24,38 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
   config,
   onSavePackage,
   onClose,
+  initialPackage,
 }) => {
   const currency = config.currency || '₹';
   const todayStr = formatDate(new Date());
 
-  const [title, setTitle] = useState('Monthly Tiffin Subscription');
-  const [startDate, setStartDate] = useState(todayStr);
-  const [totalDays, setTotalDays] = useState(30);
-  const [activeDaysOfWeek, setActiveDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5, 6]); // Default Mon-Sat
-  const [includesBreakfast, setIncludesBreakfast] = useState(true);
-  const [breakfastRate, setBreakfastRate] = useState(config.defaultBreakfastRate || 60);
-  const [includesLunch, setIncludesLunch] = useState(true);
-  const [lunchRate, setLunchRate] = useState(config.defaultLunchRate || 90);
-  const [defaultPersons, setDefaultPersons] = useState(config.defaultPersons || 1);
-  const [notes, setNotes] = useState('');
+  const [title, setTitle] = useState(initialPackage?.title || 'Monthly Tiffin Subscription');
+  const [startDate, setStartDate] = useState(initialPackage?.startDate || todayStr);
+  const [totalDays, setTotalDays] = useState(initialPackage?.totalDays || 30);
+  const [activeDaysOfWeek, setActiveDaysOfWeek] = useState<number[]>(
+    initialPackage?.activeDaysOfWeek || [1, 2, 3, 4, 5, 6]
+  );
+  const [includesBreakfast, setIncludesBreakfast] = useState(
+    initialPackage !== undefined && initialPackage !== null ? initialPackage.includesBreakfast : true
+  );
+  const [breakfastRate, setBreakfastRate] = useState(
+    initialPackage?.breakfastRate || config.defaultBreakfastRate || 60
+  );
+  const [includesLunch, setIncludesLunch] = useState(
+    initialPackage !== undefined && initialPackage !== null ? initialPackage.includesLunch : true
+  );
+  const [lunchRate, setLunchRate] = useState(
+    initialPackage?.lunchRate || config.defaultLunchRate || 90
+  );
+  const [defaultPersons, setDefaultPersons] = useState(
+    initialPackage?.defaultPersons || config.defaultPersons || 1
+  );
+  const [notes, setNotes] = useState(initialPackage?.notes || '');
 
   // Auto calculate expected total package amount
   const dailyPerPerson = (includesBreakfast ? breakfastRate : 0) + (includesLunch ? lunchRate : 0);
   const computedTotal = dailyPerPerson * defaultPersons * totalDays;
-  const [amountPaid, setAmountPaid] = useState(computedTotal);
+  const [amountPaid, setAmountPaid] = useState(initialPackage?.totalAmountPaid || computedTotal);
 
   const handleDaysPreset = (days: number) => {
     setTotalDays(days);
@@ -75,7 +89,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newPkg: PackagePlan = {
-      id: `pkg_${Date.now()}`,
+      id: initialPackage?.id || `pkg_${Date.now()}`,
       title: title.trim() || 'Tiffin Package',
       startDate,
       totalDays: Number(totalDays),
@@ -86,7 +100,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
       lunchRate: Number(lunchRate),
       defaultPersons: Number(defaultPersons),
       totalAmountPaid: Number(amountPaid),
-      status: 'active',
+      status: initialPackage?.status || 'active',
       notes: notes.trim() || undefined,
     };
     onSavePackage(newPkg);
@@ -100,8 +114,13 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>New Plan</div>
-            <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Subscribe Meal Package</h3>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              {initialPackage ? 'Modify Subscription' : 'New Plan'}
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {initialPackage && <Edit3 size={18} color="var(--accent-primary)" />}
+              <span>{initialPackage ? 'Edit Active Plan' : 'Subscribe Meal Package'}</span>
+            </h3>
           </div>
           <button 
             onClick={onClose} 
@@ -124,7 +143,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
             />
           </div>
 
-          {/* Delivery Days of Week Selector (NEW!) */}
+          {/* Delivery Days of Week Selector */}
           <div className="ios-input-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label className="ios-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -216,9 +235,6 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                 );
               })}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Selected days only consume package credits. Unselected days are treated as regular off-days without penalizing you!
-            </div>
           </div>
 
           {/* Start Date */}
@@ -235,7 +251,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
 
           {/* Days Presets */}
           <div className="ios-input-group">
-            <label className="ios-label">Total Meal Days Purchased</label>
+            <label className="ios-label">Total Meal Days in Plan</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
               {[15, 20, 30, 45].map((d) => (
                 <button
@@ -341,7 +357,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
           {/* Total Upfront Cost Summary */}
           <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '14px', borderRadius: 'var(--radius-md)', marginBottom: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
-              <span>Computed Total Amount:</span>
+              <span>Computed Plan Amount:</span>
               <span style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '16px' }}>
                 {currency}{computedTotal.toLocaleString()}
               </span>
@@ -352,8 +368,8 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
           </div>
 
           <button type="submit" className="ios-btn ios-btn-primary" style={{ width: '100%' }}>
-            <Sparkles size={16} />
-            <span>Start Subscription</span>
+            {initialPackage ? <Check size={16} /> : <Sparkles size={16} />}
+            <span>{initialPackage ? 'Save Plan Changes' : 'Start Subscription'}</span>
           </button>
         </form>
       </div>
