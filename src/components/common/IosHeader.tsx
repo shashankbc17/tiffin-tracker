@@ -74,10 +74,20 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
                 fontSize: '11px',
                 color: '#34d399'
               }}
-              title="Synced with Google Cloud"
+              title="Real-Time Sync Active across all your signed-in devices"
             >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  boxShadow: '0 0 8px #10b981',
+                  display: 'inline-block',
+                }}
+              />
               <Cloud size={12} />
-              <span>Cloud Sync</span>
+              <span>Live Sync</span>
             </div>
 
             {/* Tap Avatar to Open Profile Modal */}
@@ -98,30 +108,28 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
                 <img 
                   src={customPhoto} 
                   alt={customName} 
-                  style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '50%', 
-                    border: '2px solid var(--accent-primary)',
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
                     objectFit: 'cover',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                  }}
+                    border: '1.5px solid var(--accent-primary)'
+                  }} 
                 />
               ) : (
-                <div 
-                  style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '50%', 
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    border: '1.5px solid rgba(255, 255, 255, 0.2)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--accent-primary), #059669)',
+                    color: '#fff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: 800,
                     fontSize: '13px',
-                    color: '#ffffff'
+                    fontWeight: 700,
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
                   }}
                 >
                   {initialLetter}
@@ -134,9 +142,10 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
             onClick={onLogin}
             className="ios-btn ios-btn-secondary"
             style={{ padding: '6px 12px', fontSize: '12px', borderRadius: 'var(--radius-full)' }}
+            title="Sign in with Google on all devices to sync meals in real-time"
           >
             <LogIn size={13} />
-            <span>Google Sign In</span>
+            <span>Sign In to Sync</span>
           </button>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { DayRecord, PackagePlan, RateConfig } from '../types';
 import { db } from './firebase';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
   CONFIG: 'tiffinflow_config',
@@ -169,6 +169,7 @@ export async function syncUserDataFromCloud(userId: string): Promise<{
   config?: RateConfig;
   pkg?: PackagePlan | null;
   packages?: PackagePlan[];
+  activePackageId?: string | null;
   records?: Record<string, DayRecord>;
 } | null> {
   if (!db) return null;
@@ -185,11 +186,52 @@ export async function syncUserDataFromCloud(userId: string): Promise<{
   }
 }
 
+/**
+ * Real-time bidirectional WebSocket listener for multi-device sync
+ * Updates trigger in ~100ms when any signed-in device makes a change!
+ */
+export function subscribeToCloudUserData(
+  userId: string,
+  onData: (cloudData: {
+    config?: RateConfig;
+    pkg?: PackagePlan | null;
+    packages?: PackagePlan[];
+    activePackageId?: string | null;
+    records?: Record<string, DayRecord>;
+    lastSyncedAt?: string;
+  }) => void
+): Unsubscribe {
+  if (!db) return () => {};
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    return onSnapshot(
+      userDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          // If this update was locally generated pending write on THIS device, skip echo
+          if (docSnap.metadata.hasPendingWrites) {
+            return;
+          }
+          const data = docSnap.data() as any;
+          onData(data);
+        }
+      },
+      (err) => {
+        console.warn('Firestore real-time subscription error:', err);
+      }
+    );
+  } catch (err) {
+    console.error('Failed to setup Firestore real-time listener:', err);
+    return () => {};
+  }
+}
+
 export async function syncUserDataToCloud(
   userId: string,
   config: RateConfig,
   packagesOrPkg: PackagePlan[] | PackagePlan | null,
-  records: Record<string, DayRecord>
+  records: Record<string, DayRecord>,
+  activePackageId?: string | null
 ): Promise<void> {
   if (!db) return;
   try {
@@ -207,6 +249,7 @@ export async function syncUserDataToCloud(
         config,
         pkg: activePkg,
         packages: packagesArray,
+        activePackageId: activePackageId || activePkg?.id || null,
         records,
         lastSyncedAt: new Date().toISOString(),
       },

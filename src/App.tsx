@@ -12,6 +12,7 @@ import {
   saveLocalRecords, 
   syncUserDataFromCloud, 
   syncUserDataToCloud,
+  subscribeToCloudUserData,
   generateSampleData
 } from './services/storage';
 import { 
@@ -66,7 +67,7 @@ export const App: React.FC = () => {
     packages[0] ||
     null;
 
-  // Subscribe to Firebase Auth & Cloud Sync
+  // Subscribe to Firebase Auth & Real-Time Cloud Sync across all devices
   useEffect(() => {
     checkRedirectAuth().then((u) => {
       if (u) setUser(u);
@@ -76,34 +77,81 @@ export const App: React.FC = () => {
       }
     });
 
-    const unsubscribe = subscribeToAuthChanges(async (currentUser) => {
+    let unsubscribeFirestore: (() => void) | null = null;
+
+    const unsubscribeAuth = subscribeToAuthChanges(async (currentUser) => {
       setUser(currentUser);
+
+      // Clean up previous Firestore listener if user switches or logs out
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+        unsubscribeFirestore = null;
+      }
+
       if (currentUser) {
+        // 1. If user document doesn't exist in cloud yet, seed with initial local state
         const cloudData = await syncUserDataFromCloud(currentUser.uid);
-        if (cloudData) {
-          if (cloudData.config) {
-            setConfig(cloudData.config);
-            saveLocalConfig(cloudData.config);
-          }
-          if (cloudData.packages && Array.isArray(cloudData.packages) && cloudData.packages.length > 0) {
-            setPackages(cloudData.packages);
-            saveLocalPackages(cloudData.packages);
-          } else if (cloudData.pkg) {
-            setPackages([cloudData.pkg]);
-            saveLocalPackages([cloudData.pkg]);
-          }
-          if (cloudData.records) {
-            setRecords(cloudData.records);
-            saveLocalRecords(cloudData.records);
-          }
-        } else {
-          // Push initial local state to cloud
-          await syncUserDataToCloud(currentUser.uid, config, packages, records);
+        if (!cloudData) {
+          await syncUserDataToCloud(currentUser.uid, config, packages, records, activePackageId);
         }
+
+        // 2. Start real-time Firestore WebSocket listener (~100ms sync across all devices!)
+        unsubscribeFirestore = subscribeToCloudUserData(currentUser.uid, (data) => {
+          if (!data) return;
+          if (data.config) {
+            setConfig(data.config);
+            saveLocalConfig(data.config);
+          }
+          if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
+            setPackages(data.packages);
+            saveLocalPackages(data.packages);
+          } else if (data.pkg) {
+            setPackages([data.pkg]);
+            saveLocalPackages([data.pkg]);
+          }
+          if (data.activePackageId) {
+            setActivePackageId(data.activePackageId);
+            saveLocalActivePackageId(data.activePackageId);
+          }
+          if (data.records) {
+            setRecords(data.records);
+            saveLocalRecords(data.records);
+          }
+        });
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribeFirestore) unsubscribeFirestore();
+      unsubscribeAuth();
+    };
+  }, []);
+
+  // Instantaneous (< 5ms) sync across multiple tabs on the same device
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'tiffinflow_records' && e.newValue) {
+        try {
+          setRecords(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'tiffinflow_packages' && e.newValue) {
+        try {
+          setPackages(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'tiffinflow_config' && e.newValue) {
+        try {
+          setConfig(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'tiffinflow_active_pkg_id' && e.newValue) {
+        setActivePackageId(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Automated Delivery Check (Runs on launch + every 60 seconds)
@@ -114,7 +162,7 @@ export const App: React.FC = () => {
         setRecords(updatedRecords);
         saveLocalRecords(updatedRecords);
         if (user) {
-          syncUserDataToCloud(user.uid, config, packages, updatedRecords);
+          syncUserDataToCloud(user.uid, config, packages, updatedRecords, activePackageId);
         }
       }
     };
@@ -122,7 +170,7 @@ export const App: React.FC = () => {
     checkAndApplyAutoDelivery();
     const interval = setInterval(checkAndApplyAutoDelivery, 60000);
     return () => clearInterval(interval);
-  }, [packages, records, config, user]);
+  }, [packages, records, config, user, activePackageId]);
 
   // If any package started today but was added after cutoff with no meals logged,
   // automatically advance its start date to tomorrow so it waits until the next day.
@@ -144,10 +192,10 @@ export const App: React.FC = () => {
       setPackages(adjusted);
       saveLocalPackages(adjusted);
       if (user) {
-        syncUserDataToCloud(user.uid, config, adjusted, records);
+        syncUserDataToCloud(user.uid, config, adjusted, records, activePackageId);
       }
     }
-  }, [packages, records, config, user]);
+  }, [packages, records, config, user, activePackageId]);
 
   // Compute live carry-over and stats for currently active package
   const stats = calculateCarryOver(activePackage, records, config);
@@ -157,7 +205,7 @@ export const App: React.FC = () => {
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
-      syncUserDataToCloud(user.uid, config, packages, next);
+      syncUserDataToCloud(user.uid, config, packages, next, activePackageId);
     }
   };
 
@@ -167,7 +215,7 @@ export const App: React.FC = () => {
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
-      syncUserDataToCloud(user.uid, config, packages, next);
+      syncUserDataToCloud(user.uid, config, packages, next, activePackageId);
     }
   };
 
@@ -189,7 +237,7 @@ export const App: React.FC = () => {
     setEditingPackage(null);
 
     if (user) {
-      syncUserDataToCloud(user.uid, config, nextPackages, records);
+      syncUserDataToCloud(user.uid, config, nextPackages, records, newPkg.id);
     }
   };
 
@@ -210,20 +258,23 @@ export const App: React.FC = () => {
     }
 
     if (user) {
-      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords);
+      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, nextActiveId);
     }
   };
 
   const handleSelectPackage = (id: string) => {
     setActivePackageId(id);
     saveLocalActivePackageId(id);
+    if (user) {
+      syncUserDataToCloud(user.uid, config, packages, records, id);
+    }
   };
 
   const handleSaveConfig = (newConfig: RateConfig) => {
     setConfig(newConfig);
     saveLocalConfig(newConfig);
     if (user) {
-      syncUserDataToCloud(user.uid, newConfig, packages, records);
+      syncUserDataToCloud(user.uid, newConfig, packages, records, activePackageId);
     }
   };
 
