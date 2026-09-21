@@ -43,6 +43,10 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   const { dateStr: todayStr } = getIstNow();
   const oneMonthAgoStr = addDays(todayStr, -30);
 
+  // Check meal types included in active package
+  const isPlanIncludesBf = activePackage ? activePackage.includesBreakfast !== false : true;
+  const isPlanIncludesLunch = activePackage ? activePackage.includesLunch !== false : true;
+
   const [copied, setCopied] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
@@ -273,24 +277,28 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 <span style={{ color: '#f87171', fontWeight: 600 }}>🏖️ Cook Off Day</span>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div>
-                    🍳 Breakfast:{' '}
-                    <strong style={{ color: pastBStat === 'delivered' ? '#fbbf24' : '#c4b5fd' }}>
-                      {pastBStat}
-                    </strong>
-                    {pastRec?.breakfast?.menuItem && (
-                      <span style={{ color: '#94a3b8' }}> — {pastRec.breakfast.menuItem}</span>
-                    )}
-                  </div>
-                  <div>
-                    🍱 Lunch:{' '}
-                    <strong style={{ color: pastLStat === 'delivered' ? '#34d399' : '#c4b5fd' }}>
-                      {pastLStat}
-                    </strong>
-                    {pastRec?.lunch?.menuItem && (
-                      <span style={{ color: '#94a3b8' }}> — {pastRec.lunch.menuItem}</span>
-                    )}
-                  </div>
+                  {pastBStat !== 'none' && (isPlanIncludesBf || pastBStat === 'extra') && (
+                    <div>
+                      🍳 Breakfast:{' '}
+                      <strong style={{ color: pastBStat === 'delivered' ? '#fbbf24' : '#c4b5fd' }}>
+                        {pastBStat}
+                      </strong>
+                      {pastRec?.breakfast?.menuItem && (
+                        <span style={{ color: '#94a3b8' }}> — {pastRec.breakfast.menuItem}</span>
+                      )}
+                    </div>
+                  )}
+                  {pastLStat !== 'none' && (isPlanIncludesLunch || pastLStat === 'extra') && (
+                    <div>
+                      🍱 Lunch:{' '}
+                      <strong style={{ color: pastLStat === 'delivered' ? '#34d399' : '#c4b5fd' }}>
+                        {pastLStat}
+                      </strong>
+                      {pastRec?.lunch?.menuItem && (
+                        <span style={{ color: '#94a3b8' }}> — {pastRec.lunch.menuItem}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -492,12 +500,16 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             fontSize: '12px',
           }}
         >
-          <div style={{ color: 'var(--text-secondary)' }}>
-            🍳 Breakfasts: <strong style={{ color: '#fbbf24' }}>{monthlyStats.breakfastDelivered}</strong>
-          </div>
-          <div style={{ color: 'var(--text-secondary)' }}>
-            🍱 Lunches: <strong style={{ color: '#34d399' }}>{monthlyStats.lunchDelivered}</strong>
-          </div>
+          {isPlanIncludesBf && (
+            <div style={{ color: 'var(--text-secondary)' }}>
+              🍳 Breakfasts: <strong style={{ color: '#fbbf24' }}>{monthlyStats.breakfastDelivered}</strong>
+            </div>
+          )}
+          {isPlanIncludesLunch && (
+            <div style={{ color: 'var(--text-secondary)' }}>
+              🍱 Lunches: <strong style={{ color: '#34d399' }}>{monthlyStats.lunchDelivered}</strong>
+            </div>
+          )}
           <div style={{ color: 'var(--text-secondary)' }}>
             🏖️ Cook Off: <strong style={{ color: '#f87171' }}>{monthlyStats.cookOffDays} days</strong>
           </div>
@@ -628,6 +640,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               const bPersons = rec.breakfast?.persons || 1;
               const lPersons = rec.lunch?.persons || 1;
 
+              const shouldShowRowBf = bStat !== 'none' && (isPlanIncludesBf || bStat === 'extra');
+              const shouldShowRowLunch = lStat !== 'none' && (isPlanIncludesLunch || lStat === 'extra');
+
               const dateObj = new Date(dateStr + 'T00:00:00');
               const formattedRowDate = dateObj.toLocaleDateString('en-US', {
                 weekday: 'short',
@@ -684,7 +699,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {/* Compact Breakfast Badge */}
-                      {bStat !== 'none' && (
+                      {shouldShowRowBf && (
                         <span
                           style={{
                             padding: '2px 7px',
@@ -710,7 +725,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                       )}
 
                       {/* Compact Lunch Badge */}
-                      {lStat !== 'none' && (
+                      {shouldShowRowLunch && (
                         <span
                           style={{
                             padding: '2px 7px',
@@ -757,94 +772,104 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                       }}
                     >
                       {/* Breakfast Detail */}
-                      <div
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid rgba(251, 191, 36, 0.2)',
-                        }}
-                      >
+                      {shouldShowRowBf && (
                         <div
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(251, 191, 36, 0.2)',
                           }}
                         >
-                          <span
+                          <div
                             style={{
-                              fontWeight: 700,
-                              color: '#fbbf24',
                               display: 'flex',
+                              justifyContent: 'space-between',
                               alignItems: 'center',
-                              gap: '4px',
                             }}
                           >
-                            <Coffee size={12} /> Breakfast: {bStat.toUpperCase()}
-                          </span>
-                          <span style={{ color: 'var(--text-muted)' }}>
-                            {bPersons} Person(s) · {currency}
-                            {rec.breakfast?.rate || config.defaultBreakfastRate}/p
-                          </span>
-                        </div>
-                        <div style={{ marginTop: '4px', color: 'var(--text-secondary)' }}>
-                          🍲 <strong>Dish / Sent:</strong>{' '}
-                          {rec.breakfast?.menuItem || (
-                            <span style={{ color: 'var(--text-muted)' }}>No dish noted</span>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: '#fbbf24',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <Coffee size={12} /> Breakfast: {bStat.toUpperCase()}
+                            </span>
+                            <span style={{ color: 'var(--text-muted)' }}>
+                              {bPersons} Person(s) · {currency}
+                              {rec.breakfast?.rate || config.defaultBreakfastRate}/p
+                            </span>
+                          </div>
+                          <div style={{ marginTop: '4px', color: 'var(--text-secondary)' }}>
+                            🍲 <strong>Dish / Sent:</strong>{' '}
+                            {rec.breakfast?.menuItem || (
+                              <span style={{ color: 'var(--text-muted)' }}>No dish noted</span>
+                            )}
+                          </div>
+                          {rec.breakfast?.autoDelivered && (
+                            <div style={{ marginTop: '3px', color: '#60a5fa', fontSize: '10.5px' }}>
+                              ⚡ Auto-marked delivered after 11:00 AM IST cutoff
+                            </div>
                           )}
                         </div>
-                        {rec.breakfast?.autoDelivered && (
-                          <div style={{ marginTop: '3px', color: '#60a5fa', fontSize: '10.5px' }}>
-                            ⚡ Auto-marked delivered after 11:00 AM IST cutoff
-                          </div>
-                        )}
-                      </div>
+                      )}
 
                       {/* Lunch Detail */}
-                      <div
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid rgba(16, 185, 129, 0.2)',
-                        }}
-                      >
+                      {shouldShowRowLunch && (
                         <div
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(16, 185, 129, 0.2)',
                           }}
                         >
-                          <span
+                          <div
                             style={{
-                              fontWeight: 700,
-                              color: '#34d399',
                               display: 'flex',
+                              justifyContent: 'space-between',
                               alignItems: 'center',
-                              gap: '4px',
                             }}
                           >
-                            <Utensils size={12} /> Lunch: {lStat.toUpperCase()}
-                          </span>
-                          <span style={{ color: 'var(--text-muted)' }}>
-                            {lPersons} Person(s) · {currency}
-                            {rec.lunch?.rate || config.defaultLunchRate}/p
-                          </span>
-                        </div>
-                        <div style={{ marginTop: '4px', color: 'var(--text-secondary)' }}>
-                          🍲 <strong>Dish / Sent:</strong>{' '}
-                          {rec.lunch?.menuItem || (
-                            <span style={{ color: 'var(--text-muted)' }}>No dish noted</span>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: '#34d399',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <Utensils size={12} /> Lunch: {lStat.toUpperCase()}
+                            </span>
+                            <span style={{ color: 'var(--text-muted)' }}>
+                              {lPersons} Person(s) · {currency}
+                              {rec.lunch?.rate || config.defaultLunchRate}/p
+                            </span>
+                          </div>
+                          <div style={{ marginTop: '4px', color: 'var(--text-secondary)' }}>
+                            🍲 <strong>Dish / Sent:</strong>{' '}
+                            {rec.lunch?.menuItem || (
+                              <span style={{ color: 'var(--text-muted)' }}>No dish noted</span>
+                            )}
+                          </div>
+                          {rec.lunch?.autoDelivered && (
+                            <div style={{ marginTop: '3px', color: '#60a5fa', fontSize: '10.5px' }}>
+                              ⚡ Auto-marked delivered after 3:00 PM IST cutoff
+                            </div>
                           )}
                         </div>
-                        {rec.lunch?.autoDelivered && (
-                          <div style={{ marginTop: '3px', color: '#60a5fa', fontSize: '10.5px' }}>
-                            ⚡ Auto-marked delivered after 3:00 PM IST cutoff
-                          </div>
-                        )}
-                      </div>
+                      )}
+
+                      {!shouldShowRowBf && !shouldShowRowLunch && (
+                        <div style={{ color: rec.isCookOff ? '#f87171' : 'var(--text-muted)', fontSize: '11px', padding: '2px 0' }}>
+                          {rec.isCookOff ? '🏖️ Cook Off Day (Meals carried over)' : 'No meals recorded for this plan.'}
+                        </div>
+                      )}
 
                       {/* Day Note & Edit Action */}
                       <div

@@ -361,21 +361,31 @@ export function generateWhatsAppSummary(
        pkg.activeDaysOfWeek.map(d => daysMap[d]).join(', '))
     : 'Mon - Sat';
 
+  const incBf = pkg ? pkg.includesBreakfast !== false : true;
+  const incLn = pkg ? pkg.includesLunch !== false : true;
+
+  const mealRecordLines: string[] = [];
+  if (incBf) {
+    mealRecordLines.push(`• 🍳 Breakfast Served: ${stats.breakfastDelivered} | Skipped: ${stats.breakfastSkipped}`);
+  }
+  if (incLn) {
+    mealRecordLines.push(`• 🍱 Lunch Served: ${stats.lunchDelivered} | Skipped: ${stats.lunchSkipped}`);
+  }
+  mealRecordLines.push(`• 🔁 *Carry-over Days Saved:* *${stats.carryOverDays} days*`);
+  mealRecordLines.push(`• ⏳ *Remaining Days in Plan:* *${stats.remainingDays} days*`);
+
   return `🍽️ *Tiffin & Meal Statement - ${monthName}*
 Hi ${caterer}, here is the updated summary for our meal subscription:
 
 📦 *Package Info:*
 • Total Plan: ${stats.totalPackageDays} Days (${scheduleText})
-• Meals: ${pkg?.includesBreakfast ? 'Breakfast ' : ''}${pkg?.includesLunch ? '+ Lunch' : ''}
+• Meals: ${pkg?.includesBreakfast ? 'Breakfast ' : ''}${pkg?.includesLunch ? (pkg.includesBreakfast ? '+ Lunch' : 'Lunch') : ''}
 • Start Date: ${pkg?.startDate || 'N/A'}
 • Original End Date: ${stats.originalEndDate}
 • ⏭️ *Extended End Date (Carry-over):* *${stats.extendedEndDate}*
 
 📊 *Meals Record:*
-• 🍳 Breakfast Served: ${stats.breakfastDelivered} | Skipped: ${stats.breakfastSkipped}
-• 🍱 Lunch Served: ${stats.lunchDelivered} | Skipped: ${stats.lunchSkipped}
-• 🔁 *Carry-over Days Saved:* *${stats.carryOverDays} days*
-• ⏳ *Remaining Days in Plan:* *${stats.remainingDays} days*
+${mealRecordLines.join('\n')}
 
 💰 *Financials:*
 • Total Consumed Value: ${currency}${stats.totalSpent.toLocaleString()}
@@ -643,15 +653,24 @@ export function generateMonthlyWhatsAppSummary(
 ): string {
   const currency = config.currency || '₹';
   const caterer = config.catererName || 'Bhaiya / Caterer';
+  const incBf = pkg ? pkg.includesBreakfast !== false : true;
+  const incLn = pkg ? pkg.includesLunch !== false : true;
+
+  const mealRecordLines: string[] = [];
+  if (incBf) {
+    mealRecordLines.push(`• 🍳 Breakfast Served: ${monthStats.breakfastDelivered} portion(s) | Skipped: ${monthStats.breakfastSkipped}`);
+  }
+  if (incLn) {
+    mealRecordLines.push(`• 🍱 Lunch Served: ${monthStats.lunchDelivered} portion(s) | Skipped: ${monthStats.lunchSkipped}`);
+  }
+  mealRecordLines.push(`• 🏖️ Cook Off Days: ${monthStats.cookOffDays} day(s)`);
+  mealRecordLines.push(`• 📅 Logged Activity: ${monthStats.loggedDaysCount} day(s)`);
 
   return `🍽️ *Tiffin & Meal Monthly Report - ${monthStats.monthLabel}*
 Hi ${caterer}, here is the monthly report for our meal subscription:
 
 📊 *${monthStats.monthLabel} Meals Record:*
-• 🍳 Breakfast Served: ${monthStats.breakfastDelivered} portion(s) | Skipped: ${monthStats.breakfastSkipped}
-• 🍱 Lunch Served: ${monthStats.lunchDelivered} portion(s) | Skipped: ${monthStats.lunchSkipped}
-• 🏖️ Cook Off Days: ${monthStats.cookOffDays} day(s)
-• 📅 Logged Activity: ${monthStats.loggedDaysCount} day(s)
+${mealRecordLines.join('\n')}
 
 💰 *Monthly Financials:*
 • Total Consumed Value: ${currency}${monthStats.totalSpent.toLocaleString()}
