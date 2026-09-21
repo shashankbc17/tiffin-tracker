@@ -52,3 +52,7 @@ tiffin-tracker/
 ## Testing & Verification Policy
 - **DO NOT** run tests, automated test runners, or browser verification subagents unless the user explicitly requests them.
 - The user will check and verify all fixes manually.
+
+## Deployment & Verification Rule (MANDATORY)
+- **ALWAYS push all changes to GitHub Pages** (`git push origin main` and/or `npm run deploy`) so the user can verify changes live on GitHub Pages.
+

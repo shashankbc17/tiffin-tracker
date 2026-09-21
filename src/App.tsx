@@ -47,6 +47,7 @@ import { MfaModal } from './components/common/MfaModal';
 import { ProfileModal } from './components/common/ProfileModal';
 import { HowToUseModal } from './components/common/HowToUseModal';
 import { SyncModal } from './components/common/SyncModal';
+import { FirstUserExperience } from './components/common/FirstUserExperience';
 
 import './styles/ios-theme.css';
 
@@ -153,12 +154,19 @@ export const App: React.FC = () => {
               setConfig(data.config);
               saveLocalConfig(data.config);
             }
-            if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
-              setPackages((prevPkgs) => {
-                const merged = mergePackages(prevPkgs, data.packages || []);
-                saveLocalPackages(merged);
-                return merged;
-              });
+            if (data.packages && Array.isArray(data.packages)) {
+              if (data.packages.length === 0 && !data.pkg) {
+                setPackages([]);
+                saveLocalPackages([]);
+                setActivePackageId(null);
+                saveLocalActivePackageId(null);
+              } else {
+                setPackages((prevPkgs) => {
+                  const merged = mergePackages(prevPkgs, data.packages || []);
+                  saveLocalPackages(merged);
+                  return merged;
+                });
+              }
             } else if (data.pkg) {
               setPackages((prevPkgs) => {
                 const merged = mergePackages(prevPkgs, [data.pkg!]);
@@ -478,15 +486,36 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleLoadSampleData = () => {
+    const sample = generateSampleData();
+    setPackages([sample.defaultPkg]);
+    saveLocalPackages([sample.defaultPkg]);
+    setActivePackageId(sample.defaultPkg.id);
+    saveLocalActivePackageId(sample.defaultPkg.id);
+    setRecords(sample.records);
+    saveLocalRecords(sample.records);
+    if (user) {
+      syncUserDataToCloud(user.uid, config, [sample.defaultPkg], sample.records, sample.defaultPkg.id);
+    }
+  };
+
+  const handleClearAllData = () => {
+    if (window.confirm('Are you sure you want to clear all meal subscriptions and logs? You will start fresh with no active plan.')) {
+      setPackages([]);
+      saveLocalPackages([]);
+      setActivePackageId(null);
+      saveLocalActivePackageId(null);
+      setRecords({});
+      saveLocalRecords({});
+      if (user) {
+        syncUserDataToCloud(user.uid, config, [], {}, null);
+      }
+    }
+  };
+
   const handleResetData = () => {
-    if (window.confirm('Reset app data to sample tiffin subscription?')) {
-      const sample = generateSampleData();
-      setPackages([sample.defaultPkg]);
-      saveLocalPackages([sample.defaultPkg]);
-      setActivePackageId(sample.defaultPkg.id);
-      saveLocalActivePackageId(sample.defaultPkg.id);
-      setRecords(sample.records);
-      saveLocalRecords(sample.records);
+    if (window.confirm('Load sample tiffin subscription and starter data?')) {
+      handleLoadSampleData();
     }
   };
 
@@ -534,134 +563,150 @@ export const App: React.FC = () => {
       <main className="app-content">
         {/* Calendar / Tracker is the primary main view */}
         {activeTab === 'calendar' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Master Edit & Manage Toggle Switch */}
-            <div
-              className="ios-card"
-              style={{
-                padding: '10px 16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: isHomeEditMode
-                  ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(15, 23, 42, 0.92) 100%)'
-                  : 'rgba(255, 255, 255, 0.03)',
-                border: isHomeEditMode
-                  ? '1px solid rgba(139, 92, 246, 0.45)'
-                  : '1px solid var(--glass-border)',
-                borderRadius: 'var(--radius-md)',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: isHomeEditMode ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '15px',
-                  }}
-                >
-                  {isHomeEditMode ? '✏️' : '🔒'}
-                </div>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: isHomeEditMode ? '#f8fafc' : 'var(--text-secondary)' }}>
-                    {isHomeEditMode ? 'Edit & Delete Controls: ON' : 'Master Edit Switch: OFF'}
+          packages.length === 0 ? (
+            <FirstUserExperience
+              onOpenNewPackage={handleOpenCreateModal}
+              onOpenGuide={() => setIsHowToUseModalOpen(true)}
+              onLoadSampleData={handleLoadSampleData}
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Master Edit & Manage Toggle Switch */}
+              <div
+                className="ios-card"
+                style={{
+                  padding: '10px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: isHomeEditMode
+                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(15, 23, 42, 0.92) 100%)'
+                    : 'rgba(255, 255, 255, 0.03)',
+                  border: isHomeEditMode
+                    ? '1px solid rgba(139, 92, 246, 0.45)'
+                    : '1px solid var(--glass-border)',
+                  borderRadius: 'var(--radius-md)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: isHomeEditMode ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '15px',
+                    }}
+                  >
+                    {isHomeEditMode ? '✏️' : '🔒'}
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {isHomeEditMode
-                      ? 'Edit plan, delete plan, and clear buttons are revealed'
-                      : 'Toggle ON to reveal edit & delete options for each section'}
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: isHomeEditMode ? '#f8fafc' : 'var(--text-secondary)' }}>
+                      {isHomeEditMode ? 'Edit & Delete Controls: ON' : 'Master Edit Switch: OFF'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {isHomeEditMode
+                        ? 'Edit plan, delete plan, and clear buttons are revealed'
+                        : 'Toggle ON to reveal edit & delete options for each section'}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* iOS Cupertino Style Switch */}
-              <label style={{ position: 'relative', display: 'inline-block', width: '46px', height: '26px', cursor: 'pointer', flexShrink: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={isHomeEditMode}
-                  onChange={(e) => setIsHomeEditMode(e.target.checked)}
-                  style={{ opacity: 0, width: 0, height: 0 }}
-                />
-                <span
-                  style={{
-                    position: 'absolute',
-                    cursor: 'pointer',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: isHomeEditMode ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.16)',
-                    transition: '0.2s ease',
-                    borderRadius: '26px',
-                    border: isHomeEditMode ? '1px solid rgba(16, 185, 129, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
-                  }}
-                >
+                {/* iOS Cupertino Style Switch */}
+                <label style={{ position: 'relative', display: 'inline-block', width: '46px', height: '26px', cursor: 'pointer', flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={isHomeEditMode}
+                    onChange={(e) => setIsHomeEditMode(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
                   <span
                     style={{
                       position: 'absolute',
-                      height: '20px',
-                      width: '20px',
-                      left: isHomeEditMode ? '22px' : '3px',
-                      bottom: '2px',
-                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: isHomeEditMode ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.16)',
                       transition: '0.2s ease',
-                      borderRadius: '50%',
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                      borderRadius: '26px',
+                      border: isHomeEditMode ? '1px solid rgba(16, 185, 129, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
                     }}
-                  />
-                </span>
-              </label>
+                  >
+                    <span
+                      style={{
+                        position: 'absolute',
+                        height: '20px',
+                        width: '20px',
+                        left: isHomeEditMode ? '22px' : '3px',
+                        bottom: '2px',
+                        backgroundColor: 'white',
+                        transition: '0.2s ease',
+                        borderRadius: '50%',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                      }}
+                    />
+                  </span>
+                </label>
+              </div>
+
+              {/* Active Plan Card with Multi-Plan Selector */}
+              <PackageSummaryCard
+                pkg={activePackage}
+                packages={packages}
+                selectedPackageId={activePackageId}
+                onSelectPackage={handleSelectPackage}
+                stats={stats}
+                config={config}
+                isEditMode={isHomeEditMode}
+                onOpenNewPackage={handleOpenCreateModal}
+                onEditPackage={handleOpenEditModal}
+                onDeletePackage={handleDeletePackage}
+              />
+
+              {/* Interactive Calendar with 1-Tap Confirmation Bar */}
+              <MealCalendar
+                records={records}
+                config={config}
+                activePackage={activePackage}
+                isEditMode={isHomeEditMode}
+                onSaveRecord={handleUpdateRecord}
+                onClearRecord={handleClearRecord}
+                onClearMonth={handleClearMonthRecords}
+                onClearAutoMarked={handleClearAutoMarkedRecords}
+              />
             </div>
-
-            {/* Active Plan Card with Multi-Plan Selector */}
-            <PackageSummaryCard
-              pkg={activePackage}
-              packages={packages}
-              selectedPackageId={activePackageId}
-              onSelectPackage={handleSelectPackage}
-              stats={stats}
-              config={config}
-              isEditMode={isHomeEditMode}
-              onOpenNewPackage={handleOpenCreateModal}
-              onEditPackage={handleOpenEditModal}
-              onDeletePackage={handleDeletePackage}
-            />
-
-            {/* Interactive Calendar with 1-Tap Confirmation Bar */}
-            <MealCalendar
-              records={records}
-              config={config}
-              activePackage={activePackage}
-              isEditMode={isHomeEditMode}
-              onSaveRecord={handleUpdateRecord}
-              onClearRecord={handleClearRecord}
-              onClearMonth={handleClearMonthRecords}
-              onClearAutoMarked={handleClearAutoMarkedRecords}
-            />
-          </div>
+          )
         )}
 
         {/* Dedicated Plan Details Tab */}
         {activeTab === 'package' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <PackageSummaryCard
-              pkg={activePackage}
-              packages={packages}
-              selectedPackageId={activePackageId}
-              onSelectPackage={handleSelectPackage}
-              stats={stats}
-              config={config}
+          packages.length === 0 ? (
+            <FirstUserExperience
               onOpenNewPackage={handleOpenCreateModal}
-              onEditPackage={handleOpenEditModal}
-              onDeletePackage={handleDeletePackage}
+              onOpenGuide={() => setIsHowToUseModalOpen(true)}
+              onLoadSampleData={handleLoadSampleData}
             />
-          </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <PackageSummaryCard
+                pkg={activePackage}
+                packages={packages}
+                selectedPackageId={activePackageId}
+                onSelectPackage={handleSelectPackage}
+                stats={stats}
+                config={config}
+                onOpenNewPackage={handleOpenCreateModal}
+                onEditPackage={handleOpenEditModal}
+                onDeletePackage={handleDeletePackage}
+              />
+            </div>
+          )
         )}
 
         {/* Financial & WhatsApp Statement Tab with Expandable Activity Logs */}
@@ -682,6 +727,7 @@ export const App: React.FC = () => {
             currentUser={user}
             onSaveConfig={handleSaveConfig}
             onResetData={handleResetData}
+            onClearAllData={handleClearAllData}
             onOpenGuide={() => setIsHowToUseModalOpen(true)}
           />
         )}

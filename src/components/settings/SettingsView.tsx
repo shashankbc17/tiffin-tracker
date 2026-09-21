@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from 'firebase/auth';
 import { RateConfig } from '../../types';
-import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle } from 'lucide-react';
+import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle, Trash2, PlayCircle } from 'lucide-react';
 import { getSavedFirebaseConfig, saveFirebaseConfig, initFirebase, DEFAULT_FIREBASE_CONFIG } from '../../services/firebase';
 
 interface SettingsViewProps {
@@ -9,6 +9,7 @@ interface SettingsViewProps {
   currentUser?: User | null;
   onSaveConfig: (cfg: RateConfig) => void;
   onResetData?: () => void;
+  onClearAllData?: () => void;
   onOpenGuide?: () => void;
 }
 
@@ -41,6 +42,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentUser,
   onSaveConfig,
   onResetData,
+  onClearAllData,
   onOpenGuide,
 }) => {
   const [formData, setFormData] = useState<RateConfig>(config);
@@ -475,6 +477,58 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               4. Installs into your app drawer with an app icon!
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Data Management & Reset Section */}
+      <div className="ios-card">
+        <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '6px' }}>Data &amp; Plan Management</h4>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
+          Manage your local &amp; cloud data, test-drive features with sample subscriptions, or clear data to start fresh.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {onResetData && (
+            <button
+              type="button"
+              onClick={onResetData}
+              className="ios-btn ios-btn-secondary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '10px 14px',
+                fontSize: '12.5px',
+                color: '#a78bfa',
+                borderColor: 'rgba(139, 92, 246, 0.4)',
+              }}
+            >
+              <PlayCircle size={15} />
+              <span>Load Starter Sample Data (Demo)</span>
+            </button>
+          )}
+
+          {onClearAllData && (
+            <button
+              type="button"
+              onClick={onClearAllData}
+              className="ios-btn ios-btn-secondary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '10px 14px',
+                fontSize: '12.5px',
+                color: '#f87171',
+                borderColor: 'rgba(239, 68, 68, 0.4)',
+              }}
+            >
+              <Trash2 size={15} />
+              <span>Clear All Plans &amp; Logs (Fresh Start)</span>
+            </button>
+          )}
         </div>
       </div>
 

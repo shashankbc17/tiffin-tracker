@@ -15,8 +15,8 @@ export const DEFAULT_CONFIG: RateConfig = {
   defaultBreakfastRate: 60,
   defaultLunchRate: 90,
   defaultPersons: 1,
-  catererName: 'Ramesh Cook (Tiffin)',
-  catererPhone: '+91 98765 43210',
+  catererName: '',
+  catererPhone: '',
   autoDeliveryEnabled: false,
   breakfastCutoffHour: 11, // 11:00 AM IST
   lunchCutoffHour: 15, // 3:00 PM IST
@@ -76,24 +76,21 @@ export function saveLocalConfig(config: RateConfig): void {
 export function loadLocalPackages(): PackagePlan[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.PACKAGES);
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
     // Fallback to legacy single package
     const legacyRaw = localStorage.getItem(STORAGE_KEYS.PACKAGE);
-    if (legacyRaw) {
+    if (legacyRaw !== null) {
       const parsedLegacy = JSON.parse(legacyRaw);
-      if (parsedLegacy) {
+      if (parsedLegacy && typeof parsedLegacy === 'object') {
         saveLocalPackages([parsedLegacy]);
         return [parsedLegacy];
       }
     }
-    // Default starter sample
-    const sample = generateSampleData();
-    saveLocalPackages([sample.defaultPkg]);
-    saveLocalRecords(sample.records);
-    return [sample.defaultPkg];
+    // Clean default for new users (no packages)
+    return [];
   } catch {
     return [];
   }
@@ -153,12 +150,11 @@ export function saveLocalPackage(pkg: PackagePlan | null): void {
 export function loadLocalRecords(): Record<string, DayRecord> {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.RECORDS);
-    if (!raw) {
-      const sample = generateSampleData();
-      saveLocalRecords(sample.records);
-      return sample.records;
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
     }
-    return JSON.parse(raw);
+    return {};
   } catch {
     return {};
   }
