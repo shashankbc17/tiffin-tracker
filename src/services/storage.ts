@@ -229,6 +229,17 @@ export function subscribeToCloudUserData(
   }
 }
 
+/**
+ * Strips out unsupported `undefined` values that cause Firestore writes to crash
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  try {
+    return JSON.parse(JSON.stringify(data));
+  } catch {
+    return data;
+  }
+}
+
 export async function syncUserDataToCloud(
   userId: string,
   config: RateConfig,
@@ -246,18 +257,16 @@ export async function syncUserDataToCloud(
     const activePkg = packagesArray.find((p) => p.status === 'active') || packagesArray[0] || null;
 
     const userDocRef = doc(db, 'users', userId);
-    await setDoc(
-      userDocRef,
-      {
-        config,
-        pkg: activePkg,
-        packages: packagesArray,
-        activePackageId: activePackageId || activePkg?.id || null,
-        records,
-        lastSyncedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    const cleanPayload = sanitizeForFirestore({
+      config,
+      pkg: activePkg,
+      packages: packagesArray,
+      activePackageId: activePackageId || activePkg?.id || null,
+      records,
+      lastSyncedAt: new Date().toISOString(),
+    });
+
+    await setDoc(userDocRef, cleanPayload, { merge: true });
     return { success: true };
   } catch (err) {
     console.error('Error syncing Firestore user data:', err);
@@ -277,12 +286,14 @@ export async function syncSingleRecordToCloud(
   if (!db) return { success: false, error: 'Database not initialized' };
   try {
     const userDocRef = doc(db, 'users', userId);
+    const cleanRecord = sanitizeForFirestore(record);
     await updateDoc(userDocRef, {
-      [`records.${record.date}`]: record,
+      [`records.${record.date}`]: cleanRecord,
       lastSyncedAt: new Date().toISOString(),
     });
     return { success: true };
   } catch (err) {
+    console.warn('updateDoc delta failed, falling back to full sync:', err);
     // If user document doesn't exist yet, fall back to full setDoc
     return syncUserDataToCloud(
       userId,

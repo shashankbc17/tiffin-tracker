@@ -228,6 +228,42 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Instant re-sync whenever mobile phone tab wakes up, unlocks, or regains focus
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState === 'visible' && user) {
+        try {
+          const freshCloud = await syncUserDataFromCloud(user.uid);
+          if (freshCloud?.records) {
+            setRecords((prev) => {
+              const { merged } = mergeRecords(prev, freshCloud.records || {});
+              saveLocalRecords(merged);
+              return merged;
+            });
+          }
+          if (freshCloud?.packages) {
+            setPackages((prev) => {
+              const merged = mergePackages(prev, freshCloud.packages || []);
+              saveLocalPackages(merged);
+              return merged;
+            });
+          }
+          if (freshCloud?.activePackageId) {
+            setActivePackageId(freshCloud.activePackageId);
+            saveLocalActivePackageId(freshCloud.activePackageId);
+          }
+        } catch {}
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [user]);
+
   // Automated Delivery Check (Runs on launch + every 60 seconds)
   useEffect(() => {
     const checkAndApplyAutoDelivery = () => {
