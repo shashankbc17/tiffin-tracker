@@ -12,6 +12,7 @@ import {
   saveLocalRecords, 
   syncUserDataFromCloud, 
   syncUserDataToCloud,
+  syncSingleRecordToCloud,
   subscribeToCloudUserData,
   mergeRecords,
   mergePackages,
@@ -278,7 +279,7 @@ export const App: React.FC = () => {
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
-      syncUserDataToCloud(user.uid, config, packages, next, activePackageId);
+      syncSingleRecordToCloud(user.uid, updated);
     }
   };
 
