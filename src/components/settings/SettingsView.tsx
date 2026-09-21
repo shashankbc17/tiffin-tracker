@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from 'firebase/auth';
 import { RateConfig } from '../../types';
-import { Save, RefreshCw, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle } from 'lucide-react';
 import { getSavedFirebaseConfig, saveFirebaseConfig, initFirebase, DEFAULT_FIREBASE_CONFIG } from '../../services/firebase';
 
 interface SettingsViewProps {
@@ -9,6 +9,31 @@ interface SettingsViewProps {
   currentUser?: User | null;
   onSaveConfig: (cfg: RateConfig) => void;
   onResetData?: () => void;
+  onOpenGuide?: () => void;
+}
+
+// Helpers for Indian mobile phone numbers (+91 strictly 10 digits starting with 6-9)
+function cleanIndianPhone(raw: string): string {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('91') && digits.length > 10) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith('0') && digits.length > 10) {
+    digits = digits.slice(1);
+  }
+  // Hard limit strictly to 10 digits (will not take extra digits)
+  return digits.slice(0, 10);
+}
+
+function formatIndianPhone(digits10: string): string {
+  if (!digits10) return '';
+  if (digits10.length <= 5) {
+    return `+91 ${digits10}`;
+  }
+  return `+91 ${digits10.slice(0, 5)} ${digits10.slice(5, 10)}`;
+}
+
+function isIndianPhoneValid(digits10: string): boolean {
+  return /^[6-9]\d{9}$/.test(digits10);
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -16,11 +41,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentUser,
   onSaveConfig,
   onResetData,
+  onOpenGuide,
 }) => {
   const [formData, setFormData] = useState<RateConfig>(config);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showFirebaseModal, setShowFirebaseModal] = useState(false);
   const [showDevSettings, setShowDevSettings] = useState(false);
+
+  // String states for numeric fields to prevent iPhone "stuck on 0" bug
+  const [defaultPersonsStr, setDefaultPersonsStr] = useState(String(config.defaultPersons ?? 1));
+  const [defaultBreakfastRateStr, setDefaultBreakfastRateStr] = useState(String(config.defaultBreakfastRate ?? 60));
+  const [defaultLunchRateStr, setDefaultLunchRateStr] = useState(String(config.defaultLunchRate ?? 90));
+
+  // Phone state: raw 10 digits
+  const [phoneDigits, setPhoneDigits] = useState(() => cleanIndianPhone(config.catererPhone || ''));
+
+  // Automated delivery state
+  const [autoDeliveryEnabled, setAutoDeliveryEnabled] = useState(config.autoDeliveryEnabled ?? true);
 
   const isDev = Boolean(
     currentUser &&
@@ -37,9 +74,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const currentHost = window.location.hostname;
 
+  const phoneIsValid = phoneDigits.length === 0 || isIndianPhoneValid(phoneDigits);
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const cleaned = cleanIndianPhone(raw);
+    setPhoneDigits(cleaned);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSaveConfig(formData);
+
+    if (phoneDigits.length > 0 && !isIndianPhoneValid(phoneDigits)) {
+      alert('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
+      return;
+    }
+
+    const updatedConfig: RateConfig = {
+      ...formData,
+      defaultPersons: Math.max(1, parseInt(defaultPersonsStr, 10) || 1),
+      defaultBreakfastRate: Math.max(0, parseInt(defaultBreakfastRateStr, 10) || 0),
+      defaultLunchRate: Math.max(0, parseInt(defaultLunchRateStr, 10) || 0),
+      catererPhone: phoneDigits ? formatIndianPhone(phoneDigits) : '',
+      autoDeliveryEnabled,
+    };
+
+    onSaveConfig(updatedConfig);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
   };
@@ -65,16 +125,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleResetToDefaultFirebase = () => {
-    setFirebaseJson(JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2));
-    saveFirebaseConfig(DEFAULT_FIREBASE_CONFIG);
-    initFirebase(DEFAULT_FIREBASE_CONFIG);
-    alert('Reset to Heirloom Cookbook Firebase Project!');
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Anime Workshop Header */}
+      {/* Workshop Header */}
       <div 
         className="ios-card" 
         style={{ 
@@ -103,7 +156,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
           />
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <span 
             style={{ 
               fontSize: '10px', 
@@ -113,24 +166,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               letterSpacing: '0.05em' 
             }}
           >
-            ⚙️ Beast Workshop & Config
+            ⚙️ Beast Workshop &amp; Config
           </span>
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', margin: '2px 0' }}>
-            Settings & Catering Preferences
+            Settings &amp; Catering Preferences
           </h3>
-          <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            Configure default prices, caterer contact, phone MFA, and cloud backups.
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>
+            Configure default prices, caterer contact, phone MFA, and automated rules.
           </p>
         </div>
       </div>
 
+      {/* Senior-Friendly How to Use Guide Card */}
+      {onOpenGuide && (
+        <div 
+          onClick={onOpenGuide}
+          className="ios-card" 
+          style={{ 
+            cursor: 'pointer', 
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)', 
+            borderColor: 'rgba(16, 185, 129, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 18px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', padding: '8px', borderRadius: '50%' }}>
+              <HelpCircle size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
+                📖 How to Use TiffinFlow Guide
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                Simple, large-text instructions for seniors &amp; family members
+              </div>
+            </div>
+          </div>
+          <span style={{ fontSize: '12px', color: '#34d399', fontWeight: 700 }}>Open &gt;</span>
+        </div>
+      )}
+
       {/* Meal Rates & Cook Information */}
       <form onSubmit={handleSubmit} className="ios-card">
         <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', fontFamily: 'var(--font-heading)' }}>
-          Meal Rates & Caterer Settings
+          Meal Rates &amp; Caterer Settings
         </h3>
 
-        {/* Currency & Default Persons (50/50 Symmetrical Grid) */}
+        {/* Currency & Default Persons */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="ios-input-group">
             <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>Currency Symbol</label>
@@ -147,25 +232,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="ios-input-group">
             <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>Default Persons</label>
             <input 
-              type="number" 
-              min={1} 
+              type="text" 
+              inputMode="numeric"
+              pattern="[0-9]*"
               className="ios-input" 
-              value={formData.defaultPersons} 
-              onChange={(e) => setFormData({ ...formData, defaultPersons: Number(e.target.value) })} 
+              value={defaultPersonsStr} 
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d*$/.test(val)) {
+                  setDefaultPersonsStr(val);
+                }
+              }} 
               required 
             />
           </div>
         </div>
 
-        {/* Meal Rates (50/50 Symmetrical Grid) */}
+        {/* Meal Rates */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="ios-input-group">
             <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍳 Breakfast ({formData.currency}/p)</label>
             <input 
-              type="number" 
+              type="text" 
+              inputMode="numeric"
+              pattern="[0-9]*"
               className="ios-input" 
-              value={formData.defaultBreakfastRate} 
-              onChange={(e) => setFormData({ ...formData, defaultBreakfastRate: Number(e.target.value) })} 
+              value={defaultBreakfastRateStr} 
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d*$/.test(val)) {
+                  setDefaultBreakfastRateStr(val);
+                }
+              }} 
               required 
             />
           </div>
@@ -173,10 +273,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="ios-input-group">
             <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍱 Lunch ({formData.currency}/p)</label>
             <input 
-              type="number" 
+              type="text" 
+              inputMode="numeric"
+              pattern="[0-9]*"
               className="ios-input" 
-              value={formData.defaultLunchRate} 
-              onChange={(e) => setFormData({ ...formData, defaultLunchRate: Number(e.target.value) })} 
+              value={defaultLunchRateStr} 
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d*$/.test(val)) {
+                  setDefaultLunchRateStr(val);
+                }
+              }} 
               required 
             />
           </div>
@@ -194,16 +302,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           />
         </div>
 
-        {/* Caterer Phone */}
+        {/* Caterer Phone with strict Indian (+91) 10-digit validation */}
         <div className="ios-input-group">
-          <label className="ios-label">WhatsApp Number (with country code)</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label className="ios-label">WhatsApp Number (Indian 10-Digit Mobile)</label>
+            {phoneDigits.length === 10 && isIndianPhoneValid(phoneDigits) ? (
+              <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <Check size={12} /> Valid Indian Mobile
+              </span>
+            ) : phoneDigits.length > 0 ? (
+              <span style={{ fontSize: '11px', color: '#f87171', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <AlertCircle size={12} /> {phoneDigits.length}/10 digits (Starts with 6-9)
+              </span>
+            ) : (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>10 digits</span>
+            )}
+          </div>
           <input 
             type="text" 
+            inputMode="tel"
             className="ios-input" 
-            placeholder="e.g. +91 98765 43210" 
-            value={formData.catererPhone} 
-            onChange={(e) => setFormData({ ...formData, catererPhone: e.target.value })} 
+            placeholder="e.g. 98765 43210" 
+            value={formatIndianPhone(phoneDigits)} 
+            onChange={handlePhoneChange} 
+            maxLength={16}
           />
+          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Automatically prefixed with +91 · Strictly limits to 10 digits without extra numbers.
+          </div>
+        </div>
+
+        {/* Automated Delivery Section */}
+        <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: 'var(--radius-md)', padding: '12px 14px', margin: '14px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={16} color="#60a5fa" />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd' }}>
+                Automated Delivery Marking
+              </span>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={autoDeliveryEnabled} 
+                onChange={(e) => setAutoDeliveryEnabled(e.target.checked)} 
+                style={{ accentColor: '#3b82f6' }} 
+              />
+              <span style={{ fontSize: '12px', fontWeight: 600, color: autoDeliveryEnabled ? '#34d399' : 'var(--text-muted)' }}>
+                {autoDeliveryEnabled ? 'Active' : 'Off'}
+              </span>
+            </label>
+          </div>
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+            Automatically marks unlogged meals as delivered once delivery timing window closes:
+            <br />
+            🍳 <strong>Breakfast Cutoff:</strong> 11:00 AM IST &nbsp;|&nbsp; 🍱 <strong>Lunch Cutoff:</strong> 3:00 PM IST
+          </p>
         </div>
 
         <button type="submit" className="ios-btn ios-btn-primary" style={{ width: '100%', marginTop: '8px' }}>
@@ -220,9 +374,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <Cloud size={18} />
             </div>
             <div>
-              <h4 style={{ fontSize: '15px', fontWeight: 700 }}>Cloud Sync & Backup</h4>
+              <h4 style={{ fontSize: '15px', fontWeight: 700 }}>Cloud Sync &amp; Multi-Plan Backup</h4>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Your meals & plans are automatically synced across your devices
+                Your packages &amp; meal logs sync seamlessly across devices
               </p>
             </div>
           </div>
@@ -250,7 +404,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 padding: '4px 0'
               }}
             >
-              <span>Developer & Firebase Settings</span>
+              <span>Developer &amp; Firebase Settings</span>
               {showDevSettings ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
@@ -361,7 +515,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 type="button"
-                onClick={handleResetToDefaultFirebase}
+                onClick={() => {
+                  setFirebaseJson(JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2));
+                  saveFirebaseConfig(DEFAULT_FIREBASE_CONFIG);
+                  initFirebase(DEFAULT_FIREBASE_CONFIG);
+                  alert('Reset to default Firebase configuration.');
+                }}
                 className="ios-btn ios-btn-secondary"
                 style={{ flex: 1, fontSize: '12px' }}
               >
@@ -374,7 +533,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 className="ios-btn ios-btn-primary"
                 style={{ flex: 1, fontSize: '12px' }}
               >
-                {fbSaveSuccess ? 'Saved!' : 'Save & Reload'}
+                {fbSaveSuccess ? 'Saved!' : 'Save &amp; Reload'}
               </button>
             </div>
           </div>

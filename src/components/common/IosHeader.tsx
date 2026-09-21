@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { LogIn, Cloud } from 'lucide-react';
+import { LogIn, Cloud, HelpCircle } from 'lucide-react';
 
 interface IosHeaderProps {
   user: User | null;
   onLogin: () => void;
   onOpenProfile: () => void;
+  onOpenGuide?: () => void;
   packageTitle?: string;
 }
 
@@ -13,6 +14,7 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
   user,
   onLogin,
   onOpenProfile,
+  onOpenGuide,
   packageTitle,
 }) => {
   // Read local custom photo/letter preferences
@@ -36,7 +38,28 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {onOpenGuide && (
+          <button
+            type="button"
+            onClick={onOpenGuide}
+            className="ios-btn ios-btn-secondary"
+            style={{ 
+              padding: '5px 9px', 
+              fontSize: '11.5px', 
+              borderRadius: 'var(--radius-full)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#34d399'
+            }}
+            title="How to Use App Guide"
+          >
+            <HelpCircle size={13} />
+            <span>Guide</span>
+          </button>
+        )}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div 

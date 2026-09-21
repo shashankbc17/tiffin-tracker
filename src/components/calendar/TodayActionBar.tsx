@@ -1,6 +1,5 @@
-import React from 'react';
 import { DayRecord, PackagePlan, RateConfig, MealStatus } from '../../types';
-import { formatDate, getIstNow } from '../../services/carryOverEngine';
+import { formatDate, getIstNow, isMealActiveOnDate } from '../../services/carryOverEngine';
 import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -42,19 +41,23 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
     });
   }
 
-  // 3. Scheduled off-day check (e.g. Sunday unopted)
-  const isScheduledOff = Boolean(
-    activePackage?.activeDaysOfWeek &&
-    !activePackage.activeDaysOfWeek.includes(todayDayOfWeek)
-  );
+  // 3. Meal services active today (checking independent meal schedule if specified)
+  const bActiveToday = activePackage
+    ? isMealActiveOnDate(todayStr, activePackage, 'breakfast')
+    : true;
+  const lActiveToday = activePackage
+    ? isMealActiveOnDate(todayStr, activePackage, 'lunch')
+    : true;
 
-  // 4. Meal services included in package
-  const incBreakfast = activePackage ? activePackage.includesBreakfast !== false : true;
-  const incLunch = activePackage ? activePackage.includesLunch !== false : true;
+  const incBreakfast = bActiveToday;
+  const incLunch = lActiveToday;
+
+  // Scheduled off-day check (neither meal active today)
+  const isScheduledOff = Boolean(activePackage && !bActiveToday && !lActiveToday);
 
   // 5. IST Delivery Timing Windows:
-  // Breakfast delivery window: 8:00 AM to 10:00 AM IST
-  // Lunch delivery window: 12:30 PM to 2:30 PM IST
+  // Breakfast delivery window: 8:00 AM to 10:30 AM IST (auto cutoff 11:00 AM)
+  // Lunch delivery window: 12:00 PM to 3:00 PM IST (auto cutoff 3:00 PM)
   const isBeforeBreakfastWindow = incBreakfast && istHour < 8;
   const isBeforeLunchWindowOnly = !incBreakfast && incLunch && istHour < 12;
   const isPreDeliveryWindow = isBeforeBreakfastWindow || isBeforeLunchWindowOnly;
@@ -440,10 +443,15 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {/* CASE 4: Already Logged / Confirmed View */}
           {stateKind === 'LOGGED' && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
-                    Meals Confirmed! Umai! 🔥
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>Meals Confirmed! Umai! 🔥</span>
+                    {(todayRecord?.breakfast?.autoDelivered || todayRecord?.lunch?.autoDelivered) && (
+                      <span style={{ fontSize: '10px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', padding: '1px 6px', borderRadius: '4px' }}>
+                        ⚡ Auto
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                     {isCookOff
@@ -455,6 +463,17 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                           .filter(Boolean)
                           .join(' · ')}
                   </div>
+                  {/* Dish items if logged */}
+                  {todayRecord?.breakfast?.menuItem && (
+                    <div style={{ fontSize: '11px', color: '#fbbf24', marginTop: '3px' }}>
+                      🍳 Breakfast: <strong>{todayRecord.breakfast.menuItem}</strong>
+                    </div>
+                  )}
+                  {todayRecord?.lunch?.menuItem && (
+                    <div style={{ fontSize: '11px', color: '#34d399', marginTop: '2px' }}>
+                      🍱 Lunch: <strong>{todayRecord.lunch.menuItem}</strong>
+                    </div>
+                  )}
                 </div>
 
                 <button

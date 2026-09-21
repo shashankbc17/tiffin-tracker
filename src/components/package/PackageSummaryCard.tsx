@@ -5,6 +5,9 @@ import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangl
 
 interface PackageSummaryCardProps {
   pkg: PackagePlan | null;
+  packages?: PackagePlan[];
+  selectedPackageId?: string | null;
+  onSelectPackage?: (id: string) => void;
   stats: CarryOverStats;
   config: RateConfig;
   onOpenNewPackage: () => void;
@@ -14,6 +17,9 @@ interface PackageSummaryCardProps {
 
 export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   pkg,
+  packages = [],
+  selectedPackageId,
+  onSelectPackage,
   stats,
   config,
   onOpenNewPackage,
@@ -69,6 +75,42 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Multi-Plan Switcher Tabs if more than 1 plan exists */}
+      {packages && packages.length > 1 && (
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
+          {packages.map((p) => {
+            const isSel = p.id === (pkg?.id || selectedPackageId);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onSelectPackage?.(p.id)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius-full)',
+                  border: isSel ? '1.5px solid var(--accent-primary)' : '1px solid var(--glass-border)',
+                  background: isSel ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.04)',
+                  color: isSel ? '#34d399' : 'var(--text-secondary)',
+                  fontSize: '12px',
+                  fontWeight: isSel ? 700 : 500,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>{p.title}</span>
+                {p.status === 'active' && (
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Carry-over Highlight Banner */}
       {stats.carryOverDays > 0 && (
         <div className="carryover-banner">
@@ -254,6 +296,18 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
               ? `Starts ${pkg.startDate} (${pkg.totalDays} Days · in ${daysUntilStart === 1 ? '1 day' : `${daysUntilStart} days`})`
               : `Started ${pkg.startDate} (${pkg.totalDays} Days)`}
           </div>
+
+          {/* Schedule Badges */}
+          {pkg.breakfastDaysOfWeek && pkg.lunchDaysOfWeek && JSON.stringify(pkg.breakfastDaysOfWeek) !== JSON.stringify(pkg.lunchDaysOfWeek) && (
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.12)', border: '1px solid rgba(251, 191, 36, 0.25)', padding: '2px 7px', borderRadius: '4px', fontWeight: 600 }}>
+                🍳 Breakfast: {pkg.breakfastDaysOfWeek.length} days/wk
+              </span>
+              <span style={{ fontSize: '11px', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '2px 7px', borderRadius: '4px', fontWeight: 600 }}>
+                🍱 Lunch: {pkg.lunchDaysOfWeek.length} days/wk
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Progress Bar */}

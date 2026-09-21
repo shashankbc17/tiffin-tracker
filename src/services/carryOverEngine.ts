@@ -58,6 +58,29 @@ export function isDayActiveInPackage(dateStr: string, activeDaysOfWeek: number[]
 }
 
 /**
+ * Check if a specific meal (breakfast or lunch) is active on a given date for a package
+ */
+export function isMealActiveOnDate(
+  dateStr: string,
+  pkg: PackagePlan,
+  meal: 'breakfast' | 'lunch'
+): boolean {
+  if (meal === 'breakfast') {
+    if (!pkg.includesBreakfast) return false;
+    const days = pkg.breakfastDaysOfWeek && pkg.breakfastDaysOfWeek.length > 0
+      ? pkg.breakfastDaysOfWeek
+      : pkg.activeDaysOfWeek || [1, 2, 3, 4, 5, 6];
+    return isDayActiveInPackage(dateStr, days);
+  } else {
+    if (!pkg.includesLunch) return false;
+    const days = pkg.lunchDaysOfWeek && pkg.lunchDaysOfWeek.length > 0
+      ? pkg.lunchDaysOfWeek
+      : pkg.activeDaysOfWeek || [1, 2, 3, 4, 5, 6];
+    return isDayActiveInPackage(dateStr, days);
+  }
+}
+
+/**
  * Add N calendar days to a 'YYYY-MM-DD' date string
  */
 export function addDays(dateStr: string, days: number): string {
@@ -130,24 +153,23 @@ export function calculateCarryOver(
   let carriedOverValue = 0;
 
   const recordDates = Object.keys(records).sort();
-  let fullDaysSkipped = 0;
-
   const planPersons = pkg.defaultPersons || 1;
 
   for (const dateStr of recordDates) {
     if (dateStr < pkg.startDate) continue;
 
     const day = records[dateStr];
-    const isScheduledActive = isDayActiveInPackage(dateStr, activeDaysOfWeek);
+    const isBreakfastActive = isMealActiveOnDate(dateStr, pkg, 'breakfast');
+    const isLunchActive = isMealActiveOnDate(dateStr, pkg, 'lunch');
 
     // Cook holiday check
-    if (day.isCookOff && isScheduledActive) {
-      if (pkg.includesBreakfast) {
+    if (day.isCookOff) {
+      if (isBreakfastActive) {
         bSkipped += planPersons;
         const bRate = day.breakfast?.rate || pkg.breakfastRate || config.defaultBreakfastRate;
         carriedOverValue += bRate * planPersons;
       }
-      if (pkg.includesLunch) {
+      if (isLunchActive) {
         lSkipped += planPersons;
         const lRate = day.lunch?.rate || pkg.lunchRate || config.defaultLunchRate;
         carriedOverValue += lRate * planPersons;
@@ -164,12 +186,12 @@ export function calculateCarryOver(
         totalSpent += bRate * deliveredCount;
 
         // Partial delivery carryover: If fewer persons were delivered on a scheduled day
-        if (day.breakfast.status === 'delivered' && deliveredCount < planPersons && isScheduledActive) {
+        if (day.breakfast.status === 'delivered' && deliveredCount < planPersons && isBreakfastActive) {
           const missedPersons = planPersons - deliveredCount;
           bSkipped += missedPersons;
           carriedOverValue += bRate * missedPersons;
         }
-      } else if (day.breakfast.status === 'skipped' && isScheduledActive) {
+      } else if (day.breakfast.status === 'skipped' && isBreakfastActive) {
         const skippedCount = day.breakfast.persons || planPersons;
         bSkipped += skippedCount;
         carriedOverValue += bRate * skippedCount;
@@ -185,12 +207,12 @@ export function calculateCarryOver(
         totalSpent += lRate * deliveredCount;
 
         // Partial delivery carryover: If fewer persons were delivered on a scheduled day
-        if (day.lunch.status === 'delivered' && deliveredCount < planPersons && isScheduledActive) {
+        if (day.lunch.status === 'delivered' && deliveredCount < planPersons && isLunchActive) {
           const missedPersons = planPersons - deliveredCount;
           lSkipped += missedPersons;
           carriedOverValue += lRate * missedPersons;
         }
-      } else if (day.lunch.status === 'skipped' && isScheduledActive) {
+      } else if (day.lunch.status === 'skipped' && isLunchActive) {
         const skippedCount = day.lunch.persons || planPersons;
         lSkipped += skippedCount;
         carriedOverValue += lRate * skippedCount;
@@ -273,3 +295,119 @@ Hi ${caterer}, here is the updated summary for our meal subscription:
 
 _Generated via TiffinFlow App_`;
 }
+
+/**
+ * Automatically marks scheduled meals as delivered once cutoff timing has passed:
+ * - Breakfast delivery window cutoff: 11:00 AM IST (or config.breakfastCutoffHour)
+ * - Lunch delivery window cutoff: 3:00 PM IST (15:00) (or config.lunchCutoffHour)
+ * Works seamlessly on webhosted static sites (GitHub Pages) on app open & periodic interval.
+ */
+export function runAutoDeliveryCheck(
+  packages: PackagePlan[],
+  records: Record<string, DayRecord>,
+  config: RateConfig
+): { updatedRecords: Record<string, DayRecord>; hasChanges: boolean } {
+  if (config.autoDeliveryEnabled === false) {
+    return { updatedRecords: records, hasChanges: false };
+  }
+
+  const activePackages = packages.filter((p) => p.status === 'active');
+  if (activePackages.length === 0) {
+    return { updatedRecords: records, hasChanges: false };
+  }
+
+  const { dateStr: todayStr, hour: istHour } = getIstNow();
+  const breakfastCutoff = config.breakfastCutoffHour ?? 11; // 11:00 AM IST
+  const lunchCutoff = config.lunchCutoffHour ?? 15; // 3:00 PM IST (15:00)
+
+  let hasChanges = false;
+  const updatedRecords = { ...records };
+
+  // Find earliest start date among active packages
+  const startDates = activePackages.map((p) => p.startDate).sort();
+  const earliestStart = startDates[0];
+
+  let cur = earliestStart;
+  while (cur <= todayStr) {
+    const existing = updatedRecords[cur];
+    if (existing?.isCookOff) {
+      cur = addDays(cur, 1);
+      continue;
+    }
+
+    const isToday = cur === todayStr;
+    const isPast = cur < todayStr;
+    const isPastBreakfastCutoff = isPast || (isToday && istHour >= breakfastCutoff);
+    const isPastLunchCutoff = isPast || (isToday && istHour >= lunchCutoff);
+
+    let dayModified = false;
+    let bEntry = existing?.breakfast ? { ...existing.breakfast } : null;
+    let lEntry = existing?.lunch ? { ...existing.lunch } : null;
+
+    for (const pkg of activePackages) {
+      if (cur < pkg.startDate) continue;
+
+      // Breakfast auto-delivery
+      if (pkg.includesBreakfast && isMealActiveOnDate(cur, pkg, 'breakfast')) {
+        const currentBStatus = bEntry?.status || 'none';
+        if (currentBStatus === 'none' && isPastBreakfastCutoff) {
+          const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
+          const rate = pkg.breakfastRate || config.defaultBreakfastRate || 60;
+          bEntry = {
+            status: 'delivered',
+            persons: bEntry?.persons && bEntry.persons > 0 ? bEntry.persons : planPersons,
+            rate: bEntry?.rate && bEntry.rate > 0 ? bEntry.rate : rate,
+            notes: bEntry?.notes || 'Auto-marked delivered',
+            menuItem: bEntry?.menuItem,
+            autoDelivered: true,
+          };
+          dayModified = true;
+        }
+      }
+
+      // Lunch auto-delivery
+      if (pkg.includesLunch && isMealActiveOnDate(cur, pkg, 'lunch')) {
+        const currentLStatus = lEntry?.status || 'none';
+        if (currentLStatus === 'none' && isPastLunchCutoff) {
+          const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
+          const rate = pkg.lunchRate || config.defaultLunchRate || 90;
+          lEntry = {
+            status: 'delivered',
+            persons: lEntry?.persons && lEntry.persons > 0 ? lEntry.persons : planPersons,
+            rate: lEntry?.rate && lEntry.rate > 0 ? lEntry.rate : rate,
+            notes: lEntry?.notes || 'Auto-marked delivered',
+            menuItem: lEntry?.menuItem,
+            autoDelivered: true,
+          };
+          dayModified = true;
+        }
+      }
+    }
+
+    if (dayModified) {
+      const planPersons = config.defaultPersons || 1;
+      updatedRecords[cur] = {
+        date: cur,
+        breakfast: bEntry || {
+          status: 'none',
+          persons: planPersons,
+          rate: config.defaultBreakfastRate || 60,
+        },
+        lunch: lEntry || {
+          status: 'none',
+          persons: planPersons,
+          rate: config.defaultLunchRate || 90,
+        },
+        isCookOff: false,
+        notes: existing?.notes,
+        updatedAt: new Date().toISOString(),
+      };
+      hasChanges = true;
+    }
+
+    cur = addDays(cur, 1);
+  }
+
+  return { updatedRecords, hasChanges };
+}
+

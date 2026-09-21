@@ -5,6 +5,8 @@ import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 const STORAGE_KEYS = {
   CONFIG: 'tiffinflow_config',
   PACKAGE: 'tiffinflow_package',
+  PACKAGES: 'tiffinflow_packages',
+  ACTIVE_PKG_ID: 'tiffinflow_active_pkg_id',
   RECORDS: 'tiffinflow_records',
 };
 
@@ -15,6 +17,9 @@ export const DEFAULT_CONFIG: RateConfig = {
   defaultPersons: 1,
   catererName: 'Ramesh Cook (Tiffin)',
   catererPhone: '+91 98765 43210',
+  autoDeliveryEnabled: true,
+  breakfastCutoffHour: 11, // 11:00 AM IST
+  lunchCutoffHour: 15, // 3:00 PM IST
 };
 
 /**
@@ -33,6 +38,8 @@ export function generateSampleData() {
     startDate: startStr,
     totalDays: 30,
     activeDaysOfWeek: [1, 2, 3, 4, 5, 6], // Mon - Sat (Skip Sunday)
+    breakfastDaysOfWeek: [1, 2, 3, 4, 5, 6],
+    lunchDaysOfWeek: [1, 2, 3, 4, 5, 6],
     includesBreakfast: true,
     includesLunch: true,
     breakfastRate: 60,
@@ -50,7 +57,9 @@ export function generateSampleData() {
 export function loadLocalConfig(): RateConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.CONFIG);
-    return raw ? JSON.parse(raw) : DEFAULT_CONFIG;
+    if (!raw) return DEFAULT_CONFIG;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_CONFIG, ...parsed };
   } catch {
     return DEFAULT_CONFIG;
   }
@@ -60,27 +69,81 @@ export function saveLocalConfig(config: RateConfig): void {
   localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config));
 }
 
-export function loadLocalPackage(): PackagePlan | null {
+export function loadLocalPackages(): PackagePlan[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.PACKAGE);
-    if (!raw) {
-      const sample = generateSampleData();
-      saveLocalPackage(sample.defaultPkg);
-      saveLocalRecords(sample.records);
-      return sample.defaultPkg;
+    const raw = localStorage.getItem(STORAGE_KEYS.PACKAGES);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-    return JSON.parse(raw);
+    // Fallback to legacy single package
+    const legacyRaw = localStorage.getItem(STORAGE_KEYS.PACKAGE);
+    if (legacyRaw) {
+      const parsedLegacy = JSON.parse(legacyRaw);
+      if (parsedLegacy) {
+        saveLocalPackages([parsedLegacy]);
+        return [parsedLegacy];
+      }
+    }
+    // Default starter sample
+    const sample = generateSampleData();
+    saveLocalPackages([sample.defaultPkg]);
+    saveLocalRecords(sample.records);
+    return [sample.defaultPkg];
   } catch {
-    return null;
+    return [];
   }
 }
 
-export function saveLocalPackage(pkg: PackagePlan | null): void {
-  if (pkg) {
-    localStorage.setItem(STORAGE_KEYS.PACKAGE, JSON.stringify(pkg));
+export function saveLocalPackages(packages: PackagePlan[]): void {
+  localStorage.setItem(STORAGE_KEYS.PACKAGES, JSON.stringify(packages));
+  // Keep legacy single-package key updated for backward compatibility
+  const activePkg = packages.find((p) => p.status === 'active') || packages[0] || null;
+  if (activePkg) {
+    localStorage.setItem(STORAGE_KEYS.PACKAGE, JSON.stringify(activePkg));
   } else {
     localStorage.removeItem(STORAGE_KEYS.PACKAGE);
   }
+}
+
+export function loadLocalActivePackageId(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.ACTIVE_PKG_ID);
+}
+
+export function saveLocalActivePackageId(id: string | null): void {
+  if (id) {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_PKG_ID, id);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.ACTIVE_PKG_ID);
+  }
+}
+
+export function loadLocalPackage(): PackagePlan | null {
+  const packages = loadLocalPackages();
+  const activeId = loadLocalActivePackageId();
+  if (activeId) {
+    const found = packages.find((p) => p.id === activeId);
+    if (found) return found;
+  }
+  return packages.find((p) => p.status === 'active') || packages[0] || null;
+}
+
+export function saveLocalPackage(pkg: PackagePlan | null): void {
+  const currentPackages = loadLocalPackages();
+  if (!pkg) {
+    saveLocalPackages([]);
+    return;
+  }
+  const idx = currentPackages.findIndex((p) => p.id === pkg.id);
+  let next: PackagePlan[];
+  if (idx >= 0) {
+    next = [...currentPackages];
+    next[idx] = pkg;
+  } else {
+    next = [pkg, ...currentPackages];
+  }
+  saveLocalPackages(next);
+  saveLocalActivePackageId(pkg.id);
 }
 
 export function loadLocalRecords(): Record<string, DayRecord> {
@@ -105,6 +168,7 @@ export function saveLocalRecords(records: Record<string, DayRecord>): void {
 export async function syncUserDataFromCloud(userId: string): Promise<{
   config?: RateConfig;
   pkg?: PackagePlan | null;
+  packages?: PackagePlan[];
   records?: Record<string, DayRecord>;
 } | null> {
   if (!db) return null;
@@ -124,18 +188,30 @@ export async function syncUserDataFromCloud(userId: string): Promise<{
 export async function syncUserDataToCloud(
   userId: string,
   config: RateConfig,
-  pkg: PackagePlan | null,
+  packagesOrPkg: PackagePlan[] | PackagePlan | null,
   records: Record<string, DayRecord>
 ): Promise<void> {
   if (!db) return;
   try {
+    const packagesArray: PackagePlan[] = Array.isArray(packagesOrPkg)
+      ? packagesOrPkg
+      : packagesOrPkg
+      ? [packagesOrPkg]
+      : [];
+    const activePkg = packagesArray.find((p) => p.status === 'active') || packagesArray[0] || null;
+
     const userDocRef = doc(db, 'users', userId);
-    await setDoc(userDocRef, {
-      config,
-      pkg,
-      records,
-      lastSyncedAt: new Date().toISOString(),
-    }, { merge: true });
+    await setDoc(
+      userDocRef,
+      {
+        config,
+        pkg: activePkg,
+        packages: packagesArray,
+        records,
+        lastSyncedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
   } catch (err) {
     console.error('Error syncing Firestore user data:', err);
   }

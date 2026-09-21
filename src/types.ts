@@ -7,6 +7,8 @@ export interface MealEntry {
   persons: number;
   rate: number;
   notes?: string;
+  menuItem?: string; // e.g. "Idli Vada", "Dal Roti Sabzi"
+  autoDelivered?: boolean;
 }
 
 export interface DayRecord {
@@ -24,6 +26,8 @@ export interface PackagePlan {
   startDate: string; // 'YYYY-MM-DD'
   totalDays: number; // e.g. 30 days
   activeDaysOfWeek: number[]; // 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
+  breakfastDaysOfWeek?: number[]; // independent breakfast schedule
+  lunchDaysOfWeek?: number[]; // independent lunch schedule
   includesBreakfast: boolean;
   includesLunch: boolean;
   breakfastRate: number;
@@ -41,6 +45,9 @@ export interface RateConfig {
   defaultPersons: number;
   catererName: string;
   catererPhone: string;
+  autoDeliveryEnabled?: boolean;
+  breakfastCutoffHour?: number; // e.g. 11 (11:00 AM IST)
+  lunchCutoffHour?: number; // e.g. 15 (3:00 PM IST)
   firebaseConfig?: {
     apiKey: string;
     authDomain: string;

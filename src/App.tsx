@@ -4,8 +4,10 @@ import { DayRecord, PackagePlan, RateConfig } from './types';
 import { 
   loadLocalConfig, 
   saveLocalConfig, 
-  loadLocalPackage, 
-  saveLocalPackage, 
+  loadLocalPackages, 
+  saveLocalPackages, 
+  loadLocalActivePackageId,
+  saveLocalActivePackageId,
   loadLocalRecords, 
   saveLocalRecords, 
   syncUserDataFromCloud, 
@@ -15,7 +17,8 @@ import {
 import { 
   formatDate, 
   calculateCarryOver,
-  getIstNow
+  getIstNow,
+  runAutoDeliveryCheck
 } from './services/carryOverEngine';
 import { 
   loginWithGoogle, 
@@ -27,12 +30,14 @@ import {
 import { IosHeader } from './components/common/IosHeader';
 import { IosTabBar, TabKey } from './components/common/IosTabBar';
 import { MealCalendar } from './components/calendar/MealCalendar';
+import { DayDetailModal } from './components/calendar/DayDetailModal';
 import { PackageSummaryCard } from './components/package/PackageSummaryCard';
 import { NewPackageModal } from './components/package/NewPackageModal';
 import { ExpenseBreakdown } from './components/analytics/ExpenseBreakdown';
 import { SettingsView } from './components/settings/SettingsView';
 import { MfaModal } from './components/common/MfaModal';
 import { ProfileModal } from './components/common/ProfileModal';
+import { HowToUseModal } from './components/common/HowToUseModal';
 
 import './styles/ios-theme.css';
 
@@ -40,17 +45,26 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('calendar');
   const [user, setUser] = useState<User | null>(null);
   const [config, setConfig] = useState<RateConfig>(loadLocalConfig);
-  const [activePackage, setActivePackage] = useState<PackagePlan | null>(loadLocalPackage);
+  const [packages, setPackages] = useState<PackagePlan[]>(loadLocalPackages);
+  const [activePackageId, setActivePackageId] = useState<string | null>(loadLocalActivePackageId);
   const [records, setRecords] = useState<Record<string, DayRecord>>(loadLocalRecords);
+
   const [isNewPackageModalOpen, setIsNewPackageModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isHowToUseModalOpen, setIsHowToUseModalOpen] = useState(false);
   const [profileRevision, setProfileRevision] = useState(0);
   const [editingPackage, setEditingPackage] = useState<PackagePlan | null>(null);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [historyDetailDate, setHistoryDetailDate] = useState<string | null>(null);
 
-  const todayStr = getIstNow().dateStr;
+  // Derive activePackage from activePackageId or fallback
+  const activePackage = 
+    packages.find((p) => p.id === activePackageId) ||
+    packages.find((p) => p.status === 'active') ||
+    packages[0] ||
+    null;
 
-  // Subscribe to Firebase Auth
+  // Subscribe to Firebase Auth & Cloud Sync
   useEffect(() => {
     checkRedirectAuth().then((u) => {
       if (u) setUser(u);
@@ -63,16 +77,18 @@ export const App: React.FC = () => {
     const unsubscribe = subscribeToAuthChanges(async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Attempt cloud sync
         const cloudData = await syncUserDataFromCloud(currentUser.uid);
         if (cloudData) {
           if (cloudData.config) {
             setConfig(cloudData.config);
             saveLocalConfig(cloudData.config);
           }
-          if (cloudData.pkg !== undefined) {
-            setActivePackage(cloudData.pkg);
-            saveLocalPackage(cloudData.pkg);
+          if (cloudData.packages && Array.isArray(cloudData.packages) && cloudData.packages.length > 0) {
+            setPackages(cloudData.packages);
+            saveLocalPackages(cloudData.packages);
+          } else if (cloudData.pkg) {
+            setPackages([cloudData.pkg]);
+            saveLocalPackages([cloudData.pkg]);
           }
           if (cloudData.records) {
             setRecords(cloudData.records);
@@ -80,7 +96,7 @@ export const App: React.FC = () => {
           }
         } else {
           // Push initial local state to cloud
-          await syncUserDataToCloud(currentUser.uid, config, activePackage, records);
+          await syncUserDataToCloud(currentUser.uid, config, packages, records);
         }
       }
     });
@@ -88,7 +104,25 @@ export const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Compute live carry-over and stats
+  // Automated Delivery Check (Runs on launch + every 60 seconds)
+  useEffect(() => {
+    const checkAndApplyAutoDelivery = () => {
+      const { updatedRecords, hasChanges } = runAutoDeliveryCheck(packages, records, config);
+      if (hasChanges) {
+        setRecords(updatedRecords);
+        saveLocalRecords(updatedRecords);
+        if (user) {
+          syncUserDataToCloud(user.uid, config, packages, updatedRecords);
+        }
+      }
+    };
+
+    checkAndApplyAutoDelivery();
+    const interval = setInterval(checkAndApplyAutoDelivery, 60000);
+    return () => clearInterval(interval);
+  }, [packages, records, config, user]);
+
+  // Compute live carry-over and stats for currently active package
   const stats = calculateCarryOver(activePackage, records, config);
 
   const handleUpdateRecord = (updated: DayRecord) => {
@@ -96,7 +130,7 @@ export const App: React.FC = () => {
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
-      syncUserDataToCloud(user.uid, config, activePackage, next);
+      syncUserDataToCloud(user.uid, config, packages, next);
     }
   };
 
@@ -106,45 +140,73 @@ export const App: React.FC = () => {
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
-      syncUserDataToCloud(user.uid, config, activePackage, next);
+      syncUserDataToCloud(user.uid, config, packages, next);
     }
   };
 
   const handleSavePackage = (newPkg: PackagePlan) => {
-    setActivePackage(newPkg);
-    saveLocalPackage(newPkg);
+    const idx = packages.findIndex((p) => p.id === newPkg.id);
+    let nextPackages: PackagePlan[];
+    if (idx >= 0) {
+      nextPackages = [...packages];
+      nextPackages[idx] = newPkg;
+    } else {
+      nextPackages = [newPkg, ...packages];
+    }
+    setPackages(nextPackages);
+    saveLocalPackages(nextPackages);
+    setActivePackageId(newPkg.id);
+    saveLocalActivePackageId(newPkg.id);
+
     setIsNewPackageModalOpen(false);
     setEditingPackage(null);
+
     if (user) {
-      syncUserDataToCloud(user.uid, config, newPkg, records);
+      syncUserDataToCloud(user.uid, config, nextPackages, records);
     }
   };
 
   const handleDeletePackage = (deleteLogs: boolean) => {
-    setActivePackage(null);
-    saveLocalPackage(null);
+    if (!activePackage) return;
+    const nextPackages = packages.filter((p) => p.id !== activePackage.id);
+    setPackages(nextPackages);
+    saveLocalPackages(nextPackages);
+
+    const nextActiveId = nextPackages[0]?.id || null;
+    setActivePackageId(nextActiveId);
+    saveLocalActivePackageId(nextActiveId);
+
+    const nextRecords = deleteLogs ? {} : records;
     if (deleteLogs) {
       setRecords({});
       saveLocalRecords({});
     }
+
     if (user) {
-      syncUserDataToCloud(user.uid, config, null, deleteLogs ? {} : records);
+      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords);
     }
+  };
+
+  const handleSelectPackage = (id: string) => {
+    setActivePackageId(id);
+    saveLocalActivePackageId(id);
   };
 
   const handleSaveConfig = (newConfig: RateConfig) => {
     setConfig(newConfig);
     saveLocalConfig(newConfig);
     if (user) {
-      syncUserDataToCloud(user.uid, newConfig, activePackage, records);
+      syncUserDataToCloud(user.uid, newConfig, packages, records);
     }
   };
 
   const handleResetData = () => {
     if (window.confirm('Reset app data to sample tiffin subscription?')) {
       const sample = generateSampleData();
-      setActivePackage(sample.defaultPkg);
-      saveLocalPackage(sample.defaultPkg);
+      setPackages([sample.defaultPkg]);
+      saveLocalPackages([sample.defaultPkg]);
+      setActivePackageId(sample.defaultPkg.id);
+      saveLocalActivePackageId(sample.defaultPkg.id);
       setRecords(sample.records);
       saveLocalRecords(sample.records);
     }
@@ -184,7 +246,8 @@ export const App: React.FC = () => {
         user={user}
         onLogin={handleGoogleLogin}
         onOpenProfile={() => setIsProfileModalOpen(true)}
-        packageTitle={activePackage ? `${activePackage.title}` : undefined}
+        onOpenGuide={() => setIsHowToUseModalOpen(true)}
+        packageTitle={activePackage ? activePackage.title : undefined}
       />
 
       {/* Main Content Area */}
@@ -192,9 +255,12 @@ export const App: React.FC = () => {
         {/* Calendar / Tracker is the primary main view */}
         {activeTab === 'calendar' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Active Plan Card */}
+            {/* Active Plan Card with Multi-Plan Selector */}
             <PackageSummaryCard
               pkg={activePackage}
+              packages={packages}
+              selectedPackageId={activePackageId}
+              onSelectPackage={handleSelectPackage}
               stats={stats}
               config={config}
               onOpenNewPackage={handleOpenCreateModal}
@@ -218,6 +284,9 @@ export const App: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <PackageSummaryCard
               pkg={activePackage}
+              packages={packages}
+              selectedPackageId={activePackageId}
+              onSelectPackage={handleSelectPackage}
               stats={stats}
               config={config}
               onOpenNewPackage={handleOpenCreateModal}
@@ -227,13 +296,14 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* Financial & WhatsApp Statement Tab */}
+        {/* Financial & WhatsApp Statement Tab with Expandable Activity Logs */}
         {activeTab === 'analytics' && (
           <ExpenseBreakdown
             stats={stats}
             config={config}
             activePackage={activePackage}
             records={records}
+            onOpenDayDetails={(dateStr) => setHistoryDetailDate(dateStr)}
           />
         )}
 
@@ -244,6 +314,7 @@ export const App: React.FC = () => {
             currentUser={user}
             onSaveConfig={handleSaveConfig}
             onResetData={handleResetData}
+            onOpenGuide={() => setIsHowToUseModalOpen(true)}
           />
         )}
       </main>
@@ -275,6 +346,26 @@ export const App: React.FC = () => {
           onLogout={handleLogout}
           onClose={() => setIsProfileModalOpen(false)}
           onProfileUpdated={() => setProfileRevision((r) => r + 1)}
+        />
+      )}
+
+      {/* Senior-Friendly How to Use Guide Modal */}
+      {isHowToUseModalOpen && (
+        <HowToUseModal
+          onClose={() => setIsHowToUseModalOpen(false)}
+        />
+      )}
+
+      {/* Edit Day Record Modal from History Logs */}
+      {historyDetailDate && (
+        <DayDetailModal
+          dateStr={historyDetailDate}
+          record={records[historyDetailDate]}
+          config={config}
+          activePackage={activePackage}
+          onSave={handleUpdateRecord}
+          onClear={handleClearRecord}
+          onClose={() => setHistoryDetailDate(null)}
         />
       )}
 

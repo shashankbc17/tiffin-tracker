@@ -35,6 +35,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const [bPersons, setBPersons] = useState<number>(
     record?.breakfast?.persons && record.breakfast.persons > 0 ? record.breakfast.persons : planPersons
   );
+  const [bMenuItem, setBMenuItem] = useState<string>(record?.breakfast?.menuItem || '');
+  const [bAutoDelivered] = useState<boolean>(record?.breakfast?.autoDelivered || false);
+
   const [lStatus, setLStatus] = useState<MealStatus>(
     record?.lunch?.status && record.lunch.status !== 'none'
       ? record.lunch.status
@@ -45,6 +48,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const [lPersons, setLPersons] = useState<number>(
     record?.lunch?.persons && record.lunch.persons > 0 ? record.lunch.persons : planPersons
   );
+  const [lMenuItem, setLMenuItem] = useState<string>(record?.lunch?.menuItem || '');
+  const [lAutoDelivered] = useState<boolean>(record?.lunch?.autoDelivered || false);
+
   const [isCookOff, setIsCookOff] = useState<boolean>(record?.isCookOff || false);
   const [notes, setNotes] = useState<string>(record?.notes || '');
 
@@ -73,12 +79,16 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         persons: incBreakfast ? bPersons : 0,
         rate: activePackage?.breakfastRate || config.defaultBreakfastRate,
         notes: bStatus === 'skipped' ? 'Carried over' : undefined,
+        menuItem: bMenuItem.trim() || undefined,
+        autoDelivered: bAutoDelivered,
       },
       lunch: {
         status: incLunch ? lStatus : 'none',
         persons: incLunch ? lPersons : 0,
         rate: activePackage?.lunchRate || config.defaultLunchRate,
         notes: lStatus === 'skipped' ? 'Carried over' : undefined,
+        menuItem: lMenuItem.trim() || undefined,
+        autoDelivered: lAutoDelivered,
       },
       isCookOff,
       notes: notes.trim() || undefined,
@@ -155,6 +165,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Coffee size={16} color="#fbbf24" />
                 <span style={{ fontWeight: 600, fontSize: '14px' }}>Breakfast</span>
+                {bAutoDelivered && (
+                  <span style={{ fontSize: '10px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                    ⚡ Auto
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Users size={12} color="var(--text-muted)" />
@@ -198,6 +213,18 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               ))}
             </div>
 
+            {/* Breakfast Dish / Menu Input */}
+            <div style={{ marginTop: '10px' }}>
+              <input
+                type="text"
+                className="ios-input"
+                style={{ padding: '7px 10px', fontSize: '12px' }}
+                placeholder="What was sent? e.g. Idli Vada, Poha, Upma"
+                value={bMenuItem}
+                onChange={(e) => setBMenuItem(e.target.value)}
+              />
+            </div>
+
             {/* Partial Delivery Carryover Callout */}
             {bStatus === 'delivered' && bPersons < planPersons && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.15)', padding: '5px 8px', borderRadius: '6px' }}>
@@ -214,6 +241,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <UtensilsCrossed size={16} color="#34d399" />
                 <span style={{ fontWeight: 600, fontSize: '14px' }}>Lunch</span>
+                {lAutoDelivered && (
+                  <span style={{ fontSize: '10px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                    ⚡ Auto
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Users size={12} color="var(--text-muted)" />
@@ -255,6 +287,18 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   {st === 'skipped' ? 'Skip ⏭️' : st === 'none' ? 'Unlog' : st}
                 </button>
               ))}
+            </div>
+
+            {/* Lunch Dish / Menu Input */}
+            <div style={{ marginTop: '10px' }}>
+              <input
+                type="text"
+                className="ios-input"
+                style={{ padding: '7px 10px', fontSize: '12px' }}
+                placeholder="What was sent? e.g. Dal Roti, Rice, Paneer"
+                value={lMenuItem}
+                onChange={(e) => setLMenuItem(e.target.value)}
+              />
             </div>
 
             {/* Partial Delivery Carryover Callout */}
