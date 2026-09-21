@@ -199,7 +199,8 @@ export function subscribeToCloudUserData(
     activePackageId?: string | null;
     records?: Record<string, DayRecord>;
     lastSyncedAt?: string;
-  }) => void
+  }) => void,
+  onError?: (err: any) => void
 ): Unsubscribe {
   if (!db) return () => {};
   try {
@@ -218,10 +219,12 @@ export function subscribeToCloudUserData(
       },
       (err) => {
         console.warn('Firestore real-time subscription error:', err);
+        if (onError) onError(err);
       }
     );
   } catch (err) {
     console.error('Failed to setup Firestore real-time listener:', err);
+    if (onError) onError(err);
     return () => {};
   }
 }
@@ -232,8 +235,8 @@ export async function syncUserDataToCloud(
   packagesOrPkg: PackagePlan[] | PackagePlan | null,
   records: Record<string, DayRecord>,
   activePackageId?: string | null
-): Promise<void> {
-  if (!db) return;
+): Promise<{ success: boolean; error?: any }> {
+  if (!db) return { success: false, error: 'Database not initialized' };
   try {
     const packagesArray: PackagePlan[] = Array.isArray(packagesOrPkg)
       ? packagesOrPkg
@@ -255,7 +258,9 @@ export async function syncUserDataToCloud(
       },
       { merge: true }
     );
+    return { success: true };
   } catch (err) {
     console.error('Error syncing Firestore user data:', err);
+    return { success: false, error: err };
   }
 }

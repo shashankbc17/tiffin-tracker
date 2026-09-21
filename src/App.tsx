@@ -41,6 +41,7 @@ import { SettingsView } from './components/settings/SettingsView';
 import { MfaModal } from './components/common/MfaModal';
 import { ProfileModal } from './components/common/ProfileModal';
 import { HowToUseModal } from './components/common/HowToUseModal';
+import { SyncModal } from './components/common/SyncModal';
 
 import './styles/ios-theme.css';
 
@@ -59,6 +60,9 @@ export const App: React.FC = () => {
   const [editingPackage, setEditingPackage] = useState<PackagePlan | null>(null);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
   const [historyDetailDate, setHistoryDetailDate] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'local_only'>('local_only');
+  const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
   // Derive activePackage from activePackageId or fallback
   const activePackage = 
@@ -89,35 +93,52 @@ export const App: React.FC = () => {
       }
 
       if (currentUser) {
+        setSyncStatus('syncing');
+
         // 1. If user document doesn't exist in cloud yet, seed with initial local state
         const cloudData = await syncUserDataFromCloud(currentUser.uid);
         if (!cloudData) {
-          await syncUserDataToCloud(currentUser.uid, config, packages, records, activePackageId);
+          const res = await syncUserDataToCloud(currentUser.uid, config, packages, records, activePackageId);
+          if (!res.success) {
+            setSyncStatus('error');
+            setSyncErrorMsg(res.error?.message || 'Failed to seed initial cloud data');
+          }
         }
 
         // 2. Start real-time Firestore WebSocket listener (~100ms sync across all devices!)
-        unsubscribeFirestore = subscribeToCloudUserData(currentUser.uid, (data) => {
-          if (!data) return;
-          if (data.config) {
-            setConfig(data.config);
-            saveLocalConfig(data.config);
+        unsubscribeFirestore = subscribeToCloudUserData(
+          currentUser.uid,
+          (data) => {
+            setSyncStatus('synced');
+            setSyncErrorMsg(null);
+            if (!data) return;
+            if (data.config) {
+              setConfig(data.config);
+              saveLocalConfig(data.config);
+            }
+            if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
+              setPackages(data.packages);
+              saveLocalPackages(data.packages);
+            } else if (data.pkg) {
+              setPackages([data.pkg]);
+              saveLocalPackages([data.pkg]);
+            }
+            if (data.activePackageId) {
+              setActivePackageId(data.activePackageId);
+              saveLocalActivePackageId(data.activePackageId);
+            }
+            if (data.records) {
+              setRecords(data.records);
+              saveLocalRecords(data.records);
+            }
+          },
+          (err) => {
+            setSyncStatus('error');
+            setSyncErrorMsg(err?.message || 'Database connection error');
           }
-          if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
-            setPackages(data.packages);
-            saveLocalPackages(data.packages);
-          } else if (data.pkg) {
-            setPackages([data.pkg]);
-            saveLocalPackages([data.pkg]);
-          }
-          if (data.activePackageId) {
-            setActivePackageId(data.activePackageId);
-            saveLocalActivePackageId(data.activePackageId);
-          }
-          if (data.records) {
-            setRecords(data.records);
-            saveLocalRecords(data.records);
-          }
-        });
+        );
+      } else {
+        setSyncStatus('local_only');
       }
     });
 
@@ -322,9 +343,11 @@ export const App: React.FC = () => {
       <IosHeader
         key={profileRevision}
         user={user}
+        syncStatus={syncStatus}
         onLogin={handleGoogleLogin}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onOpenGuide={() => setIsHowToUseModalOpen(true)}
+        onOpenSyncModal={() => setIsSyncModalOpen(true)}
         packageTitle={activePackage ? activePackage.title : undefined}
       />
 
@@ -456,6 +479,17 @@ export const App: React.FC = () => {
             setMfaResolver(null);
           }}
           onClose={() => setMfaResolver(null)}
+        />
+      )}
+
+      {/* Real-Time Sync Diagnostics & Setup Modal */}
+      {isSyncModalOpen && (
+        <SyncModal
+          user={user}
+          syncStatus={syncStatus}
+          syncErrorMsg={syncErrorMsg}
+          onLogin={handleGoogleLogin}
+          onClose={() => setIsSyncModalOpen(false)}
         />
       )}
     </div>

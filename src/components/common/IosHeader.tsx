@@ -4,17 +4,21 @@ import { LogIn, Cloud, HelpCircle } from 'lucide-react';
 
 interface IosHeaderProps {
   user: User | null;
+  syncStatus?: 'synced' | 'syncing' | 'error' | 'local_only';
   onLogin: () => void;
   onOpenProfile: () => void;
   onOpenGuide?: () => void;
+  onOpenSyncModal?: () => void;
   packageTitle?: string;
 }
 
 export const IosHeader: React.FC<IosHeaderProps> = ({
   user,
+  syncStatus = 'local_only',
   onLogin,
   onOpenProfile,
   onOpenGuide,
+  onOpenSyncModal,
   packageTitle,
 }) => {
   // Read local custom photo/letter preferences
@@ -62,33 +66,50 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
         )}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div 
+            <button 
+              type="button"
+              onClick={onOpenSyncModal}
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '5px',
-                background: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.25)',
-                padding: '4px 8px',
+                background: syncStatus === 'error' 
+                  ? 'rgba(239, 68, 68, 0.15)' 
+                  : syncStatus === 'syncing'
+                  ? 'rgba(56, 189, 248, 0.15)'
+                  : 'rgba(16, 185, 129, 0.12)',
+                border: syncStatus === 'error' 
+                  ? '1px solid rgba(239, 68, 68, 0.4)' 
+                  : syncStatus === 'syncing'
+                  ? '1px solid rgba(56, 189, 248, 0.4)'
+                  : '1px solid rgba(16, 185, 129, 0.25)',
+                padding: '4px 9px',
                 borderRadius: 'var(--radius-full)',
                 fontSize: '11px',
-                color: '#34d399'
+                color: syncStatus === 'error' ? '#f87171' : syncStatus === 'syncing' ? '#38bdf8' : '#34d399',
+                cursor: 'pointer',
               }}
-              title="Real-Time Sync Active across all your signed-in devices"
+              title="Click to check Cloud Sync status & diagnostics"
             >
               <span
                 style={{
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
-                  background: '#10b981',
-                  boxShadow: '0 0 8px #10b981',
+                  background: syncStatus === 'error' ? '#ef4444' : syncStatus === 'syncing' ? '#38bdf8' : '#10b981',
+                  boxShadow: syncStatus === 'error' ? '0 0 8px #ef4444' : '0 0 8px #10b981',
                   display: 'inline-block',
                 }}
               />
               <Cloud size={12} />
-              <span>Live Sync</span>
-            </div>
+              <span>
+                {syncStatus === 'error' 
+                  ? 'Setup Cloud DB' 
+                  : syncStatus === 'syncing' 
+                  ? 'Syncing...' 
+                  : 'Live Sync'}
+              </span>
+            </button>
 
             {/* Tap Avatar to Open Profile Modal */}
             <button
@@ -138,15 +159,38 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
             </button>
           </div>
         ) : (
-          <button 
-            onClick={onLogin}
-            className="ios-btn ios-btn-secondary"
-            style={{ padding: '6px 12px', fontSize: '12px', borderRadius: 'var(--radius-full)' }}
-            title="Sign in with Google on all devices to sync meals in real-time"
-          >
-            <LogIn size={13} />
-            <span>Sign In to Sync</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {onOpenSyncModal && (
+              <button
+                type="button"
+                onClick={onOpenSyncModal}
+                style={{
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  color: '#fbbf24',
+                  borderRadius: 'var(--radius-full)',
+                  padding: '5px 8px',
+                  fontSize: '10.5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Tap to see why devices are not syncing"
+              >
+                <span>📱 Local</span>
+              </button>
+            )}
+            <button 
+              onClick={onLogin}
+              className="ios-btn ios-btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '12px', borderRadius: 'var(--radius-full)' }}
+              title="Sign in with Google on all devices to sync meals in real-time"
+            >
+              <LogIn size={13} />
+              <span>Sign In to Sync</span>
+            </button>
+          </div>
         )}
       </div>
     </header>
