@@ -13,6 +13,8 @@ import {
   syncUserDataFromCloud, 
   syncUserDataToCloud,
   subscribeToCloudUserData,
+  mergeRecords,
+  mergePackages,
   generateSampleData
 } from './services/storage';
 import { 
@@ -95,7 +97,7 @@ export const App: React.FC = () => {
       if (currentUser) {
         setSyncStatus('syncing');
 
-        // 1. If user document doesn't exist in cloud yet, seed with initial local state
+        // 1. Initial Cloud Sync with 2-Way Merge (Protects iPhone edits from being overwritten by desktop)
         const cloudData = await syncUserDataFromCloud(currentUser.uid);
         if (!cloudData) {
           const res = await syncUserDataToCloud(currentUser.uid, config, packages, records, activePackageId);
@@ -103,9 +105,40 @@ export const App: React.FC = () => {
             setSyncStatus('error');
             setSyncErrorMsg(res.error?.message || 'Failed to seed initial cloud data');
           }
+        } else {
+          // Merge local records with cloud records based on latest updatedAt timestamps
+          const localRecs = loadLocalRecords();
+          const { merged: mergedRecs, localWonAny } = mergeRecords(localRecs, cloudData.records || {});
+          setRecords(mergedRecs);
+          saveLocalRecords(mergedRecs);
+
+          const localPkgs = loadLocalPackages();
+          const mergedPkgs = mergePackages(localPkgs, cloudData.packages || (cloudData.pkg ? [cloudData.pkg] : []));
+          setPackages(mergedPkgs);
+          saveLocalPackages(mergedPkgs);
+
+          if (cloudData.config) {
+            setConfig(cloudData.config);
+            saveLocalConfig(cloudData.config);
+          }
+          if (cloudData.activePackageId) {
+            setActivePackageId(cloudData.activePackageId);
+            saveLocalActivePackageId(cloudData.activePackageId);
+          }
+
+          // If local device had any newer edits than what was stored in cloud, push the merged state to cloud!
+          if (localWonAny) {
+            await syncUserDataToCloud(
+              currentUser.uid,
+              cloudData.config || config,
+              mergedPkgs,
+              mergedRecs,
+              cloudData.activePackageId || activePackageId
+            );
+          }
         }
 
-        // 2. Start real-time Firestore WebSocket listener (~100ms sync across all devices!)
+        // 2. Real-time Firestore WebSocket listener (~100ms sync across all devices!)
         unsubscribeFirestore = subscribeToCloudUserData(
           currentUser.uid,
           (data) => {
@@ -117,19 +150,38 @@ export const App: React.FC = () => {
               saveLocalConfig(data.config);
             }
             if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
-              setPackages(data.packages);
-              saveLocalPackages(data.packages);
+              setPackages((prevPkgs) => {
+                const merged = mergePackages(prevPkgs, data.packages || []);
+                saveLocalPackages(merged);
+                return merged;
+              });
             } else if (data.pkg) {
-              setPackages([data.pkg]);
-              saveLocalPackages([data.pkg]);
+              setPackages((prevPkgs) => {
+                const merged = mergePackages(prevPkgs, [data.pkg!]);
+                saveLocalPackages(merged);
+                return merged;
+              });
             }
             if (data.activePackageId) {
               setActivePackageId(data.activePackageId);
               saveLocalActivePackageId(data.activePackageId);
             }
             if (data.records) {
-              setRecords(data.records);
-              saveLocalRecords(data.records);
+              setRecords((prevRecs) => {
+                const { merged, localWonAny } = mergeRecords(prevRecs, data.records || {});
+                saveLocalRecords(merged);
+                // If local had a newer edit than this snapshot, propagate back so other device adopts it
+                if (localWonAny && currentUser) {
+                  syncUserDataToCloud(
+                    currentUser.uid,
+                    data.config || config,
+                    data.packages || packages,
+                    merged,
+                    data.activePackageId || activePackageId
+                  );
+                }
+                return merged;
+              });
             }
           },
           (err) => {

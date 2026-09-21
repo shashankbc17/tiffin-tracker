@@ -264,3 +264,87 @@ export async function syncUserDataToCloud(
     return { success: false, error: err };
   }
 }
+
+/**
+ * Intelligent 2-Way Merge for meal records across devices.
+ * Uses Last-Write-Wins based on record.updatedAt timestamp per date,
+ * ensuring edits made on iPhone NEVER get wiped out by older desktop snapshots!
+ */
+export function mergeRecords(
+  localRecords: Record<string, DayRecord>,
+  cloudRecords: Record<string, DayRecord>
+): { merged: Record<string, DayRecord>; localWonAny: boolean } {
+  const merged: Record<string, DayRecord> = { ...(cloudRecords || {}) };
+  let localWonAny = false;
+
+  for (const [date, localRec] of Object.entries(localRecords || {})) {
+    if (!localRec) continue;
+    const cloudRec = merged[date];
+
+    if (!cloudRec) {
+      // Local has a record that cloud doesn't have yet -> Keep local!
+      merged[date] = localRec;
+      localWonAny = true;
+    } else {
+      const localTime = localRec.updatedAt ? new Date(localRec.updatedAt).getTime() : 0;
+      const cloudTime = cloudRec.updatedAt ? new Date(cloudRec.updatedAt).getTime() : 0;
+
+      if (localTime > cloudTime) {
+        // Local record is strictly NEWER than cloud -> Local wins!
+        merged[date] = localRec;
+        localWonAny = true;
+      } else if (cloudTime > localTime) {
+        // Cloud record is strictly NEWER -> Cloud wins!
+        merged[date] = cloudRec;
+      } else {
+        // Equal or zero timestamps: merge intelligently so dish names & non-none statuses are preserved
+        merged[date] = {
+          ...cloudRec,
+          breakfast: {
+            ...cloudRec.breakfast,
+            status: cloudRec.breakfast?.status && cloudRec.breakfast.status !== 'none'
+              ? cloudRec.breakfast.status
+              : localRec.breakfast?.status || 'none',
+            menuItem: localRec.breakfast?.menuItem || cloudRec.breakfast?.menuItem,
+            autoDelivered: cloudRec.breakfast?.autoDelivered || localRec.breakfast?.autoDelivered,
+          },
+          lunch: {
+            ...cloudRec.lunch,
+            status: cloudRec.lunch?.status && cloudRec.lunch.status !== 'none'
+              ? cloudRec.lunch.status
+              : localRec.lunch?.status || 'none',
+            menuItem: localRec.lunch?.menuItem || cloudRec.lunch?.menuItem,
+            autoDelivered: cloudRec.lunch?.autoDelivered || localRec.lunch?.autoDelivered,
+          },
+          isCookOff: cloudRec.isCookOff || localRec.isCookOff,
+          notes: localRec.notes || cloudRec.notes,
+        };
+      }
+    }
+  }
+
+  return { merged, localWonAny };
+}
+
+/**
+ * Intelligent 2-Way Merge for packages
+ */
+export function mergePackages(
+  localPackages: PackagePlan[],
+  cloudPackages: PackagePlan[]
+): PackagePlan[] {
+  if (!cloudPackages || cloudPackages.length === 0) return localPackages || [];
+  if (!localPackages || localPackages.length === 0) return cloudPackages || [];
+
+  const pkgMap = new Map<string, PackagePlan>();
+  for (const p of cloudPackages) {
+    pkgMap.set(p.id, p);
+  }
+  for (const p of localPackages) {
+    if (!pkgMap.has(p.id)) {
+      pkgMap.set(p.id, p);
+    }
+  }
+  return Array.from(pkgMap.values());
+}
+

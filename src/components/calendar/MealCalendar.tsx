@@ -77,14 +77,19 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
         persons: existing?.breakfast?.persons || planPersons,
         rate: existing?.breakfast?.rate || activePackage?.breakfastRate || config.defaultBreakfastRate,
         notes: bStatus === 'skipped' ? 'Carried over' : existing?.breakfast?.notes,
+        menuItem: existing?.breakfast?.menuItem,
+        autoDelivered: existing?.breakfast?.autoDelivered,
       },
       lunch: {
         status: lStatus,
         persons: existing?.lunch?.persons || planPersons,
         rate: existing?.lunch?.rate || activePackage?.lunchRate || config.defaultLunchRate,
         notes: lStatus === 'skipped' ? 'Carried over' : existing?.lunch?.notes,
+        menuItem: existing?.lunch?.menuItem,
+        autoDelivered: existing?.lunch?.autoDelivered,
       },
-      isCookOff: false,
+      isCookOff: existing?.isCookOff || false,
+      notes: existing?.notes,
       updatedAt: new Date().toISOString(),
     };
     onSaveRecord(updated);
