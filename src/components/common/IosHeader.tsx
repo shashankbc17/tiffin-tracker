@@ -4,6 +4,7 @@ import { LogIn, Cloud, HelpCircle } from 'lucide-react';
 
 interface IosHeaderProps {
   user: User | null;
+  isAuthLoading?: boolean;
   syncStatus?: 'synced' | 'syncing' | 'error' | 'local_only';
   onLogin: () => void;
   onOpenProfile: () => void;
@@ -14,6 +15,7 @@ interface IosHeaderProps {
 
 export const IosHeader: React.FC<IosHeaderProps> = ({
   user,
+  isAuthLoading = false,
   syncStatus = 'local_only',
   onLogin,
   onOpenProfile,
@@ -158,6 +160,9 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
               )}
             </button>
           </div>
+        ) : isAuthLoading ? (
+          /* Subtle clean placeholder while Firebase resolves session on reload */
+          <div style={{ width: '80px', height: '32px' }} />
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {onOpenSyncModal && (

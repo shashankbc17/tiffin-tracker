@@ -52,9 +52,30 @@ import { FirstUserExperience } from './components/common/FirstUserExperience';
 
 import './styles/ios-theme.css';
 
+const loadInitialTab = (): TabKey => {
+  try {
+    const saved = localStorage.getItem('tiffin_active_tab') as TabKey;
+    if (saved && ['calendar', 'package', 'analytics', 'settings'].includes(saved)) {
+      return saved;
+    }
+  } catch {}
+  return 'calendar';
+};
+
+const loadCachedAuthUser = (): User | null => {
+  try {
+    const raw = localStorage.getItem('tiffin_auth_cached_user');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('calendar');
-  const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>(loadInitialTab);
+  const [user, setUser] = useState<User | null>(loadCachedAuthUser);
+  const [isAuthLoading, setIsAuthLoading] = useState(() => !loadCachedAuthUser());
   const [config, setConfig] = useState<RateConfig>(loadLocalConfig);
   const [packages, setPackages] = useState<PackagePlan[]>(loadLocalPackages);
   const [activePackageId, setActivePackageId] = useState<string | null>(loadLocalActivePackageId);
@@ -67,10 +88,19 @@ export const App: React.FC = () => {
   const [editingPackage, setEditingPackage] = useState<PackagePlan | null>(null);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
   const [historyDetailDate, setHistoryDetailDate] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'local_only'>('local_only');
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'local_only'>(() => {
+    return localStorage.getItem('tiffin_auth_cached_user') ? 'syncing' : 'local_only';
+  });
   const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isHomeEditMode, setIsHomeEditMode] = useState(false);
+
+  // Persist tab navigation across refreshes
+  useEffect(() => {
+    try {
+      localStorage.setItem('tiffin_active_tab', activeTab);
+    } catch {}
+  }, [activeTab]);
 
   // Derive activePackage from activePackageId or fallback
   const activePackage = 
@@ -82,7 +112,10 @@ export const App: React.FC = () => {
   // Subscribe to Firebase Auth & Real-Time Cloud Sync across all devices
   useEffect(() => {
     checkRedirectAuth().then((u) => {
-      if (u) setUser(u);
+      if (u) {
+        setUser(u);
+        setIsAuthLoading(false);
+      }
     }).catch((err: any) => {
       if (err.code === 'auth/multi-factor-auth-required' && err.resolver) {
         setMfaResolver(err.resolver);
@@ -93,6 +126,22 @@ export const App: React.FC = () => {
 
     const unsubscribeAuth = subscribeToAuthChanges(async (currentUser) => {
       setUser(currentUser);
+      setIsAuthLoading(false);
+
+      if (currentUser) {
+        try {
+          localStorage.setItem('tiffin_auth_cached_user', JSON.stringify({
+            uid: currentUser.uid,
+            displayName: currentUser.displayName,
+            email: currentUser.email,
+            photoURL: currentUser.photoURL,
+          }));
+        } catch {}
+      } else {
+        try {
+          localStorage.removeItem('tiffin_auth_cached_user');
+        } catch {}
+      }
 
       // Clean up previous Firestore listener if user switches or logs out
       if (unsubscribeFirestore) {
@@ -582,6 +631,12 @@ export const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    try {
+      localStorage.removeItem('tiffin_auth_cached_user');
+    } catch {}
+    setUser(null);
+    setSyncStatus('local_only');
+    setIsProfileModalOpen(false);
     await logoutUser();
   };
 
@@ -601,6 +656,7 @@ export const App: React.FC = () => {
       <IosHeader
         key={profileRevision}
         user={user}
+        isAuthLoading={isAuthLoading}
         syncStatus={syncStatus}
         onLogin={handleGoogleLogin}
         onOpenProfile={() => setIsProfileModalOpen(true)}

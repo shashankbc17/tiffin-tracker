@@ -79,7 +79,10 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   };
 
   const handleWhatsAppShare = () => {
-    const phone = config.catererPhone ? config.catererPhone.replace(/[^0-9]/g, '') : '';
+    let phone = config.catererPhone ? config.catererPhone.replace(/[^0-9]/g, '') : '';
+    if (phone && phone.length === 10) {
+      phone = `91${phone}`;
+    }
     const encoded = encodeURIComponent(monthlySummaryText);
     const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
     window.open(url, '_blank');

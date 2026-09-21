@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from 'firebase/auth';
 import { RateConfig } from '../../types';
-import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle, Trash2, PlayCircle } from 'lucide-react';
+import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle, Trash2, PlayCircle, X } from 'lucide-react';
 import { getSavedFirebaseConfig, saveFirebaseConfig, initFirebase, DEFAULT_FIREBASE_CONFIG } from '../../services/firebase';
 
 interface SettingsViewProps {
@@ -14,28 +14,17 @@ interface SettingsViewProps {
   onOpenGuide?: () => void;
 }
 
-// Helpers for Indian mobile phone numbers (+91 strictly 10 digits starting with 6-9)
-function cleanIndianPhone(raw: string): string {
-  let digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('91') && digits.length > 10) {
-    digits = digits.slice(2);
-  } else if (digits.startsWith('0') && digits.length > 10) {
-    digits = digits.slice(1);
+// Helper to extract purely the 10-digit mobile number from any stored string
+function extract10DigitPhone(raw: string): string {
+  if (!raw) return '';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('91') && digits.length >= 12) {
+    return digits.slice(2, 12);
   }
-  // Hard limit strictly to 10 digits (will not take extra digits)
+  if (digits.startsWith('0') && digits.length >= 11) {
+    return digits.slice(1, 11);
+  }
   return digits.slice(0, 10);
-}
-
-function formatIndianPhone(digits10: string): string {
-  if (!digits10) return '';
-  if (digits10.length <= 5) {
-    return `+91 ${digits10}`;
-  }
-  return `+91 ${digits10.slice(0, 5)} ${digits10.slice(5, 10)}`;
-}
-
-function isIndianPhoneValid(digits10: string): boolean {
-  return /^[6-9]\d{9}$/.test(digits10);
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -58,7 +47,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [defaultLunchRateStr, setDefaultLunchRateStr] = useState(String(config.defaultLunchRate ?? 90));
 
   // Phone state: raw 10 digits
-  const [phoneDigits, setPhoneDigits] = useState(() => cleanIndianPhone(config.catererPhone || ''));
+  const [phone10Digits, setPhone10Digits] = useState(() => extract10DigitPhone(config.catererPhone || ''));
 
   // Automated delivery state
   const [autoDeliveryEnabled, setAutoDeliveryEnabled] = useState(config.autoDeliveryEnabled ?? true);
@@ -78,19 +67,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const currentHost = window.location.hostname;
 
-  const phoneIsValid = phoneDigits.length === 0 || isIndianPhoneValid(phoneDigits);
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const cleaned = cleanIndianPhone(raw);
-    setPhoneDigits(cleaned);
+    let val = e.target.value.replace(/\D/g, '');
+    // If user pasted a full number with country code 91 or 0
+    if (val.startsWith('91') && val.length > 10) {
+      val = val.slice(2);
+    } else if (val.startsWith('0') && val.length > 10) {
+      val = val.slice(1);
+    }
+    setPhone10Digits(val.slice(0, 10));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (phoneDigits.length > 0 && !isIndianPhoneValid(phoneDigits)) {
-      alert('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
+    if (phone10Digits.length > 0 && phone10Digits.length < 10) {
+      alert('Please enter a complete 10-digit mobile number, or leave it empty.');
       return;
     }
 
@@ -99,7 +91,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       defaultPersons: Math.max(1, parseInt(defaultPersonsStr, 10) || 1),
       defaultBreakfastRate: Math.max(0, parseInt(defaultBreakfastRateStr, 10) || 0),
       defaultLunchRate: Math.max(0, parseInt(defaultLunchRateStr, 10) || 0),
-      catererPhone: phoneDigits ? formatIndianPhone(phoneDigits) : '',
+      catererPhone: phone10Digits ? `+91 ${phone10Digits}` : '',
       autoDeliveryEnabled,
     };
 
@@ -293,33 +285,88 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           />
         </div>
 
-        {/* Caterer Phone with strict Indian (+91) 10-digit validation */}
+        {/* Caterer Phone with fixed +91 country badge and free 10-digit entry */}
         <div className="ios-input-group">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label className="ios-label">WhatsApp Number (Indian 10-Digit Mobile)</label>
-            {phoneDigits.length === 10 && isIndianPhoneValid(phoneDigits) ? (
+            <label className="ios-label">WhatsApp Number (Cook / Caterer)</label>
+            {phone10Digits.length === 10 ? (
               <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <Check size={12} /> Valid Indian Mobile
+                <Check size={12} /> 10-digit number ready
               </span>
-            ) : phoneDigits.length > 0 ? (
-              <span style={{ fontSize: '11px', color: '#f87171', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <AlertCircle size={12} /> {phoneDigits.length}/10 digits (Starts with 6-9)
+            ) : phone10Digits.length > 0 ? (
+              <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                {phone10Digits.length}/10 digits
               </span>
             ) : (
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>10 digits</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Optional</span>
             )}
           </div>
-          <input 
-            type="text" 
-            inputMode="tel"
-            className="ios-input" 
-            placeholder="e.g. 98765 43210" 
-            value={formatIndianPhone(phoneDigits)} 
-            onChange={handlePhoneChange} 
-            maxLength={16}
-          />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Fixed non-editable +91 country badge */}
+            <div 
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 12px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                fontSize: '14px',
+                userSelect: 'none',
+                flexShrink: 0
+              }}
+              title="Fixed Country Code (India +91)"
+            >
+              <span style={{ fontSize: '15px' }}>🇮🇳</span>
+              <span>+91</span>
+            </div>
+
+            {/* Free 10-digit input with clear button */}
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input 
+                type="tel" 
+                inputMode="numeric"
+                className="ios-input" 
+                placeholder="10-digit mobile number" 
+                value={phone10Digits} 
+                onChange={handlePhoneChange} 
+                maxLength={10}
+                style={{ width: '100%', paddingRight: phone10Digits ? '32px' : '12px' }}
+              />
+              {phone10Digits && (
+                <button
+                  type="button"
+                  onClick={() => setPhone10Digits('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '18px',
+                    height: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                    padding: 0
+                  }}
+                  title="Clear number"
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
           <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Automatically prefixed with +91 · Strictly limits to 10 digits without extra numbers.
+            Country code +91 is fixed. Enter the 10-digit mobile number freely to send WhatsApp statements in 1 tap.
           </div>
         </div>
 
