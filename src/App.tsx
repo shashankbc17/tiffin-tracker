@@ -25,8 +25,6 @@ import {
   calculateCarryOver,
   getIstNow,
   runAutoDeliveryCheck,
-  isTodayCutoffPassedForPackage,
-  getAdjustedStartDateIfCutoffPassed,
   isMealActiveOnDate,
   addDays
 } from './services/carryOverEngine';
@@ -287,31 +285,6 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [packages, records, config, user, activePackageId]);
 
-  // If any package started today but was added after cutoff with no meals logged,
-  // automatically advance its start date to tomorrow so it waits until the next day.
-  useEffect(() => {
-    if (packages.length === 0) return;
-    let hasChanges = false;
-    const adjusted = packages.map((pkg) => {
-      if (isTodayCutoffPassedForPackage(pkg, config, records)) {
-        hasChanges = true;
-        return {
-          ...pkg,
-          startDate: getAdjustedStartDateIfCutoffPassed(pkg, config, records),
-        };
-      }
-      return pkg;
-    });
-
-    if (hasChanges) {
-      setPackages(adjusted);
-      saveLocalPackages(adjusted);
-      if (user) {
-        syncUserDataToCloud(user.uid, config, adjusted, records, activePackageId);
-      }
-    }
-  }, [packages, records, config, user, activePackageId]);
-
   // Compute live carry-over and stats for currently active package
   const stats = calculateCarryOver(activePackage, records, config);
 
@@ -394,13 +367,13 @@ export const App: React.FC = () => {
     setActivePackageId(newPkg.id);
     saveLocalActivePackageId(newPkg.id);
 
-    // If start date is in the past, assume food was delivered according to the opted
+    // If start date is today or in the past, assume food was delivered according to the opted
     // day-of-week schedule up to today, deducting the plan automatically.
     const { dateStr: todayStr } = getIstNow();
     let nextRecords = { ...records };
     let hasBackfilled = false;
 
-    if (newPkg.startDate < todayStr) {
+    if (newPkg.startDate <= todayStr) {
       const isCreatingNewPlan = !editingPackage;
       let cur = newPkg.startDate;
       while (cur <= todayStr) {

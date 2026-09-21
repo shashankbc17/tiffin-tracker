@@ -438,10 +438,6 @@ export function runAutoDeliveryCheck(
   for (const pkg of activePackages) {
     if (cur < pkg.startDate) continue;
 
-    if (isTodayCutoffPassedForPackage(pkg, config, updatedRecords, istHour)) {
-      continue;
-    }
-
     // Breakfast auto-delivery
     if (pkg.includesBreakfast && isMealActiveOnDate(cur, pkg, 'breakfast')) {
       const currentBStatus = bEntry?.status || 'none';

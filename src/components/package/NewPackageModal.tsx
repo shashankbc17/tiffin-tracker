@@ -48,13 +48,8 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
   const breakfastCutoff = config.breakfastCutoffHour ?? 11;
   const lunchCutoff = config.lunchCutoffHour ?? 15;
 
-  const isBfCutoffPassed = istHour >= breakfastCutoff;
-  const isLnCutoffPassed = istHour >= lunchCutoff;
-
-  // Default start date: if it's already past breakfast cutoff (11 AM IST), default to tomorrow!
-  const defaultStartDate =
-    initialPackage?.startDate ||
-    (isBfCutoffPassed ? addDays(todayStr, 1) : todayStr);
+  // Default start date: today if creating new, or existing package start date
+  const defaultStartDate = initialPackage?.startDate || todayStr;
 
   const [title, setTitle] = useState(initialPackage?.title || 'Meal Subscription');
   const [startDate, setStartDate] = useState(defaultStartDate);
@@ -112,14 +107,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
     ? Array.from(new Set([...breakfastDaysOfWeek, ...lunchDaysOfWeek])).sort()
     : activeDaysOfWeek;
 
-  // Check if chosen start date is today and cutoff has passed for included meals
-  const isStartDateToday = startDate === todayStr;
-  const isCutoffPassedForSelected = Boolean(
-    isStartDateToday &&
-      ((includesBreakfast && !includesLunch && isBfCutoffPassed) ||
-        (!includesBreakfast && includesLunch && isLnCutoffPassed) ||
-        (includesBreakfast && includesLunch && (isBfCutoffPassed || isLnCutoffPassed)))
-  );
+
 
   const handleDaysPreset = (days: number) => {
     setTotalDaysStr(String(days));
@@ -183,15 +171,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
     const finalLunchDays = separateMealDays ? lunchDaysOfWeek : activeDaysOfWeek;
     const finalActiveDays = separateMealDays ? combinedDaysOfWeek : activeDaysOfWeek;
 
-    // If start date is today but cutoff has passed for the selected meals, automatically wait until next day
-    let finalStartDate = startDate;
-    if (finalStartDate === todayStr && isCutoffPassedForSelected) {
-      let nextDate = addDays(todayStr, 1);
-      while (!isDayActiveInPackage(nextDate, finalActiveDays)) {
-        nextDate = addDays(nextDate, 1);
-      }
-      finalStartDate = nextDate;
-    }
+    const finalStartDate = startDate;
 
     const newPkg: PackagePlan = {
       id: initialPackage?.id || `pkg_${Date.now()}`,
@@ -353,7 +333,6 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setStartDate(todayStr)}
-                  disabled={isBfCutoffPassed && !includesLunch}
                   style={{
                     background: startDate === todayStr ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
                     border: startDate === todayStr ? '1px solid #10b981' : '1px solid var(--glass-border)',
@@ -362,8 +341,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                     fontWeight: 600,
                     padding: '3px 8px',
                     borderRadius: 'var(--radius-sm)',
-                    cursor: (isBfCutoffPassed && !includesLunch) ? 'not-allowed' : 'pointer',
-                    opacity: (isBfCutoffPassed && !includesLunch) ? 0.5 : 1,
+                    cursor: 'pointer',
                   }}
                 >
                   Today
@@ -395,32 +373,8 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
               required
             />
 
-            {/* If today is chosen but cutoff has passed */}
-            {isCutoffPassedForSelected && (
-              <div
-                style={{
-                  marginTop: '6px',
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(245, 158, 11, 0.12)',
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
-                  color: '#fbbf24',
-                  fontSize: '11.5px',
-                  lineHeight: 1.4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Clock size={14} style={{ flexShrink: 0 }} />
-                <span>
-                  Delivery cutoff passed for today ({istHour >= lunchCutoff ? '3:00 PM Lunch' : '11:00 AM Breakfast'}). Plan will automatically start tomorrow so you receive all full meals!
-                </span>
-              </div>
-            )}
-
-            {/* If a past date is selected */}
-            {startDate < todayStr && (
+            {/* If today or past date is selected */}
+            {startDate <= todayStr && (
               <div
                 style={{
                   marginTop: '6px',
@@ -438,7 +392,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
               >
                 <Sparkles size={15} color="#60a5fa" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>
-                  <strong>Past Start Date Selected:</strong> Active meals based on your opted schedule from <strong>{startDate}</strong> up to today will be automatically deducted as delivered. You can edit any past day later if needed.
+                  <strong>{startDate === todayStr ? 'Starting Today:' : 'Past Start Date Selected:'}</strong> Active meals based on your opted schedule from <strong>{startDate}</strong> up to today will be recorded as delivered for {defaultPersons} {defaultPersons > 1 ? 'persons' : 'person'} by default and deducted from your plan balance. You can edit any day later from the history.
                 </span>
               </div>
             )}

@@ -3,7 +3,6 @@ import {
   formatDate,
   getIstNow,
   isMealActiveOnDate,
-  isTodayCutoffPassedForPackage,
   addDays,
 } from '../../services/carryOverEngine';
 import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils, Trash2 } from 'lucide-react';
@@ -35,44 +34,22 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   // 1. Is there an active package?
   const hasPackage = Boolean(activePackage);
 
-  // 2. Future plan check (Starts in future date OR starts today but cutoff has already passed)
-  const isPendingNextDay = Boolean(
-    activePackage &&
-      isTodayCutoffPassedForPackage(
-        activePackage,
-        config,
-        todayRecord ? { [todayStr]: todayRecord } : undefined,
-        istHour
-      )
-  );
-
+  // 2. Future plan check (Starts strictly in future date)
   const isFuturePlan = Boolean(
-    activePackage && (todayStr < activePackage.startDate || isPendingNextDay)
+    activePackage && todayStr < activePackage.startDate
   );
   
   let daysUntilStart = 0;
   let formattedStartDate = '';
   if (isFuturePlan && activePackage) {
-    if (isPendingNextDay) {
-      daysUntilStart = 1;
-      const tomorrowStr = addDays(todayStr, 1);
-      const [y, m, d] = tomorrowStr.split('-').map(Number);
-      const dTomorrow = new Date(y, m - 1, d);
-      formattedStartDate = dTomorrow.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
-    } else {
-      const d1 = new Date(todayStr + 'T00:00:00');
-      const d2 = new Date(activePackage.startDate + 'T00:00:00');
-      daysUntilStart = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
-      formattedStartDate = d2.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
-    }
+    const d1 = new Date(todayStr + 'T00:00:00');
+    const d2 = new Date(activePackage.startDate + 'T00:00:00');
+    daysUntilStart = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
+    formattedStartDate = d2.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
   // 3. Meal services active today (checking independent meal schedule if specified)
