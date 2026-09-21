@@ -120,12 +120,20 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     onClose();
   };
 
+  const handleAutoSaveAndClose = () => {
+    if (!isOlderThan1Month) {
+      handleSave();
+    } else {
+      onClose();
+    }
+  };
+
   const hasLoggedMeals = (record?.breakfast?.status && record.breakfast.status !== 'none') ||
     (record?.lunch?.status && record.lunch.status !== 'none') ||
     record?.isCookOff;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleAutoSaveAndClose}>
       <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
         
@@ -135,8 +143,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{formattedDate}</h3>
           </div>
           <button 
-            onClick={onClose} 
+            onClick={handleAutoSaveAndClose} 
             style={{ background: 'rgba(255, 255, 255, 0.1)', border: 'none', color: 'white', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Auto-saves and closes"
           >
             <X size={16} />
           </button>
