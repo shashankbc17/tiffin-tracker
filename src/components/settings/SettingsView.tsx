@@ -10,6 +10,7 @@ interface SettingsViewProps {
   onSaveConfig: (cfg: RateConfig) => void;
   onResetData?: () => void;
   onClearAllData?: () => void;
+  onWipeCloudData?: () => void;
   onOpenGuide?: () => void;
 }
 
@@ -43,6 +44,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSaveConfig,
   onResetData,
   onClearAllData,
+  onWipeCloudData,
   onOpenGuide,
 }) => {
   const [formData, setFormData] = useState<RateConfig>(config);
@@ -528,6 +530,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <Trash2 size={15} />
               <span>Clear All Plans &amp; Logs (Fresh Start)</span>
             </button>
+          )}
+
+          {/* Cloud Database Purge (when signed in or admin) */}
+          {currentUser && onWipeCloudData && (
+            <div
+              style={{
+                marginTop: '8px',
+                paddingTop: '12px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                <div style={{ fontSize: '12.5px', color: '#fca5a5', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🔥 Firebase Cloud Database</span>
+                  {isDev && (
+                    <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', padding: '1px 6px', borderRadius: 'var(--radius-full)', color: '#f87171', fontWeight: 700 }}>
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{currentUser.email}</span>
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
+                Permanently wipes your cloud document (<code style={{ color: '#cbd5e1' }}>users/{currentUser.uid}</code>) from Cloud Firestore. Use this to erase any legacy synced data so refreshing will never restore old plans or meal records.
+              </p>
+              <button
+                type="button"
+                onClick={onWipeCloudData}
+                className="ios-btn ios-btn-secondary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  fontSize: '12.5px',
+                  color: '#ef4444',
+                  borderColor: 'rgba(239, 68, 68, 0.5)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                }}
+              >
+                <Trash2 size={15} />
+                <span>Delete All Cloud Data in Firebase</span>
+              </button>
+            </div>
           )}
         </div>
       </div>

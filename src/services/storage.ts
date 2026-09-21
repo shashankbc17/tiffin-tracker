@@ -1,6 +1,6 @@
 import { DayRecord, PackagePlan, RateConfig } from '../types';
 import { db } from './firebase';
-import { doc, getDoc, setDoc, updateDoc, deleteField, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
   CONFIG: 'tiffinflow_config',
@@ -259,17 +259,34 @@ export async function syncUserDataToCloud(
     const userDocRef = doc(db, 'users', userId);
     const cleanPayload = sanitizeForFirestore({
       config,
-      pkg: activePkg,
+      pkg: activePkg || null,
       packages: packagesArray,
       activePackageId: activePackageId || activePkg?.id || null,
-      records,
+      records: records || {},
       lastSyncedAt: new Date().toISOString(),
     });
 
-    await setDoc(userDocRef, cleanPayload, { merge: true });
+    // Overwrite document completely so that deleted packages or cleared records are truly deleted from Firestore
+    await setDoc(userDocRef, cleanPayload);
     return { success: true };
   } catch (err) {
     console.error('Error syncing Firestore user data:', err);
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Permanently deletes the user document from Firestore (users/{userId})
+ * Completely purges cloud storage so no old packages or records can resurrect!
+ */
+export async function clearUserCloudData(userId: string): Promise<{ success: boolean; error?: any }> {
+  if (!db) return { success: false, error: 'Database not initialized' };
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await deleteDoc(userDocRef);
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to wipe Firestore user data:', err);
     return { success: false, error: err };
   }
 }

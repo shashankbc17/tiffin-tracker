@@ -15,6 +15,7 @@ import {
   syncSingleRecordToCloud,
   deleteRecordFromCloud,
   clearAllRecordsFromCloud,
+  clearUserCloudData,
   subscribeToCloudUserData,
   mergeRecords,
   mergePackages,
@@ -113,12 +114,30 @@ export const App: React.FC = () => {
         } else {
           // Merge local records with cloud records based on latest updatedAt timestamps
           const localRecs = loadLocalRecords();
-          const { merged: mergedRecs, localWonAny } = mergeRecords(localRecs, cloudData.records || {});
+          let mergedRecs: Record<string, DayRecord> = {};
+          let localWonAny = false;
+          if (cloudData.records && Object.keys(cloudData.records).length > 0) {
+            const res = mergeRecords(localRecs, cloudData.records);
+            mergedRecs = res.merged;
+            localWonAny = res.localWonAny;
+          } else {
+            mergedRecs = localRecs;
+          }
           setRecords(mergedRecs);
           saveLocalRecords(mergedRecs);
 
           const localPkgs = loadLocalPackages();
-          const mergedPkgs = mergePackages(localPkgs, cloudData.packages || (cloudData.pkg ? [cloudData.pkg] : []));
+          const cloudPkgs = Array.isArray(cloudData.packages)
+            ? cloudData.packages
+            : (cloudData.pkg ? [cloudData.pkg] : []);
+
+          let mergedPkgs: PackagePlan[];
+          if (cloudData.packages !== undefined && cloudData.packages.length === 0 && !cloudData.pkg) {
+            // Cloud explicitly has 0 packages (deleted in cloud)
+            mergedPkgs = [];
+          } else {
+            mergedPkgs = mergePackages(localPkgs, cloudPkgs);
+          }
           setPackages(mergedPkgs);
           saveLocalPackages(mergedPkgs);
 
@@ -449,7 +468,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleDeletePackage = (deleteLogs: boolean) => {
+  const handleDeletePackage = async (deleteLogs: boolean) => {
     if (!activePackage) return;
     const nextPackages = packages.filter((p) => p.id !== activePackage.id);
     setPackages(nextPackages);
@@ -466,7 +485,11 @@ export const App: React.FC = () => {
     }
 
     if (user) {
-      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, nextActiveId);
+      if (nextPackages.length === 0 && deleteLogs) {
+        await clearUserCloudData(user.uid);
+      } else {
+        await syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, nextActiveId);
+      }
     }
   };
 
@@ -499,7 +522,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleClearAllData = () => {
+  const handleClearAllData = async () => {
     if (window.confirm('Are you sure you want to clear all meal subscriptions and logs? You will start fresh with no active plan.')) {
       setPackages([]);
       saveLocalPackages([]);
@@ -508,8 +531,35 @@ export const App: React.FC = () => {
       setRecords({});
       saveLocalRecords({});
       if (user) {
-        syncUserDataToCloud(user.uid, config, [], {}, null);
+        await clearUserCloudData(user.uid);
       }
+    }
+  };
+
+  const handleWipeCloudData = async () => {
+    if (!user) {
+      alert('Please log in with Google first to wipe your cloud data.');
+      return;
+    }
+    const confirmed = window.confirm(
+      `⚠️ PERMANENT CLOUD PURGE:\n\nAre you sure you want to permanently delete all data in Cloud Firestore for ${user.email}?\n\nThis will completely delete users/${user.uid} from Firebase so no old packages or records can resurrect on refresh.`
+    );
+    if (!confirmed) return;
+
+    setSyncStatus('syncing');
+    const res = await clearUserCloudData(user.uid);
+    if (res.success) {
+      setPackages([]);
+      saveLocalPackages([]);
+      setActivePackageId(null);
+      saveLocalActivePackageId(null);
+      setRecords({});
+      saveLocalRecords({});
+      setSyncStatus('synced');
+      alert(`✅ Cloud database successfully wiped for ${user.email}! All cloud and local records have been cleared.`);
+    } else {
+      setSyncStatus('error');
+      alert(`Failed to wipe cloud data: ${res.error?.message || 'Unknown error'}`);
     }
   };
 
@@ -728,6 +778,7 @@ export const App: React.FC = () => {
             onSaveConfig={handleSaveConfig}
             onResetData={handleResetData}
             onClearAllData={handleClearAllData}
+            onWipeCloudData={handleWipeCloudData}
             onOpenGuide={() => setIsHowToUseModalOpen(true)}
           />
         )}
