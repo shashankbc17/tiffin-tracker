@@ -1,6 +1,6 @@
 import { DayRecord, PackagePlan, RateConfig } from '../types';
 import { db } from './firebase';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteField, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
   CONFIG: 'tiffinflow_config',
@@ -17,7 +17,7 @@ export const DEFAULT_CONFIG: RateConfig = {
   defaultPersons: 1,
   catererName: 'Ramesh Cook (Tiffin)',
   catererPhone: '+91 98765 43210',
-  autoDeliveryEnabled: true,
+  autoDeliveryEnabled: false,
   breakfastCutoffHour: 11, // 11:00 AM IST
   lunchCutoffHour: 15, // 3:00 PM IST
 };
@@ -59,7 +59,11 @@ export function loadLocalConfig(): RateConfig {
     const raw = localStorage.getItem(STORAGE_KEYS.CONFIG);
     if (!raw) return DEFAULT_CONFIG;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_CONFIG, ...parsed };
+    return { 
+      ...DEFAULT_CONFIG, 
+      ...parsed, 
+      autoDeliveryEnabled: parsed.autoDeliveryEnabled === true && parsed.explicitAutoDelivery === true 
+    };
   } catch {
     return DEFAULT_CONFIG;
   }
@@ -302,6 +306,39 @@ export async function syncSingleRecordToCloud(
       loadLocalRecords(),
       loadLocalActivePackageId()
     );
+  }
+}
+
+/**
+ * Permanently deletes a single record date from Firestore using deleteField()
+ * so it will NEVER get restored by snapshot listeners or merge.
+ */
+export async function deleteRecordFromCloud(userId: string, dateStr: string): Promise<void> {
+  if (!db) return;
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      [`records.${dateStr}`]: deleteField(),
+      lastSyncedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Failed to delete record from Firestore:', err);
+  }
+}
+
+/**
+ * Clears all records from Firestore completely
+ */
+export async function clearAllRecordsFromCloud(userId: string): Promise<void> {
+  if (!db) return;
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      records: {},
+      lastSyncedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Failed to clear records in Firestore:', err);
   }
 }
 

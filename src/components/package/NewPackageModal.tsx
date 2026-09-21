@@ -418,6 +418,30 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                 </span>
               </div>
             )}
+
+            {/* If a past date is selected */}
+            {startDate < todayStr && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#93c5fd',
+                  fontSize: '11.5px',
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}
+              >
+                <Sparkles size={15} color="#60a5fa" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>
+                  <strong>Past Start Date Selected:</strong> Active meals based on your opted schedule from <strong>{startDate}</strong> up to today will be automatically deducted as delivered. You can edit any past day later if needed.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Delivery Days of Week Selector */}

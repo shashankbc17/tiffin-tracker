@@ -13,6 +13,8 @@ import {
   syncUserDataFromCloud, 
   syncUserDataToCloud,
   syncSingleRecordToCloud,
+  deleteRecordFromCloud,
+  clearAllRecordsFromCloud,
   subscribeToCloudUserData,
   mergeRecords,
   mergePackages,
@@ -24,7 +26,9 @@ import {
   getIstNow,
   runAutoDeliveryCheck,
   isTodayCutoffPassedForPackage,
-  getAdjustedStartDateIfCutoffPassed
+  getAdjustedStartDateIfCutoffPassed,
+  isMealActiveOnDate,
+  addDays
 } from './services/carryOverEngine';
 import { 
   loginWithGoogle, 
@@ -66,6 +70,7 @@ export const App: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'local_only'>('local_only');
   const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isHomeEditMode, setIsHomeEditMode] = useState(false);
 
   // Derive activePackage from activePackageId or fallback
   const activePackage = 
@@ -325,7 +330,53 @@ export const App: React.FC = () => {
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
-      syncUserDataToCloud(user.uid, config, packages, next, activePackageId);
+      deleteRecordFromCloud(user.uid, dateStr);
+    }
+  };
+
+  const handleClearMonthRecords = (year: number, month: number) => {
+    const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const next = { ...records };
+    const datesToDelete: string[] = [];
+
+    for (const d of Object.keys(next)) {
+      if (d.startsWith(prefix)) {
+        delete next[d];
+        datesToDelete.push(d);
+      }
+    }
+
+    setRecords(next);
+    saveLocalRecords(next);
+    if (user) {
+      for (const d of datesToDelete) {
+        deleteRecordFromCloud(user.uid, d);
+      }
+    }
+  };
+
+  const handleClearAutoMarkedRecords = () => {
+    const next = { ...records };
+    const datesToDelete: string[] = [];
+
+    for (const [d, rec] of Object.entries(next)) {
+      const isAuto = (
+        (rec.breakfast?.autoDelivered || rec.breakfast?.status === 'none' || !rec.breakfast?.status) &&
+        (rec.lunch?.autoDelivered || rec.lunch?.status === 'none' || !rec.lunch?.status) &&
+        !rec.isCookOff
+      );
+      if (isAuto) {
+        delete next[d];
+        datesToDelete.push(d);
+      }
+    }
+
+    setRecords(next);
+    saveLocalRecords(next);
+    if (user) {
+      for (const d of datesToDelete) {
+        deleteRecordFromCloud(user.uid, d);
+      }
     }
   };
 
@@ -343,11 +394,77 @@ export const App: React.FC = () => {
     setActivePackageId(newPkg.id);
     saveLocalActivePackageId(newPkg.id);
 
+    // If start date is in the past, assume food was delivered according to the opted
+    // day-of-week schedule up to today, deducting the plan automatically.
+    const { dateStr: todayStr } = getIstNow();
+    let nextRecords = { ...records };
+    let hasBackfilled = false;
+
+    if (newPkg.startDate < todayStr) {
+      const isCreatingNewPlan = !editingPackage;
+      let cur = newPkg.startDate;
+      while (cur <= todayStr) {
+        const isBActive = newPkg.includesBreakfast !== false && isMealActiveOnDate(cur, newPkg, 'breakfast');
+        const isLActive = newPkg.includesLunch !== false && isMealActiveOnDate(cur, newPkg, 'lunch');
+
+        if (isBActive || isLActive) {
+          const existing = nextRecords[cur];
+          const hasExistingDeliveredOrSkipped = Boolean(
+            existing && (
+              (existing.breakfast?.status && existing.breakfast.status !== 'none') ||
+              (existing.lunch?.status && existing.lunch.status !== 'none') ||
+              existing.isCookOff
+            )
+          );
+
+          // When creating a new plan, assume every scheduled food was delivered so plan is deducted up to current date.
+          // When modifying an existing plan, backfill unlogged days.
+          if (isCreatingNewPlan || !hasExistingDeliveredOrSkipped) {
+            nextRecords[cur] = {
+              date: cur,
+              breakfast: isBActive
+                ? {
+                    status: 'delivered',
+                    persons: newPkg.defaultPersons || config.defaultPersons || 1,
+                    rate: newPkg.breakfastRate || config.defaultBreakfastRate || 60,
+                  }
+                : {
+                    status: 'none',
+                    persons: 1,
+                    rate: config.defaultBreakfastRate || 60,
+                  },
+              lunch: isLActive
+                ? {
+                    status: 'delivered',
+                    persons: newPkg.defaultPersons || config.defaultPersons || 1,
+                    rate: newPkg.lunchRate || config.defaultLunchRate || 90,
+                  }
+                : {
+                    status: 'none',
+                    persons: 1,
+                    rate: config.defaultLunchRate || 90,
+                  },
+              isCookOff: false,
+              notes: 'Initial plan deduction',
+              updatedAt: new Date().toISOString(),
+            };
+            hasBackfilled = true;
+          }
+        }
+        cur = addDays(cur, 1);
+      }
+    }
+
+    if (hasBackfilled) {
+      setRecords(nextRecords);
+      saveLocalRecords(nextRecords);
+    }
+
     setIsNewPackageModalOpen(false);
     setEditingPackage(null);
 
     if (user) {
-      syncUserDataToCloud(user.uid, config, nextPackages, records, newPkg.id);
+      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, newPkg.id);
     }
   };
 
@@ -445,6 +562,90 @@ export const App: React.FC = () => {
         {/* Calendar / Tracker is the primary main view */}
         {activeTab === 'calendar' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Master Edit & Manage Toggle Switch */}
+            <div
+              className="ios-card"
+              style={{
+                padding: '10px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: isHomeEditMode
+                  ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(15, 23, 42, 0.92) 100%)'
+                  : 'rgba(255, 255, 255, 0.03)',
+                border: isHomeEditMode
+                  ? '1px solid rgba(139, 92, 246, 0.45)'
+                  : '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-md)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: isHomeEditMode ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '15px',
+                  }}
+                >
+                  {isHomeEditMode ? '✏️' : '🔒'}
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: isHomeEditMode ? '#f8fafc' : 'var(--text-secondary)' }}>
+                    {isHomeEditMode ? 'Edit & Delete Controls: ON' : 'Master Edit Switch: OFF'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {isHomeEditMode
+                      ? 'Edit plan, delete plan, and clear buttons are revealed'
+                      : 'Toggle ON to reveal edit & delete options for each section'}
+                  </div>
+                </div>
+              </div>
+
+              {/* iOS Cupertino Style Switch */}
+              <label style={{ position: 'relative', display: 'inline-block', width: '46px', height: '26px', cursor: 'pointer', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={isHomeEditMode}
+                  onChange={(e) => setIsHomeEditMode(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span
+                  style={{
+                    position: 'absolute',
+                    cursor: 'pointer',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: isHomeEditMode ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.16)',
+                    transition: '0.2s ease',
+                    borderRadius: '26px',
+                    border: isHomeEditMode ? '1px solid rgba(16, 185, 129, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      height: '20px',
+                      width: '20px',
+                      left: isHomeEditMode ? '22px' : '3px',
+                      bottom: '2px',
+                      backgroundColor: 'white',
+                      transition: '0.2s ease',
+                      borderRadius: '50%',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                    }}
+                  />
+                </span>
+              </label>
+            </div>
+
             {/* Active Plan Card with Multi-Plan Selector */}
             <PackageSummaryCard
               pkg={activePackage}
@@ -453,6 +654,7 @@ export const App: React.FC = () => {
               onSelectPackage={handleSelectPackage}
               stats={stats}
               config={config}
+              isEditMode={isHomeEditMode}
               onOpenNewPackage={handleOpenCreateModal}
               onEditPackage={handleOpenEditModal}
               onDeletePackage={handleDeletePackage}
@@ -463,8 +665,11 @@ export const App: React.FC = () => {
               records={records}
               config={config}
               activePackage={activePackage}
+              isEditMode={isHomeEditMode}
               onSaveRecord={handleUpdateRecord}
               onClearRecord={handleClearRecord}
+              onClearMonth={handleClearMonthRecords}
+              onClearAutoMarked={handleClearAutoMarkedRecords}
             />
           </div>
         )}

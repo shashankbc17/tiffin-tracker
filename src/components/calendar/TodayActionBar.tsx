@@ -6,23 +6,27 @@ import {
   isTodayCutoffPassedForPackage,
   addDays,
 } from '../../services/carryOverEngine';
-import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils } from 'lucide-react';
+import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface TodayActionBarProps {
   todayRecord?: DayRecord;
   activePackage: PackagePlan | null;
   config: RateConfig;
+  isEditMode?: boolean;
   onConfirmToday: (status: 'delivered' | 'skipped', meal?: 'both' | 'breakfast' | 'lunch') => void;
   onOpenDayDetails: (dateStr: string) => void;
+  onClearToday?: (dateStr: string) => void;
 }
 
 export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   todayRecord,
   activePackage,
   config,
+  isEditMode = false,
   onConfirmToday,
   onOpenDayDetails,
+  onClearToday,
 }) => {
   const { dateStr: todayStr, formattedDate: formattedToday, dayOfWeek: todayDayOfWeek, hour: istHour } = getIstNow();
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -530,14 +534,32 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   )}
                 </div>
 
-                <button
-                  onClick={() => onOpenDayDetails(todayStr)}
-                  className="ios-btn ios-btn-secondary"
-                  style={{ padding: '6px 12px', fontSize: '11px', flexShrink: 0 }}
-                >
-                  <Edit2 size={12} />
-                  <span>Edit</span>
-                </button>
+                {isEditMode && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <button
+                      onClick={() => onOpenDayDetails(todayStr)}
+                      className="ios-btn ios-btn-secondary"
+                      style={{ padding: '6px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <Edit2 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    {onClearToday && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Clear and delete today's meal record?")) {
+                            onClearToday(todayStr);
+                          }
+                        }}
+                        className="ios-btn ios-btn-secondary"
+                        style={{ padding: '6px 8px', fontSize: '11px', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Delete today's record"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

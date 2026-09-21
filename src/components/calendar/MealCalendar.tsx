@@ -9,16 +9,22 @@ interface MealCalendarProps {
   records: Record<string, DayRecord>;
   config: RateConfig;
   activePackage: PackagePlan | null;
+  isEditMode?: boolean;
   onSaveRecord: (record: DayRecord) => void;
   onClearRecord?: (dateStr: string) => void;
+  onClearMonth?: (year: number, month: number) => void;
+  onClearAutoMarked?: () => void;
 }
 
 export const MealCalendar: React.FC<MealCalendarProps> = ({
   records,
   config,
   activePackage,
+  isEditMode = false,
   onSaveRecord,
   onClearRecord,
+  onClearMonth,
+  onClearAutoMarked,
 }) => {
   const todayStr = getIstNow().dateStr;
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
@@ -114,9 +120,67 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
         todayRecord={records[todayStr]}
         activePackage={activePackage}
         config={config}
+        isEditMode={isEditMode}
         onConfirmToday={handleQuickConfirmToday}
         onOpenDayDetails={(dateStr) => setSelectedDate(dateStr)}
+        onClearToday={onClearRecord}
       />
+
+      {/* Edit Mode Notice Banner */}
+      {isEditMode && (
+        <div 
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: '8px',
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)', 
+            border: '1px solid rgba(139, 92, 246, 0.35)', 
+            padding: '10px 14px', 
+            borderRadius: 'var(--radius-md)', 
+            fontSize: '12px', 
+            color: '#ddd6fe' 
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <span>✏️ <strong>Calendar Edit Mode Active</strong></span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {onClearAutoMarked && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Clear all auto-selected deliveries across the calendar?')) {
+                      onClearAutoMarked();
+                    }
+                  }}
+                  className="ios-btn ios-btn-secondary"
+                  style={{ padding: '4px 9px', fontSize: '11px', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}
+                  title="Remove auto-marked entries"
+                >
+                  🧹 Clear Auto-Selected
+                </button>
+              )}
+              {onClearMonth && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Clear all meal records for ${monthName}?`)) {
+                      onClearMonth(year, month);
+                    }
+                  }}
+                  className="ios-btn ios-btn-secondary"
+                  style={{ padding: '4px 9px', fontSize: '11px', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                  title="Clear all records in this month"
+                >
+                  🗑️ Clear {monthName.split(' ')[0]}
+                </button>
+              )}
+            </div>
+          </div>
+          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+            Tap any date below to log or adjust portions, or tap Clear inside to wipe that date.
+          </div>
+        </div>
+      )}
 
       {/* Month Navigation Card */}
       <div className="ios-card" style={{ padding: '16px 20px' }}>

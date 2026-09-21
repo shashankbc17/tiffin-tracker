@@ -29,8 +29,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const [bStatus, setBStatus] = useState<MealStatus>(
     record?.breakfast?.status && record.breakfast.status !== 'none'
       ? record.breakfast.status
-      : incBreakfast
-      ? 'delivered'
       : 'none'
   );
   const [bPersons, setBPersons] = useState<number>(
@@ -42,8 +40,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const [lStatus, setLStatus] = useState<MealStatus>(
     record?.lunch?.status && record.lunch.status !== 'none'
       ? record.lunch.status
-      : incLunch
-      ? 'delivered'
       : 'none'
   );
   const [lPersons, setLPersons] = useState<number>(
@@ -77,8 +73,34 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     }
   };
 
+  const handleQuickPreset = (type: 'delivered' | 'skipped' | 'none') => {
+    if (isOlderThan1Month) return;
+    if (incBreakfast) setBStatus(type);
+    if (incLunch) setLStatus(type);
+    if (type !== 'skipped') setIsCookOff(false);
+  };
+
   const handleSave = () => {
     if (isOlderThan1Month) return;
+
+    // If both meals are 'none' and cook is not off, clear record
+    const hasAnyLogged = (incBreakfast && bStatus !== 'none') || (incLunch && lStatus !== 'none') || isCookOff;
+    if (!hasAnyLogged) {
+      if (onClear) {
+        onClear(dateStr);
+      } else {
+        onSave({
+          date: dateStr,
+          breakfast: { status: 'none', persons: planPersons, rate: config.defaultBreakfastRate },
+          lunch: { status: 'none', persons: planPersons, rate: config.defaultLunchRate },
+          isCookOff: false,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      onClose();
+      return;
+    }
+
     const updated: DayRecord = {
       date: dateStr,
       breakfast: {
@@ -120,20 +142,17 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     onClose();
   };
 
-  const handleAutoSaveAndClose = () => {
-    if (!isOlderThan1Month) {
-      handleSave();
-    } else {
-      onClose();
-    }
-  };
-
-  const hasLoggedMeals = (record?.breakfast?.status && record.breakfast.status !== 'none') ||
+  const hasLoggedMeals = Boolean(
+    (record?.breakfast?.status && record.breakfast.status !== 'none') ||
     (record?.lunch?.status && record.lunch.status !== 'none') ||
-    record?.isCookOff;
+    record?.isCookOff ||
+    (bStatus && bStatus !== 'none') ||
+    (lStatus && lStatus !== 'none') ||
+    isCookOff
+  );
 
   return (
-    <div className="modal-overlay" onClick={handleAutoSaveAndClose}>
+    <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
         
@@ -143,9 +162,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{formattedDate}</h3>
           </div>
           <button 
-            onClick={handleAutoSaveAndClose} 
+            type="button"
+            onClick={onClose} 
             style={{ background: 'rgba(255, 255, 255, 0.1)', border: 'none', color: 'white', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            title="Auto-saves and closes"
+            title="Cancel & Close"
           >
             <X size={16} />
           </button>
@@ -197,6 +217,35 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             </span>
           </div>
           <input type="checkbox" checked={isCookOff} onChange={() => {}} style={{ accentColor: '#ef4444' }} />
+        </div>
+
+        {/* Quick Fill Presets */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <button
+            type="button"
+            onClick={() => handleQuickPreset('delivered')}
+            className="ios-btn ios-btn-secondary"
+            style={{ flex: 1, padding: '8px 10px', fontSize: '11.5px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}
+          >
+            Mark Delivered
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickPreset('skipped')}
+            className="ios-btn ios-btn-secondary"
+            style={{ flex: 1, padding: '8px 10px', fontSize: '11.5px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#c4b5fd' }}
+          >
+            Mark Skipped ⏭️
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickPreset('none')}
+            className="ios-btn ios-btn-secondary"
+            style={{ padding: '8px 10px', fontSize: '11.5px', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}
+            title="Reset to unlogged"
+          >
+            Reset
+          </button>
         </div>
 
         {/* Breakfast Row (Only shown if Breakfast is opted in package) */}

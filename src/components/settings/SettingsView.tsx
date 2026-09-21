@@ -215,44 +215,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           Meal Rates &amp; Caterer Settings
         </h3>
 
-        {/* Currency & Default Persons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div className="ios-input-group">
-            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>Currency Symbol</label>
-            <input 
-              type="text" 
-              className="ios-input" 
-              value={formData.currency} 
-              onChange={(e) => setFormData({ ...formData, currency: e.target.value })} 
-              placeholder="e.g. ₹"
-              required 
-            />
-          </div>
-
-          <div className="ios-input-group">
-            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>Default Persons</label>
-            <input 
-              type="text" 
-              inputMode="numeric"
-              pattern="[0-9]*"
-              className="ios-input" 
-              value={defaultPersonsStr} 
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === '' || /^\d*$/.test(val)) {
-                  setDefaultPersonsStr(val);
-                }
-              }} 
-              required 
-            />
-          </div>
+        {/* Default Persons */}
+        <div className="ios-input-group">
+          <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>Default Number of Persons</label>
+          <input 
+            type="text" 
+            inputMode="numeric"
+            pattern="[0-9]*"
+            className="ios-input" 
+            value={defaultPersonsStr} 
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || /^\d*$/.test(val)) {
+                setDefaultPersonsStr(val);
+              }
+            }} 
+            placeholder="1"
+            required 
+          />
         </div>
 
         {/* Meal Rates */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="ios-input-group">
-            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍳 Breakfast ({formData.currency}/p)</label>
+            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍳 Breakfast ({formData.currency || '₹'}/p)</label>
             <input 
               type="text" 
               inputMode="numeric"
@@ -271,7 +258,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <div className="ios-input-group">
-            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍱 Lunch ({formData.currency}/p)</label>
+            <label className="ios-label" style={{ whiteSpace: 'nowrap' }}>🍱 Lunch ({formData.currency || '₹'}/p)</label>
             <input 
               type="text" 
               inputMode="numeric"

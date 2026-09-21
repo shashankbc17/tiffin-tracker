@@ -107,15 +107,16 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* 1. SEPARATE SECTION: Edit Past History (Limited to 1 Month Behind) */}
-      <div
-        className="ios-card"
-        style={{
-          border: '1px solid rgba(139, 92, 246, 0.35)',
-          background:
-            'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(15, 23, 42, 0.9) 100%)',
-        }}
-      >
+      {/* 1. SEPARATE SECTION: Edit Past History (Only visible when a plan is active) */}
+      {Boolean(activePackage && activePackage.status === 'active') && (
+        <div
+          className="ios-card"
+          style={{
+            border: '1px solid rgba(139, 92, 246, 0.35)',
+            background:
+              'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(15, 23, 42, 0.9) 100%)',
+          }}
+        >
         <div
           style={{
             display: 'flex',
@@ -333,6 +334,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           </button>
         )}
       </div>
+      )}
 
       {/* 2. 6-MONTH HISTORY MONTH SELECTOR */}
       <div className="ios-card" style={{ padding: '12px 14px' }}>
@@ -625,9 +627,15 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               style={{ margin: '0 auto 8px auto', opacity: 0.4 }}
             />
             <div>No meal activity recorded for {monthlyStats.monthLabel}.</div>
-            <div style={{ fontSize: '11px', marginTop: '4px', color: '#a78bfa' }}>
-              Use the "Edit Past History" section above to log meals for any day in this month.
-            </div>
+            {Boolean(activePackage && activePackage.status === 'active') ? (
+              <div style={{ fontSize: '11px', marginTop: '4px', color: '#a78bfa' }}>
+                Use the "Edit Past History" section above to log meals for any day in this month.
+              </div>
+            ) : (
+              <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-muted)' }}>
+                Subscribe to a meal plan to start tracking meals and carry-overs.
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

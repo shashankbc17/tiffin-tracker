@@ -10,6 +10,7 @@ interface PackageSummaryCardProps {
   onSelectPackage?: (id: string) => void;
   stats: CarryOverStats;
   config: RateConfig;
+  isEditMode?: boolean;
   onOpenNewPackage: () => void;
   onEditPackage?: () => void;
   onDeletePackage?: (deleteLogs: boolean) => void;
@@ -22,6 +23,7 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   onSelectPackage,
   stats,
   config,
+  isEditMode = false,
   onOpenNewPackage,
   onEditPackage,
   onDeletePackage,
@@ -218,70 +220,74 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            {onEditPackage && (
+          {isEditMode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+              {onEditPackage && (
+                <button 
+                  onClick={onEditPackage}
+                  title="Edit active plan"
+                  style={{ 
+                    background: 'rgba(59, 130, 246, 0.18)', 
+                    border: '1px solid rgba(59, 130, 246, 0.4)', 
+                    color: '#93c5fd',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Edit3 size={11} />
+                  <span>Edit Plan</span>
+                </button>
+              )}
+
               <button 
-                onClick={onEditPackage}
-                title="Edit active plan"
+                onClick={onOpenNewPackage}
                 style={{ 
-                  background: 'rgba(59, 130, 246, 0.15)', 
-                  border: '1px solid rgba(59, 130, 246, 0.35)', 
-                  color: '#93c5fd',
+                  background: 'rgba(255, 255, 255, 0.08)', 
+                  border: '1px solid var(--glass-border)', 
+                  color: 'var(--text-secondary)',
                   fontSize: '11px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   padding: '4px 9px',
                   borderRadius: 'var(--radius-full)',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
                   whiteSpace: 'nowrap'
                 }}
               >
-                <Edit3 size={11} />
-                <span>Edit</span>
+                + Plan
               </button>
-            )}
 
-            <button 
-              onClick={onOpenNewPackage}
-              style={{ 
-                background: 'rgba(255, 255, 255, 0.08)', 
-                border: 'none', 
-                color: 'var(--text-secondary)',
-                fontSize: '11px',
-                fontWeight: 500,
-                padding: '4px 9px',
-                borderRadius: 'var(--radius-full)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              + Plan
-            </button>
-
-            {onDeletePackage && (
-              <button 
-                onClick={() => setShowDeleteConfirm(true)}
-                title="Delete or cancel this plan"
-                style={{ 
-                  background: 'rgba(239, 68, 68, 0.12)', 
-                  border: '1px solid rgba(239, 68, 68, 0.3)', 
-                  color: '#f87171',
-                  borderRadius: 'var(--radius-full)',
-                  width: '26px',
-                  height: '26px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  flexShrink: 0
-                }}
-              >
-                <Trash2 size={12} />
-              </button>
-            )}
-          </div>
+              {onDeletePackage && (
+                <button 
+                  onClick={() => setShowDeleteConfirm(true)}
+                  title="Delete this plan"
+                  style={{ 
+                    background: 'rgba(239, 68, 68, 0.15)', 
+                    border: '1px solid rgba(239, 68, 68, 0.4)', 
+                    color: '#f87171',
+                    borderRadius: 'var(--radius-full)',
+                    padding: '4px 9px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    flexShrink: 0
+                  }}
+                >
+                  <Trash2 size={12} />
+                  <span>Delete</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Row 2: Package Title & Subtitle */}

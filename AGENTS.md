@@ -48,3 +48,7 @@ tiffin-tracker/
 │   └── styles/
 │       └── ios-theme.css
 ```
+
+## Testing & Verification Policy
+- **DO NOT** run tests, automated test runners, or browser verification subagents unless the user explicitly requests them.
+- The user will check and verify all fixes manually.
