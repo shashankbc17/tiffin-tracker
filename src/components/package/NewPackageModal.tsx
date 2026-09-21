@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
 import { PackagePlan, RateConfig } from '../../types';
-import { formatDate, addActiveDays } from '../../services/carryOverEngine';
-import { X, Sparkles, Check, CalendarDays, Edit3, SlidersHorizontal, Coffee, Utensils } from 'lucide-react';
+import {
+  formatDate,
+  addActiveDays,
+  addDays,
+  getIstNow,
+  isDayActiveInPackage,
+} from '../../services/carryOverEngine';
+import {
+  X,
+  Sparkles,
+  Check,
+  CalendarDays,
+  Calendar,
+  Clock,
+  Edit3,
+  SlidersHorizontal,
+  Coffee,
+  Utensils,
+} from 'lucide-react';
 
 interface NewPackageModalProps {
   config: RateConfig;
@@ -27,10 +44,20 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
   initialPackage,
 }) => {
   const currency = config.currency || '₹';
-  const todayStr = formatDate(new Date());
+  const { dateStr: todayStr, hour: istHour } = getIstNow();
+  const breakfastCutoff = config.breakfastCutoffHour ?? 11;
+  const lunchCutoff = config.lunchCutoffHour ?? 15;
+
+  const isBfCutoffPassed = istHour >= breakfastCutoff;
+  const isLnCutoffPassed = istHour >= lunchCutoff;
+
+  // Default start date: if it's already past breakfast cutoff (11 AM IST), default to tomorrow!
+  const defaultStartDate =
+    initialPackage?.startDate ||
+    (isBfCutoffPassed ? addDays(todayStr, 1) : todayStr);
 
   const [title, setTitle] = useState(initialPackage?.title || 'Meal Subscription');
-  const [startDate, setStartDate] = useState(initialPackage?.startDate || todayStr);
+  const [startDate, setStartDate] = useState(defaultStartDate);
 
   // String states for numeric fields to prevent iPhone "stuck on 0" bug
   const [totalDaysStr, setTotalDaysStr] = useState(String(initialPackage?.totalDays || 30));
@@ -84,6 +111,15 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
   const combinedDaysOfWeek = separateMealDays
     ? Array.from(new Set([...breakfastDaysOfWeek, ...lunchDaysOfWeek])).sort()
     : activeDaysOfWeek;
+
+  // Check if chosen start date is today and cutoff has passed for included meals
+  const isStartDateToday = startDate === todayStr;
+  const isCutoffPassedForSelected = Boolean(
+    isStartDateToday &&
+      ((includesBreakfast && !includesLunch && isBfCutoffPassed) ||
+        (!includesBreakfast && includesLunch && isLnCutoffPassed) ||
+        (includesBreakfast && includesLunch && (isBfCutoffPassed || isLnCutoffPassed)))
+  );
 
   const handleDaysPreset = (days: number) => {
     setTotalDaysStr(String(days));
@@ -147,10 +183,20 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
     const finalLunchDays = separateMealDays ? lunchDaysOfWeek : activeDaysOfWeek;
     const finalActiveDays = separateMealDays ? combinedDaysOfWeek : activeDaysOfWeek;
 
+    // If start date is today but cutoff has passed for the selected meals, automatically wait until next day
+    let finalStartDate = startDate;
+    if (finalStartDate === todayStr && isCutoffPassedForSelected) {
+      let nextDate = addDays(todayStr, 1);
+      while (!isDayActiveInPackage(nextDate, finalActiveDays)) {
+        nextDate = addDays(nextDate, 1);
+      }
+      finalStartDate = nextDate;
+    }
+
     const newPkg: PackagePlan = {
       id: initialPackage?.id || `pkg_${Date.now()}`,
       title: title.trim() || 'Tiffin Package',
-      startDate,
+      startDate: finalStartDate,
       totalDays,
       activeDaysOfWeek: finalActiveDays,
       breakfastDaysOfWeek: includesBreakfast ? finalBreakfastDays : undefined,
@@ -163,6 +209,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
       totalAmountPaid: computedTotal,
       status: initialPackage?.status || 'active',
       notes: notes.trim() || undefined,
+      createdAt: initialPackage?.createdAt || new Date().toISOString(),
     };
     onSavePackage(newPkg);
     onClose();
@@ -293,6 +340,84 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
               placeholder="e.g. Daily Breakfast & Lunch"
               required 
             />
+          </div>
+
+          {/* Subscription Start Date */}
+          <div className="ios-input-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label className="ios-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                <Calendar size={14} color="var(--accent-primary)" />
+                <span>Subscription Start Date</span>
+              </label>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setStartDate(todayStr)}
+                  disabled={isBfCutoffPassed && !includesLunch}
+                  style={{
+                    background: startDate === todayStr ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: startDate === todayStr ? '1px solid #10b981' : '1px solid var(--glass-border)',
+                    color: startDate === todayStr ? '#34d399' : 'var(--text-muted)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '3px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: (isBfCutoffPassed && !includesLunch) ? 'not-allowed' : 'pointer',
+                    opacity: (isBfCutoffPassed && !includesLunch) ? 0.5 : 1,
+                  }}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStartDate(addDays(todayStr, 1))}
+                  style={{
+                    background: startDate === addDays(todayStr, 1) ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: startDate === addDays(todayStr, 1) ? '1px solid #3b82f6' : '1px solid var(--glass-border)',
+                    color: startDate === addDays(todayStr, 1) ? '#93c5fd' : 'var(--text-muted)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '3px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Tomorrow
+                </button>
+              </div>
+            </div>
+
+            <input
+              type="date"
+              className="ios-input"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+            />
+
+            {/* If today is chosen but cutoff has passed */}
+            {isCutoffPassedForSelected && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  color: '#fbbf24',
+                  fontSize: '11.5px',
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Clock size={14} style={{ flexShrink: 0 }} />
+                <span>
+                  Delivery cutoff passed for today ({istHour >= lunchCutoff ? '3:00 PM Lunch' : '11:00 AM Breakfast'}). Plan will automatically start tomorrow so you receive all full meals!
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Delivery Days of Week Selector */}

@@ -114,6 +114,94 @@ export function addActiveDays(
 }
 
 /**
+ * Check if the cutoff time has passed for a package on today's date,
+ * meaning that if the package started today with no meals logged yet,
+ * it must wait until the next active delivery day.
+ */
+export function isTodayCutoffPassedForPackage(
+  pkg: PackagePlan | null,
+  config?: RateConfig,
+  records?: Record<string, DayRecord>,
+  customHour?: number
+): boolean {
+  if (!pkg) return false;
+  const { dateStr: todayStr, hour: defaultHour } = getIstNow();
+  const currentHour = customHour ?? defaultHour;
+
+  // Only applies if the package's startDate is today
+  if (pkg.startDate !== todayStr) return false;
+
+  // If user already logged something on today, then today was actively used
+  if (records && records[todayStr]) {
+    const r = records[todayStr];
+    const hasDelivery =
+      (r.breakfast?.status && r.breakfast.status !== 'none') ||
+      (r.lunch?.status && r.lunch.status !== 'none') ||
+      r.isCookOff;
+    if (hasDelivery) return false;
+  }
+
+  const breakfastCutoff = config?.breakfastCutoffHour ?? 11;
+  const lunchCutoff = config?.lunchCutoffHour ?? 15;
+
+  const isBActive = isMealActiveOnDate(todayStr, pkg, 'breakfast');
+  const isLActive = isMealActiveOnDate(todayStr, pkg, 'lunch');
+
+  // If neither meal is scheduled for today (e.g. weekend off day)
+  if (!isBActive && !isLActive) return false;
+
+  // Breakfast-only plan
+  if (pkg.includesBreakfast && !pkg.includesLunch) {
+    return isBActive && currentHour >= breakfastCutoff;
+  }
+
+  // Lunch-only plan
+  if (!pkg.includesBreakfast && pkg.includesLunch) {
+    return isLActive && currentHour >= lunchCutoff;
+  }
+
+  // Both meals: If breakfast cutoff has passed, waiting until next day ensures a clean full-day start
+  if (pkg.includesBreakfast && pkg.includesLunch) {
+    if (isBActive && currentHour >= breakfastCutoff) return true;
+    if (isLActive && currentHour >= lunchCutoff) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Get the next valid active start date for a package if today's cutoff has already passed.
+ */
+export function getAdjustedStartDateIfCutoffPassed(
+  pkg: PackagePlan,
+  config?: RateConfig,
+  records?: Record<string, DayRecord>,
+  customHour?: number
+): string {
+  const { dateStr: todayStr } = getIstNow();
+  if (pkg.startDate > todayStr) {
+    return pkg.startDate; // Already starts in future
+  }
+
+  if (!isTodayCutoffPassedForPackage(pkg, config, records, customHour)) {
+    return pkg.startDate;
+  }
+
+  // Cutoff has passed! Advance to next day (or next active day in package schedule)
+  let nextDate = addDays(todayStr, 1);
+  const activeDays =
+    pkg.activeDaysOfWeek && pkg.activeDaysOfWeek.length > 0
+      ? pkg.activeDaysOfWeek
+      : [0, 1, 2, 3, 4, 5, 6];
+
+  while (!isDayActiveInPackage(nextDate, activeDays)) {
+    nextDate = addDays(nextDate, 1);
+  }
+
+  return nextDate;
+}
+
+/**
  * Calculate full carry-over analytics for an active package
  */
 export function calculateCarryOver(
@@ -346,6 +434,12 @@ export function runAutoDeliveryCheck(
 
     for (const pkg of activePackages) {
       if (cur < pkg.startDate) continue;
+
+      // If cur is today and today's cutoff has passed for a newly added package with no prior logs,
+      // it should wait until next day — do not auto-deliver today!
+      if (cur === todayStr && isTodayCutoffPassedForPackage(pkg, config, updatedRecords, istHour)) {
+        continue;
+      }
 
       // Breakfast auto-delivery
       if (pkg.includesBreakfast && isMealActiveOnDate(cur, pkg, 'breakfast')) {

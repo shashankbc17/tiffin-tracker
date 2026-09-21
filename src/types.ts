@@ -36,6 +36,7 @@ export interface PackagePlan {
   totalAmountPaid: number;
   status: 'active' | 'completed' | 'paused';
   notes?: string;
+  createdAt?: string;
 }
 
 export interface RateConfig {

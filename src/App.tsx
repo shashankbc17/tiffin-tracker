@@ -18,7 +18,9 @@ import {
   formatDate, 
   calculateCarryOver,
   getIstNow,
-  runAutoDeliveryCheck
+  runAutoDeliveryCheck,
+  isTodayCutoffPassedForPackage,
+  getAdjustedStartDateIfCutoffPassed
 } from './services/carryOverEngine';
 import { 
   loginWithGoogle, 
@@ -120,6 +122,31 @@ export const App: React.FC = () => {
     checkAndApplyAutoDelivery();
     const interval = setInterval(checkAndApplyAutoDelivery, 60000);
     return () => clearInterval(interval);
+  }, [packages, records, config, user]);
+
+  // If any package started today but was added after cutoff with no meals logged,
+  // automatically advance its start date to tomorrow so it waits until the next day.
+  useEffect(() => {
+    if (packages.length === 0) return;
+    let hasChanges = false;
+    const adjusted = packages.map((pkg) => {
+      if (isTodayCutoffPassedForPackage(pkg, config, records)) {
+        hasChanges = true;
+        return {
+          ...pkg,
+          startDate: getAdjustedStartDateIfCutoffPassed(pkg, config, records),
+        };
+      }
+      return pkg;
+    });
+
+    if (hasChanges) {
+      setPackages(adjusted);
+      saveLocalPackages(adjusted);
+      if (user) {
+        syncUserDataToCloud(user.uid, config, adjusted, records);
+      }
+    }
   }, [packages, records, config, user]);
 
   // Compute live carry-over and stats for currently active package

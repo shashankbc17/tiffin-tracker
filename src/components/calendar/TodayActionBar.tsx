@@ -1,5 +1,11 @@
 import { DayRecord, PackagePlan, RateConfig, MealStatus } from '../../types';
-import { formatDate, getIstNow, isMealActiveOnDate } from '../../services/carryOverEngine';
+import {
+  formatDate,
+  getIstNow,
+  isMealActiveOnDate,
+  isTodayCutoffPassedForPackage,
+  addDays,
+} from '../../services/carryOverEngine';
 import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -25,20 +31,44 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   // 1. Is there an active package?
   const hasPackage = Boolean(activePackage);
 
-  // 2. Future plan check (Starts in future date)
-  const isFuturePlan = Boolean(activePackage && todayStr < activePackage.startDate);
+  // 2. Future plan check (Starts in future date OR starts today but cutoff has already passed)
+  const isPendingNextDay = Boolean(
+    activePackage &&
+      isTodayCutoffPassedForPackage(
+        activePackage,
+        config,
+        todayRecord ? { [todayStr]: todayRecord } : undefined,
+        istHour
+      )
+  );
+
+  const isFuturePlan = Boolean(
+    activePackage && (todayStr < activePackage.startDate || isPendingNextDay)
+  );
   
   let daysUntilStart = 0;
   let formattedStartDate = '';
   if (isFuturePlan && activePackage) {
-    const d1 = new Date(todayStr + 'T00:00:00');
-    const d2 = new Date(activePackage.startDate + 'T00:00:00');
-    daysUntilStart = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
-    formattedStartDate = d2.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
+    if (isPendingNextDay) {
+      daysUntilStart = 1;
+      const tomorrowStr = addDays(todayStr, 1);
+      const [y, m, d] = tomorrowStr.split('-').map(Number);
+      const dTomorrow = new Date(y, m - 1, d);
+      formattedStartDate = dTomorrow.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+    } else {
+      const d1 = new Date(todayStr + 'T00:00:00');
+      const d2 = new Date(activePackage.startDate + 'T00:00:00');
+      daysUntilStart = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
+      formattedStartDate = d2.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
   }
 
   // 3. Meal services active today (checking independent meal schedule if specified)
@@ -408,33 +438,57 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               </div>
 
               {/* Action Buttons tailored specifically to the plan services */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 0.8fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr', gap: '8px' }}>
                 <button
                   onClick={() => handleQuickConfirm('delivered', incBreakfast && !incLunch ? 'breakfast' : !incBreakfast && incLunch ? 'lunch' : 'both')}
                   className="ios-btn ios-btn-primary"
-                  style={{ padding: '9px 6px', fontSize: '11.5px', fontWeight: 600 }}
+                  style={{
+                    padding: '9px 8px',
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    gap: '4px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minWidth: 0,
+                  }}
                 >
-                  <Check size={14} />
-                  <span>
-                    {incBreakfast && incLunch ? 'Both Served ✅' : incBreakfast ? 'Breakfast ✅' : 'Lunch ✅'}
+                  <Check size={14} style={{ flexShrink: 0 }} />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {incBreakfast && incLunch ? 'Both Served' : 'Served'}
                   </span>
                 </button>
 
                 <button
                   onClick={() => handleQuickConfirm('skipped', incBreakfast && !incLunch ? 'breakfast' : !incBreakfast && incLunch ? 'lunch' : 'both')}
                   className="ios-btn ios-btn-secondary"
-                  style={{ padding: '9px 6px', fontSize: '11.5px', color: '#c4b5fd', borderColor: 'rgba(139, 92, 246, 0.4)' }}
+                  style={{
+                    padding: '9px 8px',
+                    fontSize: '11.5px',
+                    color: '#c4b5fd',
+                    borderColor: 'rgba(139, 92, 246, 0.4)',
+                    gap: '4px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minWidth: 0,
+                  }}
                 >
-                  <FastForward size={14} />
-                  <span>Skip (Carry)</span>
+                  <FastForward size={14} style={{ flexShrink: 0 }} />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Skip</span>
                 </button>
 
                 <button
                   onClick={() => onOpenDayDetails(todayStr)}
                   className="ios-btn ios-btn-secondary"
-                  style={{ padding: '9px 6px', fontSize: '11px' }}
+                  style={{
+                    padding: '9px 8px',
+                    fontSize: '11px',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                  }}
                 >
-                  <span>More...</span>
+                  <span style={{ whiteSpace: 'nowrap' }}>More...</span>
                 </button>
               </div>
             </div>
