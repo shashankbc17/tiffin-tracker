@@ -209,9 +209,17 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             max={todayStr}
             onChange={(e) => {
               const val = e.target.value;
-              if (val >= oneMonthAgoStr && val <= todayStr) {
-                setPastEditDate(val);
+              if (val > todayStr) {
+                alert(`Cannot select future dates (${val}) for past history editing. Clamped to today (${todayStr}).`);
+                setPastEditDate(todayStr);
+                return;
               }
+              if (val < oneMonthAgoStr) {
+                alert(`Cannot select dates older than 1 month (${oneMonthAgoStr}). Clamped to ${oneMonthAgoStr}.`);
+                setPastEditDate(oneMonthAgoStr);
+                return;
+              }
+              setPastEditDate(val);
             }}
             style={{ padding: '8px 12px', fontSize: '13px' }}
           />
@@ -317,7 +325,13 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         {onOpenDayDetails && (
           <button
             type="button"
-            onClick={() => onOpenDayDetails(pastEditDate)}
+            onClick={() => {
+              if (pastEditDate > todayStr) {
+                alert(`Cannot edit future dates in past history. Max allowed date is today (${todayStr}).`);
+                return;
+              }
+              onOpenDayDetails(pastEditDate);
+            }}
             className="ios-btn ios-btn-primary"
             style={{
               width: '100%',

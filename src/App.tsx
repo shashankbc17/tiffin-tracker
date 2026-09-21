@@ -365,6 +365,17 @@ export const App: React.FC = () => {
   const stats = calculateCarryOver(activePackage, records, config);
 
   const handleUpdateRecord = (updated: DayRecord) => {
+    const { dateStr: todayStr } = getIstNow();
+    // Safety guard: future dates must never be marked as delivered
+    if (updated.date > todayStr) {
+      if (updated.breakfast?.status === 'delivered' || updated.breakfast?.status === 'extra') {
+        updated.breakfast.status = 'none';
+      }
+      if (updated.lunch?.status === 'delivered' || updated.lunch?.status === 'extra') {
+        updated.lunch.status = 'none';
+      }
+    }
+
     const next = { ...records, [updated.date]: updated };
     setRecords(next);
     saveLocalRecords(next);

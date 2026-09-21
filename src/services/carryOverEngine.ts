@@ -242,11 +242,13 @@ export function calculateCarryOver(
 
   const recordDates = Object.keys(records).sort();
   const planPersons = pkg.defaultPersons || 1;
+  const { dateStr: todayStr } = getIstNow();
 
   for (const dateStr of recordDates) {
     if (dateStr < pkg.startDate) continue;
 
     const day = records[dateStr];
+    const isFuture = dateStr > todayStr;
     const isBreakfastActive = isMealActiveOnDate(dateStr, pkg, 'breakfast');
     const isLunchActive = isMealActiveOnDate(dateStr, pkg, 'lunch');
 
@@ -268,7 +270,8 @@ export function calculateCarryOver(
     // Breakfast calculation
     if (pkg.includesBreakfast && day.breakfast) {
       const bRate = day.breakfast.rate || pkg.breakfastRate || config.defaultBreakfastRate;
-      if (day.breakfast.status === 'delivered' || day.breakfast.status === 'extra') {
+      // Future dates must not count as delivered
+      if (!isFuture && (day.breakfast.status === 'delivered' || day.breakfast.status === 'extra')) {
         const deliveredCount = day.breakfast.persons || planPersons;
         bDelivered += deliveredCount;
         totalSpent += bRate * deliveredCount;
@@ -289,7 +292,8 @@ export function calculateCarryOver(
     // Lunch calculation
     if (pkg.includesLunch && day.lunch) {
       const lRate = day.lunch.rate || pkg.lunchRate || config.defaultLunchRate;
-      if (day.lunch.status === 'delivered' || day.lunch.status === 'extra') {
+      // Future dates must not count as delivered
+      if (!isFuture && (day.lunch.status === 'delivered' || day.lunch.status === 'extra')) {
         const deliveredCount = day.lunch.persons || planPersons;
         lDelivered += deliveredCount;
         totalSpent += lRate * deliveredCount;
@@ -563,12 +567,14 @@ export function calculateMonthlyStats(
   let cookOffDays = 0;
   let loggedDaysCount = 0;
 
+  const { dateStr: todayStr } = getIstNow();
   const datesInMonth = Object.keys(records)
     .filter((d) => d.startsWith(monthKey))
     .sort();
 
   for (const d of datesInMonth) {
     const rec = records[d];
+    const isFuture = d > todayStr;
     loggedDaysCount++;
 
     if (rec.isCookOff) {
@@ -587,7 +593,7 @@ export function calculateMonthlyStats(
     if (rec.breakfast) {
       const bRate = rec.breakfast.rate || defaultBRate;
       const bCount = rec.breakfast.persons || planPersons;
-      if (rec.breakfast.status === 'delivered' || rec.breakfast.status === 'extra') {
+      if (!isFuture && (rec.breakfast.status === 'delivered' || rec.breakfast.status === 'extra')) {
         breakfastDelivered += bCount;
         totalSpent += bRate * bCount;
       } else if (rec.breakfast.status === 'skipped') {
@@ -599,7 +605,7 @@ export function calculateMonthlyStats(
     if (rec.lunch) {
       const lRate = rec.lunch.rate || defaultLRate;
       const lCount = rec.lunch.persons || planPersons;
-      if (rec.lunch.status === 'delivered' || rec.lunch.status === 'extra') {
+      if (!isFuture && (rec.lunch.status === 'delivered' || rec.lunch.status === 'extra')) {
         lunchDelivered += lCount;
         totalSpent += lRate * lCount;
       } else if (rec.lunch.status === 'skipped') {

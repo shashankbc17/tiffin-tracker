@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DayRecord, MealStatus, RateConfig, PackagePlan } from '../../types';
 import { getIstNow, addDays } from '../../services/carryOverEngine';
-import { X, Coffee, UtensilsCrossed, Users, Check, AlertCircle, Trash2, Lock } from 'lucide-react';
+import { X, Coffee, UtensilsCrossed, Users, Check, AlertCircle, Trash2, Lock, Clock } from 'lucide-react';
 
 interface DayDetailModalProps {
   dateStr: string;
@@ -26,22 +26,27 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const incLunch = activePackage ? activePackage.includesLunch !== false : true;
   const planPersons = activePackage?.defaultPersons || config.defaultPersons || 1;
 
-  const [bStatus, setBStatus] = useState<MealStatus>(
-    record?.breakfast?.status && record.breakfast.status !== 'none'
-      ? record.breakfast.status
-      : 'none'
-  );
+  const { dateStr: todayStr } = getIstNow();
+  const oneMonthAgoStr = addDays(todayStr, -30);
+  const isOlderThan1Month = dateStr < oneMonthAgoStr;
+  const isFutureDate = dateStr > todayStr;
+
+  const [bStatus, setBStatus] = useState<MealStatus>(() => {
+    const raw = record?.breakfast?.status;
+    if (isFutureDate && (raw === 'delivered' || raw === 'extra')) return 'none';
+    return raw && raw !== 'none' ? raw : 'none';
+  });
   const [bPersons, setBPersons] = useState<number>(
     record?.breakfast?.persons && record.breakfast.persons > 0 ? record.breakfast.persons : planPersons
   );
   const [bMenuItem, setBMenuItem] = useState<string>(record?.breakfast?.menuItem || '');
   const [bAutoDelivered] = useState<boolean>(record?.breakfast?.autoDelivered || false);
 
-  const [lStatus, setLStatus] = useState<MealStatus>(
-    record?.lunch?.status && record.lunch.status !== 'none'
-      ? record.lunch.status
-      : 'none'
-  );
+  const [lStatus, setLStatus] = useState<MealStatus>(() => {
+    const raw = record?.lunch?.status;
+    if (isFutureDate && (raw === 'delivered' || raw === 'extra')) return 'none';
+    return raw && raw !== 'none' ? raw : 'none';
+  });
   const [lPersons, setLPersons] = useState<number>(
     record?.lunch?.persons && record.lunch.persons > 0 ? record.lunch.persons : planPersons
   );
@@ -59,10 +64,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     year: 'numeric'
   });
 
-  const { dateStr: todayStr } = getIstNow();
-  const oneMonthAgoStr = addDays(todayStr, -30);
-  const isOlderThan1Month = dateStr < oneMonthAgoStr;
-
   const handleCookOffToggle = () => {
     if (isOlderThan1Month) return;
     const nextVal = !isCookOff;
@@ -75,6 +76,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   const handleQuickPreset = (type: 'delivered' | 'skipped' | 'none') => {
     if (isOlderThan1Month) return;
+    if (isFutureDate && type === 'delivered') {
+      alert("Cannot mark meals as delivered for future dates.");
+      return;
+    }
     if (incBreakfast) setBStatus(type);
     if (incLunch) setLStatus(type);
     if (type !== 'skipped') setIsCookOff(false);
@@ -82,6 +87,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   const handleSave = () => {
     if (isOlderThan1Month) return;
+
+    if (isFutureDate && (bStatus === 'delivered' || bStatus === 'extra' || lStatus === 'delivered' || lStatus === 'extra')) {
+      alert('Future dates cannot be marked as delivered since meals have not occurred yet.');
+      return;
+    }
 
     // If both meals are 'none' and cook is not off, clear record
     const hasAnyLogged = (incBreakfast && bStatus !== 'none') || (incLunch && lStatus !== 'none') || isCookOff;
@@ -195,6 +205,30 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           </div>
         )}
 
+        {/* Future Date Notification Banner */}
+        {isFutureDate && (
+          <div
+            style={{
+              background: 'rgba(59, 130, 246, 0.12)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 12px',
+              color: '#93c5fd',
+              fontSize: '11.5px',
+              lineHeight: 1.4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '14px',
+            }}
+          >
+            <Clock size={15} style={{ flexShrink: 0, color: '#60a5fa' }} />
+            <span>
+              <strong>Future Date:</strong> Delivered status is disabled because meals have not occurred yet. You can plan skips or cook leave in advance.
+            </span>
+          </div>
+        )}
+
         {/* Cook Holiday Quick Toggle */}
         <div 
           onClick={handleCookOffToggle}
@@ -224,8 +258,19 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           <button
             type="button"
             onClick={() => handleQuickPreset('delivered')}
+            disabled={isOlderThan1Month || isFutureDate}
             className="ios-btn ios-btn-secondary"
-            style={{ flex: 1, padding: '8px 10px', fontSize: '11.5px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}
+            style={{ 
+              flex: 1, 
+              padding: '8px 10px', 
+              fontSize: '11.5px', 
+              borderRadius: 'var(--radius-sm)', 
+              border: isFutureDate ? '1px dashed rgba(255, 255, 255, 0.15)' : '1px solid rgba(16, 185, 129, 0.3)', 
+              color: isFutureDate ? 'var(--text-muted)' : '#34d399',
+              opacity: isFutureDate || isOlderThan1Month ? 0.35 : 1,
+              cursor: isFutureDate || isOlderThan1Month ? 'not-allowed' : 'pointer'
+            }}
+            title={isFutureDate ? "Delivered status is disabled for future dates" : "Mark Delivered"}
           >
             Mark Delivered
           </button>
@@ -282,25 +327,36 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-              {(['delivered', 'skipped', 'extra', 'none'] as MealStatus[]).map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setBStatus(st)}
-                  style={{
-                    padding: '6px 4px',
-                    borderRadius: 'var(--radius-xs)',
-                    border: bStatus === st ? '1px solid var(--accent-primary)' : '1px solid var(--glass-border)',
-                    background: bStatus === st ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                    color: bStatus === st ? '#34d399' : 'var(--text-secondary)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    textTransform: 'capitalize',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {st === 'skipped' ? 'Skip ⏭️' : st === 'none' ? 'Unlog' : st}
-                </button>
-              ))}
+              {(['delivered', 'skipped', 'extra', 'none'] as MealStatus[]).map((st) => {
+                const isDeliveredType = st === 'delivered' || st === 'extra';
+                const isOptionDisabled = isOlderThan1Month || (isFutureDate && isDeliveredType);
+                return (
+                  <button
+                    key={st}
+                    type="button"
+                    disabled={isOptionDisabled}
+                    onClick={() => {
+                      if (isOptionDisabled) return;
+                      setBStatus(st);
+                    }}
+                    style={{
+                      padding: '6px 4px',
+                      borderRadius: 'var(--radius-xs)',
+                      border: bStatus === st ? '1px solid var(--accent-primary)' : '1px solid var(--glass-border)',
+                      background: bStatus === st ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                      color: isOptionDisabled ? 'var(--text-muted)' : bStatus === st ? '#34d399' : 'var(--text-secondary)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      textTransform: 'capitalize',
+                      cursor: isOptionDisabled ? 'not-allowed' : 'pointer',
+                      opacity: isOptionDisabled ? 0.35 : 1,
+                    }}
+                    title={isFutureDate && isDeliveredType ? 'Cannot mark delivered for future dates' : undefined}
+                  >
+                    {st === 'skipped' ? 'Skip ⏭️' : st === 'none' ? 'Unlog' : st}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Breakfast Dish / Menu Input */}
@@ -358,25 +414,36 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-              {(['delivered', 'skipped', 'extra', 'none'] as MealStatus[]).map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setLStatus(st)}
-                  style={{
-                    padding: '6px 4px',
-                    borderRadius: 'var(--radius-xs)',
-                    border: lStatus === st ? '1px solid var(--accent-primary)' : '1px solid var(--glass-border)',
-                    background: lStatus === st ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                    color: lStatus === st ? '#34d399' : 'var(--text-secondary)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    textTransform: 'capitalize',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {st === 'skipped' ? 'Skip ⏭️' : st === 'none' ? 'Unlog' : st}
-                </button>
-              ))}
+              {(['delivered', 'skipped', 'extra', 'none'] as MealStatus[]).map((st) => {
+                const isDeliveredType = st === 'delivered' || st === 'extra';
+                const isOptionDisabled = isOlderThan1Month || (isFutureDate && isDeliveredType);
+                return (
+                  <button
+                    key={st}
+                    type="button"
+                    disabled={isOptionDisabled}
+                    onClick={() => {
+                      if (isOptionDisabled) return;
+                      setLStatus(st);
+                    }}
+                    style={{
+                      padding: '6px 4px',
+                      borderRadius: 'var(--radius-xs)',
+                      border: lStatus === st ? '1px solid var(--accent-primary)' : '1px solid var(--glass-border)',
+                      background: lStatus === st ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                      color: isOptionDisabled ? 'var(--text-muted)' : lStatus === st ? '#34d399' : 'var(--text-secondary)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      textTransform: 'capitalize',
+                      cursor: isOptionDisabled ? 'not-allowed' : 'pointer',
+                      opacity: isOptionDisabled ? 0.35 : 1,
+                    }}
+                    title={isFutureDate && isDeliveredType ? 'Cannot mark delivered for future dates' : undefined}
+                  >
+                    {st === 'skipped' ? 'Skip ⏭️' : st === 'none' ? 'Unlog' : st}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Lunch Dish / Menu Input */}
