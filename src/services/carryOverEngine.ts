@@ -505,3 +505,158 @@ export function runAutoDeliveryCheck(
   return { updatedRecords, hasChanges };
 }
 
+export interface MonthOption {
+  key: string; // '2026-09'
+  label: string; // 'Sep 2026'
+  fullLabel: string; // 'September 2026'
+  year: number;
+  month: number; // 0-11
+}
+
+/**
+ * Get options for the last N months (default 6) counting back from current IST month
+ */
+export function getLast6Months(count = 6): MonthOption[] {
+  const { dateStr: todayStr } = getIstNow();
+  const [y, m] = todayStr.split('-').map(Number);
+
+  const list: MonthOption[] = [];
+  for (let i = 0; i < count; i++) {
+    // Construct 1st of the target month
+    const d = new Date(y, m - 1 - i, 1);
+    const targetYear = d.getFullYear();
+    const targetMonth = d.getMonth();
+    const key = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const fullLabel = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    list.push({ key, label, fullLabel, year: targetYear, month: targetMonth });
+  }
+  return list;
+}
+
+export interface MonthlyReportStats {
+  monthKey: string; // '2026-09'
+  monthLabel: string; // 'September 2026'
+  totalSpent: number;
+  carriedOverValue: number;
+  breakfastDelivered: number;
+  breakfastSkipped: number;
+  lunchDelivered: number;
+  lunchSkipped: number;
+  cookOffDays: number;
+  loggedDaysCount: number;
+}
+
+/**
+ * Calculate comprehensive monthly report stats for a specific 'YYYY-MM'
+ */
+export function calculateMonthlyStats(
+  monthKey: string,
+  records: Record<string, DayRecord>,
+  pkg: PackagePlan | null,
+  config: RateConfig
+): MonthlyReportStats {
+  const planPersons = pkg?.defaultPersons || config.defaultPersons || 1;
+  const defaultBRate = pkg?.breakfastRate || config.defaultBreakfastRate || 60;
+  const defaultLRate = pkg?.lunchRate || config.defaultLunchRate || 90;
+
+  let totalSpent = 0;
+  let carriedOverValue = 0;
+  let breakfastDelivered = 0;
+  let breakfastSkipped = 0;
+  let lunchDelivered = 0;
+  let lunchSkipped = 0;
+  let cookOffDays = 0;
+  let loggedDaysCount = 0;
+
+  const datesInMonth = Object.keys(records)
+    .filter((d) => d.startsWith(monthKey))
+    .sort();
+
+  for (const d of datesInMonth) {
+    const rec = records[d];
+    loggedDaysCount++;
+
+    if (rec.isCookOff) {
+      cookOffDays++;
+      if (pkg?.includesBreakfast !== false) {
+        breakfastSkipped += planPersons;
+        carriedOverValue += defaultBRate * planPersons;
+      }
+      if (pkg?.includesLunch !== false) {
+        lunchSkipped += planPersons;
+        carriedOverValue += defaultLRate * planPersons;
+      }
+      continue;
+    }
+
+    if (rec.breakfast) {
+      const bRate = rec.breakfast.rate || defaultBRate;
+      const bCount = rec.breakfast.persons || planPersons;
+      if (rec.breakfast.status === 'delivered' || rec.breakfast.status === 'extra') {
+        breakfastDelivered += bCount;
+        totalSpent += bRate * bCount;
+      } else if (rec.breakfast.status === 'skipped') {
+        breakfastSkipped += bCount;
+        carriedOverValue += bRate * bCount;
+      }
+    }
+
+    if (rec.lunch) {
+      const lRate = rec.lunch.rate || defaultLRate;
+      const lCount = rec.lunch.persons || planPersons;
+      if (rec.lunch.status === 'delivered' || rec.lunch.status === 'extra') {
+        lunchDelivered += lCount;
+        totalSpent += lRate * lCount;
+      } else if (rec.lunch.status === 'skipped') {
+        lunchSkipped += lCount;
+        carriedOverValue += lRate * lCount;
+      }
+    }
+  }
+
+  const [y, m] = monthKey.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, 1);
+  const monthLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  return {
+    monthKey,
+    monthLabel,
+    totalSpent,
+    carriedOverValue,
+    breakfastDelivered,
+    breakfastSkipped,
+    lunchDelivered,
+    lunchSkipped,
+    cookOffDays,
+    loggedDaysCount,
+  };
+}
+
+/**
+ * Generate monthly WhatsApp statement specifically for a selected month
+ */
+export function generateMonthlyWhatsAppSummary(
+  monthStats: MonthlyReportStats,
+  pkg: PackagePlan | null,
+  config: RateConfig
+): string {
+  const currency = config.currency || '₹';
+  const caterer = config.catererName || 'Bhaiya / Caterer';
+
+  return `🍽️ *Tiffin & Meal Monthly Report - ${monthStats.monthLabel}*
+Hi ${caterer}, here is the monthly report for our meal subscription:
+
+📊 *${monthStats.monthLabel} Meals Record:*
+• 🍳 Breakfast Served: ${monthStats.breakfastDelivered} portion(s) | Skipped: ${monthStats.breakfastSkipped}
+• 🍱 Lunch Served: ${monthStats.lunchDelivered} portion(s) | Skipped: ${monthStats.lunchSkipped}
+• 🏖️ Cook Off Days: ${monthStats.cookOffDays} day(s)
+• 📅 Logged Activity: ${monthStats.loggedDaysCount} day(s)
+
+💰 *Monthly Financials:*
+• Total Consumed Value: ${currency}${monthStats.totalSpent.toLocaleString()}
+• Carried-over Savings: ${currency}${monthStats.carriedOverValue.toLocaleString()}
+
+_Generated via TiffinFlow App_`;
+}
+

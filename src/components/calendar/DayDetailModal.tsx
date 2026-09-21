@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DayRecord, MealStatus, RateConfig, PackagePlan } from '../../types';
-import { X, Coffee, UtensilsCrossed, Users, Check, AlertCircle, Trash2 } from 'lucide-react';
+import { getIstNow, addDays } from '../../services/carryOverEngine';
+import { X, Coffee, UtensilsCrossed, Users, Check, AlertCircle, Trash2, Lock } from 'lucide-react';
 
 interface DayDetailModalProps {
   dateStr: string;
@@ -62,7 +63,12 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     year: 'numeric'
   });
 
+  const { dateStr: todayStr } = getIstNow();
+  const oneMonthAgoStr = addDays(todayStr, -30);
+  const isOlderThan1Month = dateStr < oneMonthAgoStr;
+
   const handleCookOffToggle = () => {
+    if (isOlderThan1Month) return;
     const nextVal = !isCookOff;
     setIsCookOff(nextVal);
     if (nextVal) {
@@ -72,6 +78,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   };
 
   const handleSave = () => {
+    if (isOlderThan1Month) return;
     const updated: DayRecord = {
       date: dateStr,
       breakfast: {
@@ -99,6 +106,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   };
 
   const handleClear = () => {
+    if (isOlderThan1Month) return;
     if (onClear) {
       onClear(dateStr);
     } else {
@@ -133,6 +141,30 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             <X size={16} />
           </button>
         </div>
+
+        {/* 1-Month Edit Limit Lock Banner */}
+        {isOlderThan1Month && (
+          <div
+            style={{
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 12px',
+              color: '#fca5a5',
+              fontSize: '11.5px',
+              lineHeight: 1.4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '14px',
+            }}
+          >
+            <Lock size={15} style={{ flexShrink: 0, color: '#f87171' }} />
+            <span>
+              <strong>Read-Only Archive:</strong> Records older than 1 month ({oneMonthAgoStr}) are locked to preserve accounting and billing integrity.
+            </span>
+          </div>
+        )}
 
         {/* Cook Holiday Quick Toggle */}
         <div 
@@ -323,7 +355,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-          {hasLoggedMeals && (
+          {hasLoggedMeals && !isOlderThan1Month && (
             <button
               type="button"
               onClick={handleClear}
@@ -338,12 +370,17 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
           <button 
             type="button"
-            onClick={handleSave} 
+            onClick={isOlderThan1Month ? undefined : handleSave} 
+            disabled={isOlderThan1Month}
             className="ios-btn ios-btn-primary" 
-            style={{ flex: 1 }}
+            style={{
+              flex: 1,
+              opacity: isOlderThan1Month ? 0.45 : 1,
+              cursor: isOlderThan1Month ? 'not-allowed' : 'pointer'
+            }}
           >
-            <Check size={16} />
-            <span>Confirm & Save</span>
+            {isOlderThan1Month ? <Lock size={16} /> : <Check size={16} />}
+            <span>{isOlderThan1Month ? 'Archived (Locked)' : 'Confirm & Save'}</span>
           </button>
         </div>
       </div>
