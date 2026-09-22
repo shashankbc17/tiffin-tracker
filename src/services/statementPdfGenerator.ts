@@ -623,7 +623,7 @@ export async function shareStatementToWhatsApp(
 
   const companionMessage = `🍽️ *Official Tiffin & Meal Statement - ${data.periodLabel}*
 Hi ${data.catererName},
-I have generated our official Bank-Style Statement PDF with daily food logs, skipped days, and carry-overs.
+I have generated our official Food Statement PDF with daily food logs, skipped days, and carry-overs.
 
 📄 *Summary Overview:*
 • Total Meals Served: 🍳 ${data.breakfastDelivered} Breakfast | 🍱 ${data.lunchDelivered} Lunch

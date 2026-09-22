@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CarryOverStats, RateConfig, PackagePlan, DayRecord } from '../../types';
 import {
   generateMonthlyWhatsAppSummary,
@@ -25,6 +26,7 @@ import {
   FileText,
   FileSpreadsheet,
   Download,
+  X,
 } from 'lucide-react';
 import { StatementExportModal } from './StatementExportModal';
 import { InfoPopover } from '../common/InfoPopover';
@@ -57,6 +59,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   const [copied, setCopied] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
 
   const handleOpenExtractModal = () => {
     if (onOpenStatementModal) {
@@ -162,7 +165,26 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             <InfoPopover
               title="Edit Past History"
               color="#c4b5fd"
-              content="Select any date within the past 30 days to update delivered meals, portions, custom dish names, or skips so they reflect accurately in your billing logs."
+              content={
+                <div>
+                  <p style={{ margin: '0 0 8px 0' }}>
+                    Select any date within the past 30 days to update delivered meals, portions, custom dish names, or skips so they reflect accurately in your billing logs.
+                  </p>
+                  <div
+                    style={{
+                      padding: '8px 10px',
+                      background: 'rgba(139, 92, 246, 0.12)',
+                      border: '1px solid rgba(139, 92, 246, 0.25)',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: '#ddd6fe',
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    <strong>30-Day Window:</strong> Allowed dates are strictly between <strong>{oneMonthAgoStr}</strong> (30 days ago) and <strong>{todayStr}</strong> (today). Future dates and dates older than 30 days are locked.
+                  </div>
+                </div>
+              }
             />
           </div>
           <span
@@ -221,12 +243,6 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
               Select Past Date:
             </label>
-            <InfoPopover
-              title="30-Day Window Limit"
-              color="#c4b5fd"
-              size={13}
-              content={`Allowed range: ${oneMonthAgoStr} (30 days ago) to ${todayStr} (today). Future dates and dates older than 30 days cannot be modified.`}
-            />
           </div>
           <input
             type="date"
@@ -380,7 +396,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
       </div>
       )}
 
-      {/* 2. 6-MONTH HISTORY MONTH SELECTOR */}
+      {/* 2. MONTHLY REPORT SELECTOR - COMPACT ONE-BUTTON WITH MODAL PICKER */}
       <div className="ios-card" style={{ padding: '12px 14px' }}>
         <div
           style={{
@@ -392,7 +408,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         >
           <div
             style={{
-              fontSize: '12.5px',
+              fontSize: '13px',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
@@ -400,72 +416,226 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               color: '#f8fafc',
             }}
           >
-            <Calendar size={14} color="var(--accent-primary)" />
-            <span>Monthly Reports (Up to 6 Months in Past)</span>
+            <Calendar size={15} color="var(--accent-primary)" />
+            <span>Monthly Reports</span>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {monthDates.length} logs in {monthlyStats.monthLabel.split(' ')[0]}
+            {monthDates.length} {monthDates.length === 1 ? 'log' : 'logs'} in {monthlyStats.monthLabel.split(' ')[0]}
           </span>
         </div>
 
-        <div
+        {/* Large Prominent Month Selector Button */}
+        <button
+          type="button"
+          onClick={() => setIsMonthPickerOpen(true)}
+          className="ios-btn"
           style={{
+            width: '100%',
+            padding: '11px 14px',
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1.5px solid rgba(16, 185, 129, 0.38)',
+            borderRadius: 'var(--radius-md)',
             display: 'flex',
-            gap: '6px',
-            overflowX: 'auto',
-            paddingBottom: '4px',
-            scrollbarWidth: 'none',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            color: '#f8fafc',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
         >
-          {monthOptions.map((m) => {
-            const isSelected = selectedMonthKey === m.key;
-            const countInMonth = Object.keys(records).filter((d) => d.startsWith(m.key)).length;
-            return (
-              <button
-                key={m.key}
-                type="button"
-                onClick={() => {
-                  setSelectedMonthKey(m.key);
-                  setExpandedDate(null);
-                }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Calendar size={16} color="#34d399" />
+            <span style={{ fontSize: '13.5px', fontWeight: 700 }}>
+              {monthlyStats.monthLabel}
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                background: monthDates.length > 0 ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                color: monthDates.length > 0 ? '#090d16' : 'var(--text-muted)',
+                padding: '2px 7px',
+                borderRadius: 'var(--radius-full)',
+              }}
+            >
+              {monthDates.length} {monthDates.length === 1 ? 'log' : 'logs'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#34d399', fontSize: '12px', fontWeight: 600 }}>
+            <span>Change Month</span>
+            <ChevronDown size={15} />
+          </div>
+        </button>
+
+        {/* Month Picker Popup Modal */}
+        {isMonthPickerOpen &&
+          createPortal(
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100vh',
+                backgroundColor: 'rgba(0, 0, 0, 0.78)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                zIndex: 99999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                boxSizing: 'border-box',
+              }}
+              onClick={() => setIsMonthPickerOpen(false)}
+            >
+              <div
                 style={{
-                  padding: '7px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  border: isSelected ? '1px solid #10b981' : '1px solid var(--glass-border)',
-                  background: isSelected
-                    ? 'rgba(16, 185, 129, 0.2)'
-                    : 'rgba(255, 255, 255, 0.04)',
-                  color: isSelected ? '#34d399' : 'var(--text-secondary)',
-                  fontSize: '12px',
-                  fontWeight: isSelected ? 700 : 500,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
+                  width: '100%',
+                  maxWidth: '380px',
+                  maxHeight: '85vh',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease',
-                  flexShrink: 0,
+                  flexDirection: 'column',
+                  backgroundColor: '#131b2e',
+                  border: '1px solid rgba(255, 255, 255, 0.18)',
+                  borderRadius: '20px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+                  overflow: 'hidden',
+                  animation: 'iosModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <span>{m.label}</span>
-                {countInMonth > 0 && (
-                  <span
+                {/* Header */}
+                <div
+                  style={{
+                    padding: '14px 18px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Calendar size={18} color="#34d399" />
+                    <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                      Select Report Month
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMonthPickerOpen(false)}
                     style={{
-                      fontSize: '10px',
-                      padding: '1px 5px',
-                      borderRadius: 'var(--radius-full)',
-                      background: isSelected ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
-                      color: isSelected ? '#090d16' : 'var(--text-muted)',
-                      fontWeight: 700,
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '28px',
+                      height: '28px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
                     }}
                   >
-                    {countInMonth}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    <X size={15} />
+                  </button>
+                </div>
+
+                {/* List of Months */}
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    overflowY: 'auto',
+                    flex: 1,
+                  }}
+                >
+                  {monthOptions.map((m) => {
+                    const isSelected = selectedMonthKey === m.key;
+                    const countInMonth = Object.keys(records).filter((d) => d.startsWith(m.key)).length;
+                    return (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMonthKey(m.key);
+                          setExpandedDate(null);
+                          setIsMonthPickerOpen(false);
+                        }}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: isSelected ? '1.5px solid #10b981' : '1px solid var(--glass-border)',
+                          background: isSelected ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: isSelected ? 700 : 500, color: isSelected ? '#34d399' : '#f8fafc' }}>
+                            {m.label}
+                          </span>
+                          {countInMonth > 0 && (
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                padding: '2px 7px',
+                                borderRadius: 'var(--radius-full)',
+                                background: isSelected ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                                color: isSelected ? '#090d16' : 'var(--text-muted)',
+                              }}
+                            >
+                              {countInMonth} {countInMonth === 1 ? 'log' : 'logs'}
+                            </span>
+                          )}
+                        </div>
+                        {isSelected && <Check size={18} color="#10b981" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Footer */}
+                <div
+                  style={{
+                    padding: '10px 18px 14px',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    flexShrink: 0,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setIsMonthPickerOpen(false)}
+                    className="ios-btn ios-btn-secondary"
+                    style={{
+                      padding: '8px 18px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-full)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
 
       {/* 3. MONTHLY REPORT SUMMARY BANNER FOR SELECTED MONTH */}
@@ -590,12 +760,12 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-                  Bank Statement PDF to WhatsApp
+                  Food Statement PDF to WhatsApp
                 </h3>
                 <InfoPopover
-                  title="Official Bank Statement PDF"
+                  title="Official Food Statement PDF"
                   color="#34d399"
-                  content="Generates an official bank-statement look-alike PDF showing each day's served dishes, billing debits, and carry-over savings ready to send to your cook on WhatsApp or download."
+                  content="Generates an official food-statement PDF showing each day's served dishes, billing debits, and carry-over savings ready to send to your cook on WhatsApp or download."
                 />
               </div>
               <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>

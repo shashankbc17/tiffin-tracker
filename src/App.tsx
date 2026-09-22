@@ -782,6 +782,7 @@ export const App: React.FC = () => {
                 onSelectPackage={handleSelectPackage}
                 stats={stats}
                 config={config}
+                records={records}
                 isEditMode={isHomeEditMode}
                 onOpenNewPackage={handleOpenCreateModal}
                 onEditPackage={handleOpenEditModal}
@@ -820,6 +821,7 @@ export const App: React.FC = () => {
                 onSelectPackage={handleSelectPackage}
                 stats={stats}
                 config={config}
+                records={records}
                 onOpenNewPackage={handleOpenCreateModal}
                 onEditPackage={handleOpenEditModal}
                 onDeletePackage={handleDeletePackage}

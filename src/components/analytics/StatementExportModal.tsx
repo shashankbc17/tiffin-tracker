@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DayRecord, PackagePlan, RateConfig } from '../../types';
 import {
   generateBankStatementData,
@@ -115,14 +116,14 @@ Carry-over Days Saved: ${statementData.carryOverDaysSaved} Days (${statementData
 Remaining Days in Plan: ${statementData.remainingDays} Days
 Statement Ref: ${statementData.statementId}
 
-Generated via TiffinFlow Bank Statement`;
+Generated via TiffinFlow Food Statement`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -184,16 +185,16 @@ Generated via TiffinFlow Bank Statement`;
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
-                  Meal Statement &amp; PDF Extract
+                  Food Statement &amp; PDF Extract
                 </h2>
                 <InfoPopover
-                  title="Statement & WhatsApp PDF"
+                  title="Food Statement & WhatsApp PDF"
                   color="#34d399"
-                  content="This bank-style statement details all daily meals, dish names, pricing, and carry-over savings. Tap 'Share PDF to WhatsApp' to directly send the official document to your cook, or Download PDF for your accounting records."
+                  content="This food statement details all daily meals, dish names, pricing, and carry-over savings. Tap 'Share PDF to WhatsApp' to directly send the official document to your cook, or Download PDF for your accounting records."
                 />
               </div>
               <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
-                Bank-statement look-alike with daily food logs &amp; carry-overs
+                Itemized food statement with daily meal logs &amp; carry-overs
               </p>
             </div>
           </div>
@@ -672,6 +673,7 @@ Generated via TiffinFlow Bank Statement`;
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

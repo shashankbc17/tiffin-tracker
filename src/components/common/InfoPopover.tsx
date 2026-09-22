@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 interface InfoPopoverProps {
   title: string;
@@ -75,128 +76,147 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
         {badgeText}
       </button>
 
-      {isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.72)',
-            backdropFilter: 'blur(8px)',
-            zIndex: 10000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsOpen(false);
-          }}
-        >
+      {isOpen &&
+        createPortal(
           <div
             style={{
-              width: '100%',
-              maxWidth: '380px',
-              backgroundColor: '#131b2e',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: 'var(--radius-lg, 20px)',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
-              overflow: 'hidden',
-              animation: 'iosModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(0, 0, 0, 0.78)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 99999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              boxSizing: 'border-box',
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setIsOpen(false)}
           >
-            {/* Header */}
             <div
               style={{
-                padding: '14px 18px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                background: 'rgba(255, 255, 255, 0.03)',
+                width: '100%',
+                maxWidth: '380px',
+                maxHeight: 'min(520px, 86vh)',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                flexDirection: 'column',
+                backgroundColor: '#131b2e',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                borderRadius: '20px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+                overflow: 'hidden',
+                animation: 'iosModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div
+              {/* Header */}
+              <div
+                style={{
+                  padding: '14px 18px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: `${color}25`,
+                      color: color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {badgeText}
+                  </div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                    {title}
+                  </h4>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
                   style={{
-                    width: '24px',
-                    height: '24px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: 'none',
                     borderRadius: '50%',
-                    background: `${color}25`,
-                    color: color,
+                    width: '28px',
+                    height: '28px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 800,
+                    color: '#94a3b8',
+                    cursor: 'pointer',
                   }}
                 >
-                  {badgeText}
-                </div>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
-                  {title}
-                </h4>
+                  <X size={15} />
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
+              {/* Content */}
+              <div
                 style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '26px',
-                  height: '26px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
+                  padding: '16px 18px',
+                  fontSize: '13px',
+                  color: 'var(--text-secondary, #94a3b8)',
+                  lineHeight: 1.55,
+                  overflowY: 'auto',
+                  flex: 1,
                 }}
               >
-                <X size={14} />
-              </button>
-            </div>
+                {typeof content === 'string' ? (
+                  <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{content}</p>
+                ) : (
+                  content
+                )}
+              </div>
 
-            {/* Content */}
-            <div
-              style={{
-                padding: '16px 18px',
-                fontSize: '13px',
-                color: 'var(--text-secondary, #94a3b8)',
-                lineHeight: 1.55,
-                maxHeight: '70vh',
-                overflowY: 'auto',
-              }}
-            >
-              {typeof content === 'string' ? (
-                <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{content}</p>
-              ) : (
-                content
-              )}
-            </div>
-
-            {/* Footer Dismiss Button */}
-            <div
-              style={{
-                padding: '10px 18px 14px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                display: 'flex',
-                justifyContent: 'flex-end',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="ios-btn ios-btn-secondary"
-                style={{ padding: '7px 16px', fontSize: '12px', borderRadius: 'var(--radius-full, 9999px)' }}
+              {/* Footer Dismiss Button */}
+              <div
+                style={{
+                  padding: '10px 18px 14px',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  flexShrink: 0,
+                }}
               >
-                Got it
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="ios-btn ios-btn-secondary"
+                  style={{
+                    padding: '8px 18px',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    borderRadius: 'var(--radius-full, 9999px)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 };

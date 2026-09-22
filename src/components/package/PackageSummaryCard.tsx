@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { PackagePlan, CarryOverStats, RateConfig } from '../../types';
-import { formatDate, getIstNow } from '../../services/carryOverEngine';
-import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock, FileText } from 'lucide-react';
+import { PackagePlan, CarryOverStats, RateConfig, DayRecord } from '../../types';
+import { calculateCarryOver, formatDate, getIstNow } from '../../services/carryOverEngine';
+import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock, FileText, Wallet } from 'lucide-react';
 import { InfoPopover } from '../common/InfoPopover';
 
 interface PackageSummaryCardProps {
@@ -11,6 +11,7 @@ interface PackageSummaryCardProps {
   onSelectPackage?: (id: string) => void;
   stats: CarryOverStats;
   config: RateConfig;
+  records?: Record<string, DayRecord>;
   isEditMode?: boolean;
   onOpenNewPackage: () => void;
   onEditPackage?: () => void;
@@ -25,6 +26,7 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   onSelectPackage,
   stats,
   config,
+  records = {},
   isEditMode = false,
   onOpenNewPackage,
   onEditPackage,
@@ -78,20 +80,36 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
 
   const progressPercent = Math.min(100, Math.round((stats.effectiveDaysConsumed / pkg.totalDays) * 100));
 
+  // Financial computations for the active plan
+  const planDailyCost =
+    (pkg.includesBreakfast ? pkg.breakfastRate : 0) + (pkg.includesLunch ? pkg.lunchRate : 0);
+  const planExpectedCost = planDailyCost * (pkg.defaultPersons || 1) * pkg.totalDays;
+  const totalPlanBudget = pkg.totalAmountPaid > 0 ? pkg.totalAmountPaid : planExpectedCost;
+  const moneySpent = stats.totalSpent;
+  const moneyRemaining = Math.max(0, totalPlanBudget - moneySpent);
+  const percentFundsLeft =
+    totalPlanBudget > 0 ? Math.max(0, Math.min(100, Math.round((moneyRemaining / totalPlanBudget) * 100))) : 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Multi-Plan Switcher Tabs if more than 1 plan exists */}
+      {/* Multi-Plan Switcher Tabs with Money Left per plan */}
       {packages && packages.length > 1 && (
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
           {packages.map((p) => {
             const isSel = p.id === (pkg?.id || selectedPackageId);
+            const pDaily = (p.includesBreakfast ? p.breakfastRate : 0) + (p.includesLunch ? p.lunchRate : 0);
+            const pExpected = pDaily * (p.defaultPersons || 1) * p.totalDays;
+            const pBudget = p.totalAmountPaid > 0 ? p.totalAmountPaid : pExpected;
+            const pStats = p.id === pkg.id ? stats : calculateCarryOver(p, records, config);
+            const pLeft = Math.max(0, pBudget - pStats.totalSpent);
+
             return (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => onSelectPackage?.(p.id)}
                 style={{
-                  padding: '7px 14px',
+                  padding: '7px 12px',
                   borderRadius: 'var(--radius-full)',
                   border: isSel ? '1.5px solid var(--accent-primary)' : '1px solid var(--glass-border)',
                   background: isSel ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.04)',
@@ -107,6 +125,18 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
                 }}
               >
                 <span>{p.title}</span>
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: 'var(--radius-full)',
+                    background: isSel ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.08)',
+                    color: isSel ? '#a7f3d0' : 'var(--text-muted)',
+                  }}
+                >
+                  {currency}{pLeft.toLocaleString()} left
+                </span>
                 {p.status === 'active' && (
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
                 )}
@@ -347,6 +377,85 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           </div>
         </div>
 
+        {/* Money Left in Plan Hero Banner */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)',
+            border: '1.5px solid rgba(16, 185, 129, 0.35)',
+            borderRadius: 'var(--radius-md)',
+            padding: '14px 16px',
+            marginBottom: '16px',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  💰 Money Left in Plan
+                </span>
+                <InfoPopover
+                  title="Plan Budget & Money Left"
+                  color="#34d399"
+                  size={13}
+                  content={
+                    <div>
+                      <div style={{ lineHeight: '1.6' }}>
+                        • <strong>Total Plan Value:</strong> {currency}{totalPlanBudget.toLocaleString()}<br />
+                        • <strong>Spent So Far:</strong> {currency}{moneySpent.toLocaleString()} (for delivered meals)<br />
+                        • <strong>Remaining Balance:</strong> {currency}{moneyRemaining.toLocaleString()}<br />
+                        {stats.carriedOverValue > 0 && (
+                          <>• <strong>Carry-over Value:</strong> {currency}{stats.carriedOverValue.toLocaleString()} preserved from {stats.carryOverDays} skipped days.</>
+                        )}
+                      </div>
+                    </div>
+                  }
+                />
+              </div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#34d399', margin: '3px 0 2px 0', lineHeight: 1.15 }}>
+                {currency}{moneyRemaining.toLocaleString()}
+              </div>
+              <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                {currency}{moneySpent.toLocaleString()} spent of {currency}{totalPlanBudget.toLocaleString()} total plan value
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#10b981',
+                  background: 'rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  padding: '3px 9px',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                {percentFundsLeft}% Funds Left
+              </span>
+              {stats.carriedOverValue > 0 && (
+                <span style={{ fontSize: '11px', color: '#c4b5fd', fontWeight: 600 }}>
+                  +{currency}{stats.carriedOverValue.toLocaleString()} carried over
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Progress bar of funds remaining */}
+          <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: 'var(--radius-full)', overflow: 'hidden', marginTop: '8px' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${percentFundsLeft}%`,
+                background: 'linear-gradient(90deg, #10b981, #34d399)',
+                borderRadius: 'var(--radius-full)',
+                transition: 'width 0.4s ease',
+              }}
+            />
+          </div>
+        </div>
+
         {/* 4-Grid Key Metrics: Perfectly Equal Containers */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           {/* Card 1: Remaining */}
@@ -499,7 +608,7 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
               }}
             >
               <FileText size={16} />
-              <span>Extract Bank Statement (PDF to WhatsApp)</span>
+              <span>Extract Food Statement (PDF to WhatsApp)</span>
             </button>
           </div>
         )}
