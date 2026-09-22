@@ -49,6 +49,7 @@ import { ProfileModal } from './components/common/ProfileModal';
 import { HowToUseModal } from './components/common/HowToUseModal';
 import { SyncModal } from './components/common/SyncModal';
 import { FirstUserExperience } from './components/common/FirstUserExperience';
+import { StatementExportModal } from './components/analytics/StatementExportModal';
 
 import './styles/ios-theme.css';
 
@@ -94,6 +95,7 @@ export const App: React.FC = () => {
   const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isHomeEditMode, setIsHomeEditMode] = useState(false);
+  const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
 
   // Persist tab navigation across refreshes
   useEffect(() => {
@@ -821,6 +823,7 @@ export const App: React.FC = () => {
                 onOpenNewPackage={handleOpenCreateModal}
                 onEditPackage={handleOpenEditModal}
                 onDeletePackage={handleDeletePackage}
+                onExtractStatement={() => setIsStatementModalOpen(true)}
               />
             </div>
           )
@@ -834,6 +837,7 @@ export const App: React.FC = () => {
             activePackage={activePackage}
             records={records}
             onOpenDayDetails={(dateStr) => setHistoryDetailDate(dateStr)}
+            onOpenStatementModal={() => setIsStatementModalOpen(true)}
           />
         )}
 
@@ -921,6 +925,17 @@ export const App: React.FC = () => {
           syncErrorMsg={syncErrorMsg}
           onLogin={handleGoogleLogin}
           onClose={() => setIsSyncModalOpen(false)}
+        />
+      )}
+
+      {/* Official Bank-Style Statement & Extract Modal */}
+      {isStatementModalOpen && (
+        <StatementExportModal
+          isOpen={isStatementModalOpen}
+          onClose={() => setIsStatementModalOpen(false)}
+          records={records}
+          activePackage={activePackage}
+          config={config}
         />
       )}
     </div>

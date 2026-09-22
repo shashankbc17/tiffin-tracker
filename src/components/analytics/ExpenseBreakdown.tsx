@@ -22,7 +22,11 @@ import {
   Clock,
   Sparkles,
   CalendarDays,
+  FileText,
+  FileSpreadsheet,
+  Download,
 } from 'lucide-react';
+import { StatementExportModal } from './StatementExportModal';
 
 interface ExpenseBreakdownProps {
   stats: CarryOverStats;
@@ -30,6 +34,7 @@ interface ExpenseBreakdownProps {
   activePackage: PackagePlan | null;
   records: Record<string, DayRecord>;
   onOpenDayDetails?: (dateStr: string) => void;
+  onOpenStatementModal?: (monthKey?: string) => void;
 }
 
 export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
@@ -38,6 +43,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   activePackage,
   records,
   onOpenDayDetails,
+  onOpenStatementModal,
 }) => {
   const currency = config.currency || '₹';
   const { dateStr: todayStr } = getIstNow();
@@ -49,6 +55,15 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
   const [copied, setCopied] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
+
+  const handleOpenExtractModal = () => {
+    if (onOpenStatementModal) {
+      onOpenStatementModal(selectedMonthKey);
+    } else {
+      setIsStatementModalOpen(true);
+    }
+  };
 
   // 6 Months History Selector (counts back up to 6 months from current month)
   const monthOptions = getLast6Months(6);
@@ -538,7 +553,87 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         </div>
       </div>
 
-      {/* 4. MONTHLY WHATSAPP STATEMENT GENERATOR FOR SELECTED MONTH */}
+      {/* 4. BANK STATEMENT & PDF TO WHATSAPP EXTRACT (HERO CARD) */}
+      <div
+        className="ios-card"
+        style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
+          border: '1.5px solid rgba(16, 185, 129, 0.45)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+              }}
+            >
+              <FileText size={20} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+                Bank Statement PDF to WhatsApp
+              </h3>
+              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
+                {monthlyStats.monthLabel} · Itemized Daily Food Ledger
+              </span>
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              background: 'rgba(16, 185, 129, 0.2)',
+              color: '#34d399',
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-full)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            PDF Extract
+          </span>
+        </div>
+
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.45 }}>
+          Generates an official bank-statement look-alike PDF showing each day's served dishes, billing debits, and carry-over savings ready to send to your cook on WhatsApp.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={handleOpenExtractModal}
+            className="ios-btn ios-btn-whatsapp"
+            style={{ fontSize: '13px', padding: '11px 12px', gap: '8px' }}
+          >
+            <Share2 size={16} />
+            <span>Send PDF to Cook</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenExtractModal}
+            className="ios-btn ios-btn-secondary"
+            style={{ fontSize: '13px', padding: '11px 12px', gap: '8px' }}
+          >
+            <FileSpreadsheet size={16} color="#34d399" />
+            <span>Extract &amp; Ledger</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4B. MONTHLY WHATSAPP STATEMENT TEXT FOR SELECTED MONTH */}
       <div className="ios-card">
         <div
           style={{
@@ -551,7 +646,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MessageSquare size={18} color="#25D366" />
             <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>
-              {monthlyStats.monthLabel.split(' ')[0]} WhatsApp Statement
+              {monthlyStats.monthLabel.split(' ')[0]} WhatsApp Text Preview
             </h3>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -569,7 +664,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             fontFamily: 'monospace',
             whiteSpace: 'pre-line',
             color: 'var(--text-secondary)',
-            maxHeight: '150px',
+            maxHeight: '130px',
             overflowY: 'auto',
             marginBottom: '14px',
             userSelect: 'text',
@@ -594,7 +689,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             style={{ fontSize: '13px', padding: '10px 12px' }}
           >
             <Share2 size={16} />
-            <span>Send to Cook</span>
+            <span>Send Text</span>
           </button>
         </div>
       </div>
@@ -934,6 +1029,15 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           </div>
         )}
       </div>
+      {/* STATEMENT EXPORT MODAL */}
+      <StatementExportModal
+        isOpen={isStatementModalOpen}
+        onClose={() => setIsStatementModalOpen(false)}
+        records={records}
+        activePackage={activePackage}
+        config={config}
+        initialMonthKey={selectedMonthKey}
+      />
     </div>
   );
 };

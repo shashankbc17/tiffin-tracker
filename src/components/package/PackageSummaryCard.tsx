@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PackagePlan, CarryOverStats, RateConfig } from '../../types';
 import { formatDate, getIstNow } from '../../services/carryOverEngine';
-import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock } from 'lucide-react';
+import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock, FileText } from 'lucide-react';
 
 interface PackageSummaryCardProps {
   pkg: PackagePlan | null;
@@ -14,6 +14,7 @@ interface PackageSummaryCardProps {
   onOpenNewPackage: () => void;
   onEditPackage?: () => void;
   onDeletePackage?: (deleteLogs: boolean) => void;
+  onExtractStatement?: () => void;
 }
 
 export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
@@ -27,6 +28,7 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   onOpenNewPackage,
   onEditPackage,
   onDeletePackage,
+  onExtractStatement,
 }) => {
   const currency = config.currency || '₹';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -465,6 +467,34 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             )}
           </div>
         </div>
+
+        {/* Extract Bank-Style PDF Statement Button */}
+        {onExtractStatement && (
+          <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--glass-border)' }}>
+            <button
+              type="button"
+              onClick={onExtractStatement}
+              className="ios-btn"
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.8) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                color: '#34d399',
+                fontSize: '13px',
+                fontWeight: 600,
+                padding: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              <FileText size={16} />
+              <span>Extract Bank Statement (PDF to WhatsApp)</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Delete / Reset Plan Confirmation Modal */}
