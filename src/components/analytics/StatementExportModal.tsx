@@ -241,54 +241,48 @@ Generated via TiffinFlow Food Statement`;
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {Boolean(activePackage && activePackage.status === 'active') && (
-                <button
-                  type="button"
-                  onClick={() => setPeriodType('package')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: periodType === 'package' ? '1.5px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
-                    background: periodType === 'package' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                    color: periodType === 'package' ? '#34d399' : '#94a3b8',
-                  }}
-                >
-                  📦 Active Plan ({activePackage?.title})
-                </button>
-              )}
-
+            <div>
               <select
-                value={selectedMonthKey}
+                value={periodType === 'package' ? '__package__' : selectedMonthKey}
                 onChange={(e) => {
-                  setSelectedMonthKey(e.target.value);
-                  setPeriodType('month');
+                  const val = e.target.value;
+                  if (val === '__package__') {
+                    setPeriodType('package');
+                  } else {
+                    setSelectedMonthKey(val);
+                    setPeriodType('month');
+                  }
                 }}
                 style={{
-                  padding: '6px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '12px',
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1.5px solid rgba(16, 185, 129, 0.4)',
+                  color: '#ffffff',
+                  fontSize: '13px',
                   fontWeight: 600,
-                  cursor: 'pointer',
-                  border: periodType === 'month' ? '1.5px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
-                  background: periodType === 'month' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                  color: periodType === 'month' ? '#34d399' : '#94a3b8',
                   outline: 'none',
+                  cursor: 'pointer',
                 }}
               >
-                {monthOptions.map((m) => (
-                  <option key={m.key} value={m.key} style={{ background: '#1e293b', color: '#ffffff' }}>
-                    📅 {m.label} Monthly Statement
+                {Boolean(activePackage && activePackage.status === 'active') && (
+                  <option value="__package__" style={{ background: '#1e293b', color: '#34d399', fontWeight: 700 }}>
+                    📦 Active Plan: {activePackage?.title} (Entire Plan Duration)
                   </option>
-                ))}
+                )}
+                <optgroup label="Monthly Statements" style={{ background: '#0f172a', color: '#94a3b8' }}>
+                  {monthOptions.map((m) => (
+                    <option key={m.key} value={m.key} style={{ background: '#1e293b', color: '#ffffff' }}>
+                      📅 {m.label} Monthly Statement
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
           </div>
 
-          {/* BANK STATEMENT CARD PREVIEW */}
+          {/* FOOD STATEMENT CARD PREVIEW */}
           <div
             style={{
               background: '#ffffff',
@@ -371,15 +365,15 @@ Generated via TiffinFlow Food Statement`;
               </div>
             </div>
 
-            {/* 4 SUMMARY METRIC CARDS (BANK BALANCE BLOCK) */}
+            {/* 4 SUMMARY METRIC CARDS */}
             <div
               style={{
-                padding: '12px 14px',
+                padding: '12px 16px',
+                background: '#ffffff',
+                borderBottom: '1px solid #e2e8f0',
                 display: 'grid',
                 gridTemplateColumns: 'repeat(4, 1fr)',
                 gap: '8px',
-                background: '#ffffff',
-                borderBottom: '1px solid #e2e8f0',
               }}
             >
               {/* Card 1 */}
@@ -469,26 +463,25 @@ Generated via TiffinFlow Food Statement`;
                 Itemized Daily Meal Ledger ({statementData.rows.length} records)
               </span>
               <span style={{ fontSize: '9.5px', color: '#64748b' }}>
-                All daily dishes &amp; status
+                Clean, readable view
               </span>
             </div>
 
-            {/* SCROLLABLE TRANSACTION TABLE */}
-            <div style={{ maxHeight: '200px', overflowY: 'auto', borderTop: '1px solid #e2e8f0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px' }}>
+            {/* SCROLLABLE TRANSACTION TABLE - 4 CLEAN COLUMNS */}
+            <div style={{ maxHeight: '220px', overflowY: 'auto', borderTop: '1px solid #e2e8f0' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
                 <thead>
                   <tr style={{ background: '#1e293b', color: '#f8fafc', textAlign: 'left', position: 'sticky', top: 0 }}>
-                    <th style={{ padding: '6px 10px', fontSize: '9px', fontWeight: 600 }}>Date</th>
-                    <th style={{ padding: '6px 8px', fontSize: '9px', fontWeight: 600 }}>Session</th>
-                    <th style={{ padding: '6px 8px', fontSize: '9px', fontWeight: 600 }}>Dish / Food Item</th>
-                    <th style={{ padding: '6px 8px', fontSize: '9px', fontWeight: 600 }}>Status</th>
-                    <th style={{ padding: '6px 10px', fontSize: '9px', fontWeight: 600, textAlign: 'right' }}>Debit</th>
+                    <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: 700 }}>Date &amp; Meal</th>
+                    <th style={{ padding: '8px 10px', fontSize: '10px', fontWeight: 700 }}>Food / Dish Description</th>
+                    <th style={{ padding: '8px 10px', fontSize: '10px', fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: 700, textAlign: 'right' }}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {statementData.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
                         No meals or logs recorded for this period.
                       </td>
                     </tr>
@@ -497,7 +490,7 @@ Generated via TiffinFlow Food Statement`;
                       const isDelivered = row.status === 'DELIVERED';
                       const isSkipped = row.status === 'SKIPPED';
                       const isCookOff = row.status === 'COOK OFF';
-                      const isExtra = row.status === 'EXTRA';
+                      const sessionEmoji = row.session === 'Breakfast' ? '🍳' : row.session === 'Lunch' ? '🍱' : '🏖️';
 
                       return (
                         <tr
@@ -507,26 +500,24 @@ Generated via TiffinFlow Food Statement`;
                             borderBottom: '1px solid #f1f5f9',
                           }}
                         >
-                          <td style={{ padding: '6px 10px', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
-                            {row.dateFormatted}
+                          <td style={{ padding: '8px 12px', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 700, fontSize: '11.5px' }}>{row.dateFormatted}</div>
+                            <div style={{ fontSize: '10.5px', color: '#64748b' }}>{sessionEmoji} {row.session}</div>
                           </td>
-                          <td style={{ padding: '6px 8px', color: '#475569' }}>
-                            {row.session === 'Breakfast' ? '🍳 Breakfast' : row.session === 'Lunch' ? '🍱 Lunch' : '🏖️ Cook Off'}
-                          </td>
-                          <td style={{ padding: '6px 8px', color: '#0f172a', fontWeight: 500 }}>
-                            <div>{row.dish}</div>
-                            {row.notes && (
-                              <div style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic' }}>
-                                {row.notes}
+                          <td style={{ padding: '8px 10px', color: '#0f172a' }}>
+                            <div style={{ fontWeight: 600, fontSize: '12px' }}>{row.dish}</div>
+                            {row.notes && row.notes !== 'Kitchen closed - full carry-over credited' && !row.notes.startsWith('Auto-delivered') && (
+                              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '1px' }}>
+                                Note: {row.notes}
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
                             <span
                               style={{
-                                fontSize: '8.5px',
+                                fontSize: '10.5px',
                                 fontWeight: 700,
-                                padding: '2px 6px',
+                                padding: '3px 8px',
                                 borderRadius: '4px',
                                 background: isDelivered
                                   ? 'rgba(16, 185, 129, 0.15)'
@@ -544,19 +535,26 @@ Generated via TiffinFlow Food Statement`;
                                   : '#7c3aed',
                               }}
                             >
-                              {row.status}
+                              {isDelivered
+                                ? `✓ Delivered (${row.persons}p)`
+                                : isSkipped
+                                ? '⏸ Skipped'
+                                : isCookOff
+                                ? '🏖️ Cook Off'
+                                : `Extra (${row.persons}p)`}
                             </span>
                           </td>
                           <td
                             style={{
-                              padding: '6px 10px',
+                              padding: '8px 12px',
                               textAlign: 'right',
                               fontWeight: 700,
-                              color: row.debit > 0 ? '#0f172a' : '#94a3b8',
+                              fontSize: '12px',
+                              color: row.debit > 0 ? '#0f172a' : '#64748b',
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            {row.debit > 0 ? `${statementData.currency}${row.debit}` : '₹0.00'}
+                            {row.debit > 0 ? `${statementData.currency}${row.debit}` : '₹0 (Credit)'}
                           </td>
                         </tr>
                       );

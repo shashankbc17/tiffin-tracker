@@ -478,112 +478,111 @@ export function generateStatementPdf(data: StatementSummaryData): {
   doc.setTextColor(15, 23, 42);
   doc.text('ITEMIZED MEAL TRANSACTIONS & FOOD LOG', margin, y);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('Detailed record of daily preparations, delivery status, dish names, and carry-over entries', margin, y + 4);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(30, 41, 59);
+  doc.text('DAILY MEAL LEDGER & CHARGES (Itemized Records)', margin, y + 4);
 
   y += 6;
 
-  // 4. TRANSACTION LEDGER TABLE (Bank Statement autoTable)
-  const tableData = data.rows.map((row) => [
-    row.dateFormatted,
-    row.session,
-    row.dish,
-    row.status,
-    `${row.persons}`,
-    `${data.currency}${row.rate}`,
-    row.debit > 0 ? `${data.currency}${row.debit}` : '₹0.00',
-    row.carryOverEffect,
-  ]);
+  // 4. TRANSACTION LEDGER TABLE (Clean, spacious, elderly & cook friendly)
+  const tableData = data.rows.map((row) => {
+    const sessionLabel = row.session === 'Breakfast' ? 'Breakfast' : row.session === 'Lunch' ? 'Lunch' : 'Holiday';
+    const dateAndMeal = `${row.dateFormatted}\n(${sessionLabel})`;
+
+    const dishDetails = row.notes && row.notes !== 'Kitchen closed - full carry-over credited' && !row.notes.startsWith('Auto-delivered')
+      ? `${row.dish}\nNote: ${row.notes}`
+      : row.dish;
+
+    const statusText =
+      row.status === 'DELIVERED'
+        ? `Delivered (${row.persons} plate${row.persons > 1 ? 's' : ''})`
+        : row.status === 'SKIPPED'
+        ? `Skipped (+${row.carryOverEffect})`
+        : row.status === 'COOK OFF'
+        ? 'Cook Holiday (Credit)'
+        : `Extra (${row.persons} plate${row.persons > 1 ? 's' : ''})`;
+
+    const amountText = row.debit > 0 ? `${data.currency}${row.debit.toLocaleString()}` : '₹0 (Credit)';
+
+    return [dateAndMeal, dishDetails, statusText, amountText];
+  });
 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin, bottom: 18 },
     head: [[
-      'Date & Day',
-      'Session',
-      'Food / Dish Item',
-      'Status',
-      'Qty',
-      'Rate',
-      'Debit (Charge)',
-      'Carry-Over Impact'
+      'Date & Meal',
+      'Food / Dish Description',
+      'Delivery Status',
+      'Amount'
     ]],
     body: tableData.length > 0 ? tableData : [[
       '-',
-      '-',
       'No recorded transactions in this period',
       '-',
-      '-',
-      '-',
-      '₹0.00',
-      '-'
+      '₹0.00'
     ]],
     theme: 'plain',
     headStyles: {
-      fillColor: [30, 41, 59], // #1e293b (Bank Header)
-      textColor: [248, 250, 252],
-      fontSize: 7.5,
+      fillColor: [15, 23, 42], // Deep Navy
+      textColor: [255, 255, 255],
+      fontSize: 9.5,
       fontStyle: 'bold',
       halign: 'left',
-      cellPadding: 2.2,
+      cellPadding: 3.5,
     },
     bodyStyles: {
-      fontSize: 7.5,
-      textColor: [51, 65, 85],
-      cellPadding: 2,
+      fontSize: 9.2,
+      textColor: [30, 41, 59],
+      cellPadding: 3.5,
       lineColor: [226, 232, 240],
-      lineWidth: 0.15,
+      lineWidth: 0.2,
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252], // alternating zebra
+      fillColor: [248, 250, 252], // soft alternating zebra
     },
     columnStyles: {
-      0: { cellWidth: 24, fontStyle: 'bold' },
-      1: { cellWidth: 18 },
-      2: { cellWidth: 'auto' }, // Food item gets maximum space
-      3: { cellWidth: 20, fontStyle: 'bold' },
-      4: { cellWidth: 10, halign: 'center' },
-      5: { cellWidth: 14, halign: 'right' },
-      6: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },
-      7: { cellWidth: 26, fontStyle: 'normal' },
+      0: { cellWidth: 36, fontStyle: 'bold' },
+      1: { cellWidth: 84 },
+      2: { cellWidth: 42, fontStyle: 'bold' },
+      3: { cellWidth: 28, halign: 'right', fontStyle: 'bold', fontSize: 10 },
     },
     didParseCell: (hookData) => {
       // Color-code status column
-      if (hookData.section === 'body' && hookData.column.index === 3) {
+      if (hookData.section === 'body' && hookData.column.index === 2) {
         const text = String(hookData.cell.raw);
-        if (text === 'DELIVERED') {
-          hookData.cell.styles.textColor = [16, 185, 129]; // Emerald
-        } else if (text === 'SKIPPED') {
+        if (text.startsWith('Delivered')) {
+          hookData.cell.styles.textColor = [5, 150, 105]; // Emerald
+        } else if (text.startsWith('Skipped')) {
           hookData.cell.styles.textColor = [217, 119, 6]; // Amber
-        } else if (text === 'COOK OFF') {
+        } else if (text.startsWith('Cook Holiday')) {
           hookData.cell.styles.textColor = [220, 38, 38]; // Red
-        } else if (text === 'EXTRA') {
+        } else if (text.startsWith('Extra')) {
           hookData.cell.styles.textColor = [124, 58, 237]; // Purple
         }
       }
       // Highlight debit charges
-      if (hookData.section === 'body' && hookData.column.index === 6) {
+      if (hookData.section === 'body' && hookData.column.index === 3) {
         const text = String(hookData.cell.raw);
-        if (text !== '₹0.00' && text !== '0') {
+        if (text !== '₹0 (Credit)' && text !== '₹0.00' && text !== '0') {
           hookData.cell.styles.textColor = [15, 23, 42];
         } else {
-          hookData.cell.styles.textColor = [148, 163, 184];
+          hookData.cell.styles.textColor = [100, 116, 139];
         }
       }
     },
     didDrawPage: (hookData) => {
-      // Add formal bank footer on each page
+      // Add formal footer on each page
       const currentDoc = hookData.doc;
       const str = `Page ${hookData.pageNumber} · TiffinFlow Official Meal Subscription Ledger · Verified Electronic Record`;
-      currentDoc.setFontSize(7);
+      currentDoc.setFontSize(7.5);
       currentDoc.setTextColor(148, 163, 184);
       currentDoc.text(str, pageWidth / 2, pageHeight - 8, { align: 'center' });
       
       // Bottom emerald micro line
       currentDoc.setFillColor(16, 185, 129);
-      currentDoc.rect(margin, pageHeight - 12, pageWidth - margin * 2, 0.4, 'F');
+      currentDoc.rect(margin, pageHeight - 5, pageWidth - margin * 2, 0.8, 'F');
     },
   });
 
@@ -594,21 +593,31 @@ export function generateStatementPdf(data: StatementSummaryData): {
   const blob = doc.output('blob');
   const dataUri = doc.output('dataurlstring');
 
-  return { doc, blob, filename, dataUri };
+  return {
+    doc,
+    blob,
+    filename,
+    dataUri,
+  };
 }
 
 /**
- * Trigger direct file download of the PDF
+ * Trigger immediate client-side download of statement PDF
  */
 export function downloadStatementPdf(data: StatementSummaryData): void {
-  const { doc, filename } = generateStatementPdf(data);
-  doc.save(filename);
+  const { blob, filename } = generateStatementPdf(data);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /**
- * Share PDF to WhatsApp:
- * 1. Uses navigator.share({ files: [file] }) if supported (iOS Safari, Android Chrome, Mac Safari)
- * 2. If Web Share is not supported or cancelled, triggers download + opens WhatsApp with message.
+ * Share statement directly to WhatsApp with companion text and downloadable attachment
  */
 export async function shareStatementToWhatsApp(
   data: StatementSummaryData,
@@ -621,18 +630,13 @@ export async function shareStatementToWhatsApp(
     phone = `91${phone}`;
   }
 
-  const companionMessage = `🍽️ *Official Tiffin & Meal Statement - ${data.periodLabel}*
+  const companionMessage = `🍽️ *Tiffin Statement - ${data.periodLabel}*
 Hi ${data.catererName},
-I have generated our official Food Statement PDF with daily food logs, skipped days, and carry-overs.
+• Meals Served: ${data.breakfastDelivered + data.lunchDelivered} (${data.currency}${data.totalSpent.toLocaleString()})
+• Skips / Saved: ${data.carryOverDaysSaved} days (${data.currency}${data.carriedOverValue.toLocaleString()})
+• Balance Days: ${data.remainingDays} days left
 
-📄 *Summary Overview:*
-• Total Meals Served: 🍳 ${data.breakfastDelivered} Breakfast | 🍱 ${data.lunchDelivered} Lunch
-• Total Consumed Value: ${data.currency}${data.totalSpent.toLocaleString()}
-• 🔁 *Carry-over Credit Saved:* *${data.carryOverDaysSaved} Days (${data.currency}${data.carriedOverValue.toLocaleString()})*
-• ⏳ *Remaining Days:* *${data.remainingDays} Days*
-• Statement ID: ${data.statementId}
-
-Attached is the complete PDF statement for your records.`;
+Attached is the official Food Statement PDF with itemized daily logs.`;
 
   const encoded = encodeURIComponent(companionMessage);
   const waUrl = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;

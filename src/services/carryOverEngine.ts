@@ -642,30 +642,16 @@ export function generateMonthlyWhatsAppSummary(
   config: RateConfig
 ): string {
   const currency = config.currency || '₹';
-  const caterer = config.catererName || 'Bhaiya / Caterer';
-  const incBf = pkg ? pkg.includesBreakfast !== false : true;
-  const incLn = pkg ? pkg.includesLunch !== false : true;
+  const caterer = config.catererName || 'Cook / Caterer';
+  const totalMeals = monthStats.breakfastDelivered + monthStats.lunchDelivered;
+  const totalSkips = monthStats.breakfastSkipped + monthStats.lunchSkipped;
 
-  const mealRecordLines: string[] = [];
-  if (incBf) {
-    mealRecordLines.push(`• 🍳 Breakfast Served: ${monthStats.breakfastDelivered} portion(s) | Skipped: ${monthStats.breakfastSkipped}`);
-  }
-  if (incLn) {
-    mealRecordLines.push(`• 🍱 Lunch Served: ${monthStats.lunchDelivered} portion(s) | Skipped: ${monthStats.lunchSkipped}`);
-  }
-  mealRecordLines.push(`• 🏖️ Cook Off Days: ${monthStats.cookOffDays} day(s)`);
-  mealRecordLines.push(`• 📅 Logged Activity: ${monthStats.loggedDaysCount} day(s)`);
+  return `🍽️ *Tiffin Statement - ${monthStats.monthLabel}*
+Hi ${caterer},
+• Meals Served: ${totalMeals} (${currency}${monthStats.totalSpent.toLocaleString()})
+• Skips / Saved: ${totalSkips} (${currency}${monthStats.carriedOverValue.toLocaleString()})
+• Logged Days: ${monthStats.loggedDaysCount} active days
 
-  return `🍽️ *Tiffin & Meal Monthly Report - ${monthStats.monthLabel}*
-Hi ${caterer}, here is the monthly report for our meal subscription:
-
-📊 *${monthStats.monthLabel} Meals Record:*
-${mealRecordLines.join('\n')}
-
-💰 *Monthly Financials:*
-• Total Consumed Value: ${currency}${monthStats.totalSpent.toLocaleString()}
-• Carried-over Savings: ${currency}${monthStats.carriedOverValue.toLocaleString()}
-
-_Generated via TiffinFlow App_`;
+Attached is the official Food Statement PDF with itemized daily logs.`;
 }
 

@@ -729,7 +729,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         </div>
       </div>
 
-      {/* 4. BANK STATEMENT & PDF TO WHATSAPP EXTRACT (HERO CARD) */}
+      {/* 4. COMBINED FOOD STATEMENT & WHATSAPP SUMMARY */}
       <div
         className="ios-card"
         style={{
@@ -738,38 +738,41 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
           position: 'relative',
           overflow: 'hidden',
+          padding: '16px',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+        {/* Header Strip */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
                 background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#ffffff',
                 boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                flexShrink: 0,
               }}
             >
-              <FileText size={20} />
+              <FileText size={22} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-                  Food Statement PDF to WhatsApp
+                <h3 style={{ fontSize: '15.5px', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+                  Food Statement &amp; WhatsApp Summary
                 </h3>
                 <InfoPopover
-                  title="Official Food Statement PDF"
+                  title="PDF Statement & WhatsApp Text"
                   color="#34d399"
-                  content="Generates an official food-statement PDF showing each day's served dishes, billing debits, and carry-over savings ready to send to your cook on WhatsApp or download."
+                  content="Sends an official PDF statement to your cook along with a short, clean companion message summarizing monthly meals, skips, and billing."
                 />
               </div>
-              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
-                {monthlyStats.monthLabel} · Itemized Daily Food Ledger
+              <span style={{ fontSize: '11.5px', color: '#34d399', fontWeight: 600 }}>
+                {monthlyStats.monthLabel} · Statement PDF goes with concise text summary
               </span>
             </div>
           </div>
@@ -783,13 +786,42 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
               border: '1px solid rgba(16, 185, 129, 0.3)',
+              flexShrink: 0,
             }}
           >
-            PDF Extract
+            PDF + Text
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+        {/* Shortened Bare Minimum WhatsApp Text Preview */}
+        <div
+          style={{
+            background: 'rgba(0, 0, 0, 0.35)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '10px 12px',
+            fontSize: '12px',
+            lineHeight: 1.5,
+            color: '#cbd5e1',
+            marginBottom: '12px',
+            userSelect: 'text',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              💬 WhatsApp Companion Message (Goes with PDF)
+            </span>
+            <span style={{ fontSize: '10.5px', color: '#25D366', fontWeight: 600 }}>
+              To {config.catererName || 'Cook'}
+            </span>
+          </div>
+          <div style={{ whiteSpace: 'pre-line', fontFamily: 'monospace', fontSize: '11.5px', color: '#e2e8f0' }}>
+            {monthlySummaryText}
+          </div>
+        </div>
+
+        {/* Action Buttons Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', marginBottom: '8px' }}>
           <button
             type="button"
             onClick={handleOpenExtractModal}
@@ -807,68 +839,41 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             style={{ fontSize: '13px', padding: '11px 12px', gap: '8px' }}
           >
             <FileSpreadsheet size={16} color="#34d399" />
-            <span>Extract &amp; Ledger</span>
+            <span>View &amp; Ledger</span>
           </button>
         </div>
-      </div>
 
-      {/* 4B. MONTHLY WHATSAPP STATEMENT TEXT FOR SELECTED MONTH */}
-      <div className="ios-card">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '12px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MessageSquare size={18} color="#25D366" />
-            <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>
-              {monthlyStats.monthLabel.split(' ')[0]} WhatsApp Text Preview
-            </h3>
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            To {config.catererName || 'Cook'}
-          </span>
-        </div>
-
-        <div
-          style={{
-            background: 'rgba(0, 0, 0, 0.3)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '12px',
-            fontSize: '12px',
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-line',
-            color: 'var(--text-secondary)',
-            maxHeight: '130px',
-            overflowY: 'auto',
-            marginBottom: '14px',
-            userSelect: 'text',
-          }}
-        >
-          {monthlySummaryText}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
           <button
+            type="button"
             onClick={handleCopy}
             className="ios-btn ios-btn-secondary"
-            style={{ fontSize: '13px', padding: '10px 12px' }}
+            style={{ fontSize: '12px', padding: '8px 10px', gap: '6px' }}
           >
-            {copied ? <Check size={16} color="#10b981" /> : <Copy size={16} />}
-            <span>{copied ? 'Copied!' : 'Copy Text'}</span>
+            {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+            <span>{copied ? 'Copied Quick Text!' : 'Copy Quick Text'}</span>
           </button>
 
           <button
+            type="button"
             onClick={handleWhatsAppShare}
-            className="ios-btn ios-btn-whatsapp"
-            style={{ fontSize: '13px', padding: '10px 12px' }}
+            className="ios-btn"
+            style={{
+              fontSize: '12px',
+              padding: '8px 10px',
+              gap: '6px',
+              background: 'rgba(37, 211, 102, 0.12)',
+              border: '1px solid rgba(37, 211, 102, 0.3)',
+              color: '#4ade80',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-full)',
+            }}
           >
-            <Share2 size={16} />
-            <span>Send Text</span>
+            <MessageSquare size={14} />
+            <span>Send Text Only</span>
           </button>
         </div>
       </div>
