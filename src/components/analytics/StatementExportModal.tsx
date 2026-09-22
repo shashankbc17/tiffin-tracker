@@ -21,6 +21,7 @@ import {
   AlertCircle,
   ExternalLink,
 } from 'lucide-react';
+import { InfoPopover } from '../common/InfoPopover';
 
 interface StatementExportModalProps {
   isOpen: boolean;
@@ -181,9 +182,16 @@ Generated via TiffinFlow Bank Statement`;
               <FileText size={20} />
             </div>
             <div>
-              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
-                Meal Statement &amp; PDF Extract
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                  Meal Statement &amp; PDF Extract
+                </h2>
+                <InfoPopover
+                  title="Statement & WhatsApp PDF"
+                  color="#34d399"
+                  content="This bank-style statement details all daily meals, dish names, pricing, and carry-over savings. Tap 'Share PDF to WhatsApp' to directly send the official document to your cook, or Download PDF for your accounting records."
+                />
+              </div>
               <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
                 Bank-statement look-alike with daily food logs &amp; carry-overs
               </p>
@@ -595,26 +603,6 @@ Generated via TiffinFlow Bank Statement`;
             </div>
           )}
 
-          {/* EXPLANATORY HINT FOR FIRST-TIME USERS */}
-          <div
-            style={{
-              padding: '10px 12px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              fontSize: '11px',
-              color: '#94a3b8',
-              display: 'flex',
-              gap: '8px',
-              alignItems: 'flex-start',
-            }}
-          >
-            <AlertCircle size={15} color="#38bdf8" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <strong style={{ color: '#f8fafc' }}>Easy First-Time Sharing:</strong> Tap{' '}
-              <strong style={{ color: '#25D366' }}>Share PDF to WhatsApp</strong> to send this complete document directly to your cook on WhatsApp with the food ledger, carry-overs, and billing breakdown.
-            </div>
-          </div>
         </div>
 
         {/* BOTTOM FIXED ACTION BUTTONS */}

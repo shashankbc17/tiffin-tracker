@@ -4,6 +4,7 @@ import { formatDate, getIstNow } from '../../services/carryOverEngine';
 import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
 import { TodayActionBar } from './TodayActionBar';
+import { InfoPopover } from '../common/InfoPopover';
 
 interface MealCalendarProps {
   records: Record<string, DayRecord>;
@@ -176,9 +177,6 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
               )}
             </div>
           </div>
-          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-            Tap any date below to log or adjust portions, or tap Clear inside to wipe that date.
-          </div>
         </div>
       )}
 
@@ -192,9 +190,39 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
             <ChevronLeft size={18} />
           </button>
 
-          <h3 style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>
-            {monthName}
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-heading)', margin: 0 }}>
+              {monthName}
+            </h3>
+            <InfoPopover
+              title="Calendar Color Guide"
+              color="#34d399"
+              content={
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="dot-indicator dot-breakfast" />
+                      <span>🍳 Breakfast</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="dot-indicator dot-lunch" />
+                      <span>🍱 Lunch</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="dot-indicator dot-carryover" />
+                      <span>⏭️ Skipped (Carry-over)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>🏖️ Cook Off</span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px' }}>
+                    💡 Tap any date on the calendar to mark, skip, or edit portions for that day.
+                  </div>
+                </div>
+              }
+            />
+          </div>
 
           <button 
             onClick={handleNextMonth}
@@ -294,33 +322,6 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Calendar Color Legend */}
-      <div className="ios-card" style={{ padding: '14px 18px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>
-          Calendar Guide:
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div className="dot-indicator dot-breakfast" />
-            <span>🍳 Breakfast Confirmed</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div className="dot-indicator dot-lunch" />
-            <span>🍱 Lunch Confirmed</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div className="dot-indicator dot-carryover" />
-            <span>⏭️ Skipped (Carried Over)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>🏖️ Cook Holiday</span>
-          </div>
-        </div>
-        <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--text-muted)' }}>
-          💡 Tap any date on the calendar to mark, skip, or adjust portions for that day.
         </div>
       </div>
 

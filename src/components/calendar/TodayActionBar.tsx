@@ -7,6 +7,7 @@ import {
 } from '../../services/carryOverEngine';
 import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { InfoPopover } from '../common/InfoPopover';
 
 interface TodayActionBarProps {
   todayRecord?: DayRecord;
@@ -140,23 +141,6 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
             : '1px solid var(--glass-border)',
       }}
     >
-      {/* Demon Slayer background watermark glow */}
-      <div
-        style={{
-          position: 'absolute',
-          right: '-10px',
-          bottom: '-15px',
-          width: '90px',
-          height: '90px',
-          opacity: 0.12,
-          pointerEvents: 'none',
-          backgroundImage: `url(${demonSlayerImg})`,
-          backgroundSize: 'cover',
-          borderRadius: '50%',
-          filter: 'blur(2px)',
-        }}
-      />
-
       {/* Top Header Row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexShrink: 0 }}>
@@ -324,13 +308,22 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {/* CASE: Pre-Delivery Window in IST (Early morning before 8 AM for breakfast or before 12 PM for lunch) */}
           {stateKind === 'PRE_WINDOW' && (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px' }}>
-                {incBreakfast ? 'Breakfast Arrives 8:00 AM – 10:00 AM IST 🍳' : 'Lunch Arrives 12:30 PM – 2:30 PM IST 🍱'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+                  {incBreakfast ? 'Breakfast Arriving Soon 🍳' : 'Lunch Arriving Soon 🍱'}
+                </div>
+                <InfoPopover
+                  title="Delivery Window Timing"
+                  color="#fbbf24"
+                  content={
+                    incBreakfast
+                      ? 'Breakfast delivery window runs 8:00 AM to 10:30 AM IST. Cutoff is 11:00 AM.'
+                      : 'Lunch delivery window runs 12:30 PM to 2:30 PM IST. Cutoff is 3:00 PM.'
+                  }
+                />
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4, marginBottom: '10px' }}>
-                {incBreakfast
-                  ? 'It is currently early morning in IST. Breakfast delivery is between 8:00 AM and 10:00 AM. Tanjiro is prepping the kitchen!'
-                  : 'It is morning in IST. Lunch delivery begins at 12:30 PM. Have a great morning!'}
+              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+                {incBreakfast ? 'Expected window: 8:00 AM – 10:00 AM IST' : 'Expected window: 12:30 PM – 2:30 PM IST'}
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -353,11 +346,18 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {/* CASE 1: Future Plan (Not Started Yet) */}
           {stateKind === 'FUTURE' && (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px' }}>
-                {daysUntilStart === 1 ? 'Plan Starts Tomorrow! 🔥' : `Plan Starts on ${formattedStartDate}`}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+                  {daysUntilStart === 1 ? 'Starts Tomorrow' : `Starts on ${formattedStartDate}`}
+                </div>
+                <InfoPopover
+                  title="Upcoming Subscription"
+                  color="#60a5fa"
+                  content={`Your plan "${activePackage?.title}" begins on ${formattedStartDate}. No meals are scheduled for today.`}
+                />
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4, marginBottom: '10px' }}>
-                Tanjiro is preparing the kitchen. Your <span style={{ color: '#60a5fa', fontWeight: 600 }}>"{activePackage?.title}"</span> package begins tomorrow. No meals scheduled today!
+              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+                Package: {activePackage?.title} ({activePackage?.totalDays} Days)
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -380,11 +380,18 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {/* CASE 2: Scheduled Day Off (e.g. Sunday unopted) */}
           {stateKind === 'OFF_DAY' && (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px' }}>
-                Today is your Day Off! 🌸
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+                  Scheduled Off-Day ({todayDayName})
+                </div>
+                <InfoPopover
+                  title="Off-Day"
+                  color="#c4b5fd"
+                  content={`${todayDayName}s are excluded from your delivery schedule. No tiffin is expected today.`}
+                />
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4, marginBottom: '10px' }}>
-                {todayDayName}s are not opted in your plan. Nezuko is resting today — no tiffin delivery expected!
+              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+                No tiffin delivery scheduled today.
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -407,15 +414,17 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {/* CASE 3: Active Delivery Day (Needs Confirmation) */}
           {stateKind === 'ACTIVE_DELIVERY' && (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px' }}>
-                {incBreakfast && incLunch && 'Did your meals arrive today? 🍱'}
-                {incBreakfast && !incLunch && 'Did your Breakfast arrive today? 🍳'}
-                {!incBreakfast && incLunch && 'Did your Lunch arrive today? 🍱'}
-              </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4, marginBottom: '10px' }}>
-                {incBreakfast && incLunch && 'Breakfast & Lunch scheduled. Tap below to confirm or carry-over:'}
-                {incBreakfast && !incLunch && 'Breakfast scheduled (Lunch is not included in this plan).'}
-                {!incBreakfast && incLunch && 'Lunch scheduled (Breakfast is not included in this plan).'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#f8fafc' }}>
+                  {incBreakfast && incLunch && 'Today\'s Meals (Breakfast & Lunch)'}
+                  {incBreakfast && !incLunch && 'Today\'s Breakfast 🍳'}
+                  {!incBreakfast && incLunch && 'Today\'s Lunch 🍱'}
+                </div>
+                <InfoPopover
+                  title="Meal Confirmation & Carry-over"
+                  color="#34d399"
+                  content="Tap 'Served' to log today's meal, or 'Skip & Save' to carry this meal value forward to extend your subscription end date."
+                />
               </div>
 
               {/* Action Buttons tailored specifically to the plan services */}
@@ -481,7 +490,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>Meals Confirmed! Umai! 🔥</span>
+                    <span>Today's Meals Confirmed ✓</span>
                     {(todayRecord?.breakfast?.autoDelivered || todayRecord?.lunch?.autoDelivered) && (
                       <span style={{ fontSize: '10px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', padding: '1px 6px', borderRadius: '4px' }}>
                         ⚡ Auto

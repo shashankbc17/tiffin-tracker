@@ -27,6 +27,7 @@ import {
   Download,
 } from 'lucide-react';
 import { StatementExportModal } from './StatementExportModal';
+import { InfoPopover } from '../common/InfoPopover';
 
 interface ExpenseBreakdownProps {
   stats: CarryOverStats;
@@ -143,20 +144,27 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             marginBottom: '6px',
           }}
         >
-          <h3
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#f8fafc',
-              margin: 0,
-            }}
-          >
-            <History size={16} color="#c4b5fd" />
-            <span>Edit Past History</span>
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3
+              style={{
+                fontSize: '15px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#f8fafc',
+                margin: 0,
+              }}
+            >
+              <History size={16} color="#c4b5fd" />
+              <span>Edit Past History</span>
+            </h3>
+            <InfoPopover
+              title="Edit Past History"
+              color="#c4b5fd"
+              content="Select any date within the past 30 days to update delivered meals, portions, custom dish names, or skips so they reflect accurately in your billing logs."
+            />
+          </div>
           <span
             style={{
               fontSize: '10.5px',
@@ -167,12 +175,8 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               fontWeight: 600,
             }}
           >
-            Up to 1 Month Behind
+            Past 30 Days
           </span>
-        </div>
-
-        <div style={{ fontSize: '11.5px', color: '#94a3b8', lineHeight: 1.4, marginBottom: '10px' }}>
-          Select any date within the past 30 days to update delivered meals, portions, menu dishes, or skips so they reflect accurately in your logs.
         </div>
 
         {/* Quick Date Presets */}
@@ -213,9 +217,17 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
         {/* Date input strictly constrained between [today - 30 days] and [today] */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
-            Choose Past Date (Min: {oneMonthAgoStr} · Max: {todayStr}):
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
+              Select Past Date:
+            </label>
+            <InfoPopover
+              title="30-Day Window Limit"
+              color="#c4b5fd"
+              size={13}
+              content={`Allowed range: ${oneMonthAgoStr} (30 days ago) to ${todayStr} (today). Future dates and dates older than 30 days cannot be modified.`}
+            />
+          </div>
           <input
             type="date"
             className="ios-input"
@@ -461,65 +473,59 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         className="ios-card"
         style={{
           background:
-            'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(15, 23, 42, 0.85) 100%)',
+            'linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(15, 23, 42, 0.9) 100%)',
           borderColor: 'rgba(16, 185, 129, 0.35)',
           position: 'relative',
           overflow: 'hidden',
+          padding: '14px 16px',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <span
-              style={{
-                fontSize: '11px',
-                color: '#34d399',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                background: 'rgba(16, 185, 129, 0.15)',
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-full)',
-                display: 'inline-block',
-                marginBottom: '6px',
-              }}
-            >
-              📊 Monthly Report · {monthlyStats.monthLabel}
-            </span>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Total Consumed in {monthlyStats.monthLabel}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: '#34d399',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                📊 Monthly Summary · {monthlyStats.monthLabel}
+              </span>
+              <InfoPopover
+                title={`Monthly Summary for ${monthlyStats.monthLabel}`}
+                color="#34d399"
+                content={
+                  <div>
+                    <div>Consolidated billing and consumption metrics for {monthlyStats.monthLabel}:</div>
+                    <div style={{ marginTop: '8px', lineHeight: '1.6' }}>
+                      • <strong>Consumed Value:</strong> Total debited for served meals.<br />
+                      • <strong>Carry-over Savings:</strong> Value preserved when meals were skipped or cook was off.<br />
+                      • <strong>Portions:</strong> Exact count of delivered breakfast and lunch plates.
+                    </div>
+                  </div>
+                }
+              />
             </div>
             <div
               style={{
-                fontSize: '32px',
+                fontSize: '28px',
                 fontWeight: 800,
                 fontFamily: 'var(--font-heading)',
                 color: '#34d399',
-                margin: '2px 0 6px 0',
+                margin: '2px 0',
               }}
             >
               {currency}{monthlyStats.totalSpent.toLocaleString()}
             </div>
             <div style={{ fontSize: '11.5px', color: '#c4b5fd' }}>
-              ✨ Saved {currency}{monthlyStats.carriedOverValue.toLocaleString()} in carry-over skips this month!
+              ✨ Saved {currency}{monthlyStats.carriedOverValue.toLocaleString()} in carry-over skips
             </div>
-          </div>
-
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '18px',
-              overflow: 'hidden',
-              flexShrink: 0,
-              border: '2px solid #fbbf24',
-              boxShadow: '0 4px 14px rgba(251, 191, 36, 0.3)',
-            }}
-          >
-            <img
-              src="./assets/anime_analytics.jpg"
-              alt="Nezuko Savings"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
           </div>
         </div>
 
@@ -582,9 +588,16 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               <FileText size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
-                Bank Statement PDF to WhatsApp
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+                  Bank Statement PDF to WhatsApp
+                </h3>
+                <InfoPopover
+                  title="Official Bank Statement PDF"
+                  color="#34d399"
+                  content="Generates an official bank-statement look-alike PDF showing each day's served dishes, billing debits, and carry-over savings ready to send to your cook on WhatsApp or download."
+                />
+              </div>
               <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
                 {monthlyStats.monthLabel} · Itemized Daily Food Ledger
               </span>
@@ -605,10 +618,6 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             PDF Extract
           </span>
         </div>
-
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.45 }}>
-          Generates an official bank-statement look-alike PDF showing each day's served dishes, billing debits, and carry-over savings ready to send to your cook on WhatsApp.
-        </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
           <button
@@ -704,24 +713,28 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             marginBottom: '14px',
           }}
         >
-          <h3
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              margin: 0,
-            }}
-          >
-            <Calendar size={16} color="var(--text-muted)" />
-            <span>
-              Activity Logs · {monthlyStats.monthLabel} ({monthDates.length})
-            </span>
-          </h3>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Tap row for dish &amp; person details
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3
+              style={{
+                fontSize: '15px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                margin: 0,
+              }}
+            >
+              <Calendar size={16} color="var(--text-muted)" />
+              <span>
+                Activity Logs · {monthlyStats.monthLabel} ({monthDates.length})
+              </span>
+            </h3>
+            <InfoPopover
+              title="Daily Activity Logs"
+              color="#94a3b8"
+              content="Tap any date row in this list to expand full dish names, notes, and individual portion rates, or to edit past meal details."
+            />
+          </div>
         </div>
 
         {monthDates.length === 0 ? (

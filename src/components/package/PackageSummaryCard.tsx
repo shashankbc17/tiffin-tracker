@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PackagePlan, CarryOverStats, RateConfig } from '../../types';
 import { formatDate, getIstNow } from '../../services/carryOverEngine';
 import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock, FileText } from 'lucide-react';
+import { InfoPopover } from '../common/InfoPopover';
 
 interface PackageSummaryCardProps {
   pkg: PackagePlan | null;
@@ -117,28 +118,35 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
 
       {/* Carry-over Highlight Banner */}
       {stats.carryOverDays > 0 && (
-        <div className="carryover-banner">
+        <div className="carryover-banner" style={{ padding: '12px 14px' }}>
           <div 
             style={{ 
               background: 'var(--accent-carryover)', 
               borderRadius: '50%', 
-              padding: '10px', 
+              width: '32px',
+              height: '32px',
               color: 'white',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              flexShrink: 0
             }}
           >
-            <FastForward size={20} />
+            <FastForward size={16} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: '14px', color: '#c4b5fd' }}>
-              {stats.carryOverDays} Days Carried Over!
+            <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#c4b5fd' }}>
+              +{stats.carryOverDays} Days Carried Over
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Skips automatically pushed your validity to <strong style={{ color: '#fff' }}>{stats.extendedEndDate}</strong> (originally {stats.originalEndDate}).
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              Extended to <strong style={{ color: '#fff' }}>{stats.extendedEndDate}</strong> (was {stats.originalEndDate})
             </div>
           </div>
+          <InfoPopover
+            title="Carry-Over Extension"
+            color="#c4b5fd"
+            content={`Whenever you skip a meal or cook is off, that credit extends your subscription end date from ${stats.originalEndDate} to ${stats.extendedEndDate}. No money or meal is wasted!`}
+          />
         </div>
       )}
 
@@ -150,29 +158,29 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '12px', 
-              marginBottom: '16px', 
+              justifyContent: 'space-between',
+              marginBottom: '14px', 
               padding: '10px 14px', 
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%)', 
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%)', 
               borderRadius: 'var(--radius-md)', 
               border: '1px solid rgba(59, 130, 246, 0.3)' 
             }}
           >
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', overflow: 'hidden', flexShrink: 0, border: '2px solid #60a5fa', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
-              <img src="./assets/anime_coming_soon.jpg" alt="Coming Soon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={16} color="#60a5fa" />
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd' }}>
-                {isEarlyMorningFirstDay ? 'First Delivery This Morning! ⏳' : 'Countdown to First Delivery! ⏳'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                {isEarlyMorningFirstDay ? (
-                  <>Zenitsu & Tanjiro are counting down. Your first breakfast will arrive between <strong style={{ color: '#f8fafc' }}>8:00 AM and 10:00 AM IST</strong>!</>
-                ) : (
-                  <>Zenitsu & Tanjiro are counting down. Your meal plan will activate on <strong style={{ color: '#f8fafc' }}>{formattedStartDate}</strong>!</>
-                )}
+                {isEarlyMorningFirstDay ? 'First Delivery This Morning (8:00 AM IST)' : `Starts on ${formattedStartDate}`}
               </div>
             </div>
+            <InfoPopover
+              title="Subscription Activation Timing"
+              color="#60a5fa"
+              content={
+                isEarlyMorningFirstDay
+                  ? 'Your first meal arrives today! Breakfast delivery window runs 8:00 AM to 10:30 AM IST.'
+                  : `Your meal plan activates on ${formattedStartDate}. You can view the calendar and plan your meals in advance.`
+              }
+            />
           </div>
         )}
 

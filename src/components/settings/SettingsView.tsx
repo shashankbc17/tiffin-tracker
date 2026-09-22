@@ -3,6 +3,7 @@ import { User } from 'firebase/auth';
 import { RateConfig } from '../../types';
 import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle, Trash2, PlayCircle, X } from 'lucide-react';
 import { getSavedFirebaseConfig, saveFirebaseConfig, initFirebase, DEFAULT_FIREBASE_CONFIG } from '../../services/firebase';
+import { InfoPopover } from '../common/InfoPopover';
 
 interface SettingsViewProps {
   config: RateConfig;
@@ -123,54 +124,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Workshop Header */}
+      {/* Clean Settings Header */}
       <div 
         className="ios-card" 
         style={{ 
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)', 
-          borderColor: 'rgba(245, 158, 11, 0.35)', 
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.9) 100%)', 
+          borderColor: 'rgba(245, 158, 11, 0.3)', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '14px', 
-          padding: '16px 18px' 
+          justifyContent: 'space-between',
+          padding: '14px 18px' 
         }}
       >
-        <div 
-          style={{ 
-            width: '60px', 
-            height: '60px', 
-            borderRadius: '18px', 
-            overflow: 'hidden', 
-            flexShrink: 0, 
-            border: '2px solid #f59e0b', 
-            boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)' 
-          }}
-        >
-          <img 
-            src="./assets/anime_settings.jpg" 
-            alt="Inosuke Workshop" 
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-          />
+        <div>
+          <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+            Settings &amp; Preferences
+          </h2>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Subscription defaults, caterer contact &amp; rules
+          </div>
         </div>
-        <div style={{ flex: 1 }}>
-          <span 
-            style={{ 
-              fontSize: '10px', 
-              color: '#fbbf24', 
-              fontWeight: 700, 
-              textTransform: 'uppercase', 
-              letterSpacing: '0.05em' 
-            }}
-          >
-            ⚙️ Beast Workshop &amp; Config
-          </span>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', margin: '2px 0' }}>
-            Settings &amp; Catering Preferences
-          </h3>
-          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>
-            Configure default prices, caterer contact, phone MFA, and automated rules.
-          </p>
-        </div>
+        <InfoPopover
+          title="Settings & Defaults"
+          color="#fbbf24"
+          content="Configure default meal prices, subscriber count, and caterer contact. These defaults are automatically used for new meal packages and daily statements."
+        />
       </div>
 
       {/* Senior-Friendly How to Use Guide Card */}
@@ -288,18 +266,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Caterer Phone with fixed +91 country badge and free 10-digit entry */}
         <div className="ios-input-group">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label className="ios-label">WhatsApp Number (Cook / Caterer)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label className="ios-label" style={{ margin: 0 }}>WhatsApp Number</label>
+              <InfoPopover
+                title="Caterer WhatsApp Contact"
+                color="#34d399"
+                content="Enter the 10-digit mobile number of your tiffin cook or caterer. Country code +91 is applied automatically so statements can be sent with a single tap."
+              />
+            </div>
             {phone10Digits.length === 10 ? (
               <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <Check size={12} /> 10-digit number ready
+                <Check size={12} /> Ready
               </span>
             ) : phone10Digits.length > 0 ? (
               <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
                 {phone10Digits.length}/10 digits
               </span>
-            ) : (
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Optional</span>
-            )}
+            ) : null}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -365,19 +348,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
             </div>
           </div>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Country code +91 is fixed. Enter the 10-digit mobile number freely to send WhatsApp statements in 1 tap.
-          </div>
         </div>
 
         {/* Automated Delivery Section */}
         <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: 'var(--radius-md)', padding: '12px 14px', margin: '14px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Clock size={16} color="#60a5fa" />
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd' }}>
                 Automated Delivery Marking
               </span>
+              <InfoPopover
+                title="Automated Delivery Cutoffs"
+                color="#60a5fa"
+                content={
+                  <div>
+                    <div>Automatically marks unlogged meals as delivered once window closes:</div>
+                    <div style={{ marginTop: '6px', lineHeight: '1.6' }}>
+                      • 🍳 <strong>Breakfast Cutoff:</strong> 11:00 AM IST<br />
+                      • 🍱 <strong>Lunch Cutoff:</strong> 3:00 PM IST
+                    </div>
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                      Never retroactively alters past history.
+                    </div>
+                  </div>
+                }
+              />
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               <input 
@@ -391,11 +387,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </span>
             </label>
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-            Automatically marks unlogged meals as delivered once delivery timing window closes:
-            <br />
-            🍳 <strong>Breakfast Cutoff:</strong> 11:00 AM IST &nbsp;|&nbsp; 🍱 <strong>Lunch Cutoff:</strong> 3:00 PM IST
-          </p>
         </div>
 
         <button type="submit" className="ios-btn ios-btn-primary" style={{ width: '100%', marginTop: '8px' }}>
@@ -493,48 +484,69 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
       </div>
 
-      {/* App Installation Guide (iPhone & Android) */}
-      <div className="ios-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-          <Smartphone size={20} color="var(--accent-primary)" />
-          <h4 style={{ fontSize: '15px', fontWeight: 700 }}>How to Install as App (iPhone &amp; Android)</h4>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {/* iPhone */}
-          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
-            <div style={{ fontWeight: 700, fontSize: '13px', color: '#38bdf8', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span>🍎 iPhone (Safari)</span>
-            </div>
-            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.6', margin: 0 }}>
-              1. Open URL in <strong>Safari</strong>.<br />
-              2. Tap the <strong>Share</strong> button (box with upward arrow).<br />
-              3. Tap <strong>"Add to Home Screen"</strong>.<br />
-              4. Launches full-screen like a native iOS app!
-            </p>
+      {/* App Installation Drawer Card */}
+      <div 
+        className="ios-card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '7px', borderRadius: '50%' }}>
+            <Smartphone size={16} />
           </div>
-
-          {/* Android */}
-          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
-            <div style={{ fontWeight: 700, fontSize: '13px', color: '#34d399', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span>🤖 Android (Chrome)</span>
+          <div>
+            <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#f8fafc' }}>
+              Install as Mobile App
             </div>
-            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.6', margin: 0 }}>
-              1. Open URL in <strong>Chrome</strong>.<br />
-              2. Tap the <strong>three dots (⋮)</strong> at top right.<br />
-              3. Tap <strong>"Install app"</strong> (or "Add to Home screen").<br />
-              4. Installs into your app drawer with an app icon!
-            </p>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Add to Home Screen (iPhone &amp; Android)
+            </div>
           </div>
         </div>
+        <InfoPopover
+          title="How to Install TiffinFlow App"
+          color="#38bdf8"
+          content={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.04)', padding: '10px 12px', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '4px', fontSize: '12.5px' }}>
+                  🍎 iPhone (Safari)
+                </div>
+                <div style={{ fontSize: '11.5px', lineHeight: '1.6' }}>
+                  1. Open URL in <strong>Safari</strong>.<br />
+                  2. Tap <strong>Share</strong> button (square with arrow).<br />
+                  3. Select <strong>"Add to Home Screen"</strong>.
+                </div>
+              </div>
+              <div style={{ background: 'rgba(255, 255, 255, 0.04)', padding: '10px 12px', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontWeight: 700, color: '#34d399', marginBottom: '4px', fontSize: '12.5px' }}>
+                  🤖 Android (Chrome)
+                </div>
+                <div style={{ fontSize: '11.5px', lineHeight: '1.6' }}>
+                  1. Open URL in <strong>Chrome</strong>.<br />
+                  2. Tap <strong>three dots (⋮)</strong> at top right.<br />
+                  3. Tap <strong>"Install app"</strong> or "Add to Home screen".
+                </div>
+              </div>
+            </div>
+          }
+        />
       </div>
 
       {/* Data Management & Reset Section */}
       <div className="ios-card">
-        <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '6px' }}>Data &amp; Plan Management</h4>
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
-          Manage your local &amp; cloud data, test-drive features with sample subscriptions, or clear data to start fresh.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h4 style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>Data &amp; Plan Management</h4>
+          <InfoPopover
+            title="Data Management"
+            color="#a78bfa"
+            content="Manage local device cache, load demo starter plans, or purge data for a fresh start."
+          />
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {onResetData && (
