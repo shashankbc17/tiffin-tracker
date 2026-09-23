@@ -180,7 +180,7 @@ export const HowToUseModal: React.FC<HowToUseModalProps> = ({ onClose }) => {
               <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <CheckCircle2 size={20} color="#34d399" />
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     1. Confirming Meals Today
                   </h4>
                 </div>
@@ -213,7 +213,7 @@ export const HowToUseModal: React.FC<HowToUseModalProps> = ({ onClose }) => {
               <div style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)', border: '1px solid rgba(59, 130, 246, 0.35)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Clock size={20} color="#60a5fa" />
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Automated Delivery (No Stress!)
                   </h4>
                 </div>
@@ -251,7 +251,7 @@ export const HowToUseModal: React.FC<HowToUseModalProps> = ({ onClose }) => {
               <div style={{ background: 'rgba(251, 191, 36, 0.12)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Utensils size={20} color="#fbbf24" />
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Recording What Was Sent (Dishes / Menu)
                   </h4>
                 </div>
@@ -273,7 +273,7 @@ export const HowToUseModal: React.FC<HowToUseModalProps> = ({ onClose }) => {
               <div style={{ background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <FastForward size={20} color="#a78bfa" />
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Smart Carry-Over &amp; Skips
                   </h4>
                 </div>
@@ -294,7 +294,7 @@ export const HowToUseModal: React.FC<HowToUseModalProps> = ({ onClose }) => {
               <div style={{ background: 'rgba(37, 211, 102, 0.12)', border: '1px solid rgba(37, 211, 102, 0.3)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <MessageSquare size={20} color="#25D366" />
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Sending Statement to Cook / Caterer
                   </h4>
                 </div>
@@ -315,7 +315,7 @@ export const HowToUseModal: React.FC<HowToUseModalProps> = ({ onClose }) => {
               <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Smartphone size={20} color="#38bdf8" />
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Install on Phone Home Screen
                   </h4>
                 </div>

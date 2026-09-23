@@ -332,10 +332,10 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
 
         {/* Row 2: Package Title & Subtitle */}
         <div style={{ marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px', lineHeight: 1.25 }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px', lineHeight: 1.25 }}>
             {pkg.title}
           </h3>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
             {isEarlyMorningFirstDay
               ? `Starts Today, ${pkg.startDate} · First delivery: 8:00 AM – 10:00 AM IST`
               : isUpcomingDate 
@@ -346,10 +346,10 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           {/* Schedule Badges */}
           {pkg.breakfastDaysOfWeek && pkg.lunchDaysOfWeek && JSON.stringify(pkg.breakfastDaysOfWeek) !== JSON.stringify(pkg.lunchDaysOfWeek) && (
             <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '11px', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.12)', border: '1px solid rgba(251, 191, 36, 0.25)', padding: '2px 7px', borderRadius: '4px', fontWeight: 600 }}>
+              <span style={{ fontSize: '11px', color: 'var(--accent-breakfast)', background: 'var(--accent-breakfast-subtle)', border: '1px solid rgba(217, 119, 6, 0.25)', padding: '2px 7px', borderRadius: '4px', fontWeight: 600 }}>
                 🍳 Breakfast: {pkg.breakfastDaysOfWeek.length} days/wk
               </span>
-              <span style={{ fontSize: '11px', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '2px 7px', borderRadius: '4px', fontWeight: 600 }}>
+              <span style={{ fontSize: '11px', color: 'var(--accent-lunch)', background: 'var(--accent-lunch-subtle)', border: '1px solid rgba(5, 150, 105, 0.25)', padding: '2px 7px', borderRadius: '4px', fontWeight: 600 }}>
                 🍱 Lunch: {pkg.lunchDaysOfWeek.length} days/wk
               </span>
             </div>
@@ -364,12 +364,12 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
               {stats.effectiveDaysConsumed} / {pkg.totalDays} Days ({progressPercent}%)
             </span>
           </div>
-          <div style={{ height: '8px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+          <div style={{ height: '8px', background: 'var(--metric-card-border)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
             <div 
               style={{ 
                 height: '100%', 
                 width: `${progressPercent}%`, 
-                background: 'linear-gradient(90deg, #10b981, #34d399)', 
+                background: 'linear-gradient(90deg, #10b981, #059669)', 
                 borderRadius: 'var(--radius-full)',
                 transition: 'width 0.4s ease'
               }} 
@@ -378,25 +378,16 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
         </div>
 
         {/* Money Left in Plan Hero Banner */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)',
-            border: '1.5px solid rgba(16, 185, 129, 0.35)',
-            borderRadius: 'var(--radius-md)',
-            padding: '14px 16px',
-            marginBottom: '16px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
-          }}
-        >
+        <div className="plan-funds-banner">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span className="plan-funds-title">
                   💰 Money Left in Plan
                 </span>
                 <InfoPopover
                   title="Plan Budget & Money Left"
-                  color="#34d399"
+                  color="var(--funds-text-primary)"
                   size={13}
                   content={
                     <div>
@@ -412,30 +403,20 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
                   }
                 />
               </div>
-              <div style={{ fontSize: '26px', fontWeight: 800, color: '#34d399', margin: '3px 0 2px 0', lineHeight: 1.15 }}>
+              <div className="plan-funds-amount">
                 {currency}{moneyRemaining.toLocaleString()}
               </div>
-              <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+              <div className="plan-funds-sub">
                 {currency}{moneySpent.toLocaleString()} spent of {currency}{totalPlanBudget.toLocaleString()} total plan value
               </div>
             </div>
 
             <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#10b981',
-                  background: 'rgba(16, 185, 129, 0.2)',
-                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                  padding: '3px 9px',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
+              <span className="plan-funds-badge">
                 {percentFundsLeft}% Funds Left
               </span>
               {stats.carriedOverValue > 0 && (
-                <span style={{ fontSize: '11px', color: '#c4b5fd', fontWeight: 600 }}>
+                <span style={{ fontSize: '11px', color: 'var(--accent-carryover)', fontWeight: 600 }}>
                   +{currency}{stats.carriedOverValue.toLocaleString()} carried over
                 </span>
               )}
@@ -443,12 +424,12 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           </div>
 
           {/* Progress bar of funds remaining */}
-          <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: 'var(--radius-full)', overflow: 'hidden', marginTop: '8px' }}>
+          <div style={{ height: '6px', background: 'var(--metric-card-border)', borderRadius: 'var(--radius-full)', overflow: 'hidden', marginTop: '8px' }}>
             <div
               style={{
                 height: '100%',
                 width: `${percentFundsLeft}%`,
-                background: 'linear-gradient(90deg, #10b981, #34d399)',
+                background: 'linear-gradient(90deg, #10b981, #059669)',
                 borderRadius: 'var(--radius-full)',
                 transition: 'width 0.4s ease',
               }}
@@ -456,129 +437,73 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
           </div>
         </div>
 
-        {/* 4-Grid Key Metrics: Perfectly Equal Containers */}
+        {/* 4-Grid Key Metrics: Distinct, high-contrast elevated blocks */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           {/* Card 1: Remaining */}
-          <div 
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.03)', 
-              padding: '12px 14px', 
-              borderRadius: 'var(--radius-md)', 
-              border: '1px solid var(--glass-border)',
-              minHeight: '84px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="metric-stat-box">
+            <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Remaining Days
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1, margin: '3px 0' }}>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1, margin: '3px 0' }}>
               {stats.remainingDays}
             </div>
-            <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Valid till {stats.extendedEndDate}
             </div>
           </div>
 
           {/* Card 2: Carry-over */}
-          <div 
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.03)', 
-              padding: '12px 14px', 
-              borderRadius: 'var(--radius-md)', 
-              border: '1px solid var(--glass-border)',
-              minHeight: '84px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="metric-stat-box">
+            <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Carry-over Days
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 800, color: '#a78bfa', lineHeight: 1.1, margin: '3px 0' }}>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent-carryover)', lineHeight: 1.1, margin: '3px 0' }}>
               +{stats.carryOverDays}
             </div>
-            <div style={{ fontSize: '11px', color: '#a78bfa', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '11px', color: 'var(--accent-carryover)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Worth {currency}{stats.carriedOverValue}
             </div>
           </div>
 
           {/* Card 3: Breakfasts */}
-          <div 
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.03)', 
-              padding: '12px 14px', 
-              borderRadius: 'var(--radius-md)', 
-              border: '1px solid var(--glass-border)',
-              minHeight: '84px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="metric-stat-box">
+            <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Breakfasts Served
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 800, color: '#fbbf24', lineHeight: 1.1, margin: '3px 0' }}>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent-breakfast)', lineHeight: 1.1, margin: '3px 0' }}>
               {stats.breakfastDelivered}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
               {stats.breakfastSkipped} skipped
             </div>
           </div>
 
           {/* Card 4: Lunches */}
-          <div 
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.03)', 
-              padding: '12px 14px', 
-              borderRadius: 'var(--radius-md)', 
-              border: '1px solid var(--glass-border)',
-              minHeight: '84px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="metric-stat-box">
+            <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Lunches Served
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 800, color: '#34d399', lineHeight: 1.1, margin: '3px 0' }}>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent-lunch)', lineHeight: 1.1, margin: '3px 0' }}>
               {stats.lunchDelivered}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
               {stats.lunchSkipped} skipped
             </div>
           </div>
         </div>
 
         {/* Date Extension Details */}
-        <div 
-          style={{ 
-            marginTop: '16px', 
-            padding: '12px', 
-            background: 'rgba(15, 23, 42, 0.5)', 
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--glass-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: '12px'
-          }}
-        >
+        <div className="date-extension-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CalendarClock size={16} color="var(--accent-carryover)" />
-            <span style={{ color: 'var(--text-secondary)' }}>Original Expiry:</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Original Expiry:</span>
           </div>
           <div>
-            <span style={{ textDecoration: stats.carryOverDays > 0 ? 'line-through' : 'none', color: 'var(--text-muted)' }}>
+            <span style={{ textDecoration: stats.carryOverDays > 0 ? 'line-through' : 'none', color: 'var(--text-muted)', fontWeight: 500 }}>
               {stats.originalEndDate}
             </span>
             {stats.carryOverDays > 0 && (
-              <span style={{ marginLeft: '8px', color: '#a78bfa', fontWeight: 700 }}>
+              <span style={{ marginLeft: '8px', color: 'var(--accent-carryover)', fontWeight: 700 }}>
                 → {stats.extendedEndDate}
               </span>
             )}
@@ -591,12 +516,11 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             <button
               type="button"
               onClick={onExtractStatement}
-              className="ios-btn"
+              className="ios-btn ios-btn-secondary"
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.8) 100%)',
-                border: '1px solid rgba(16, 185, 129, 0.35)',
-                color: '#34d399',
+                color: 'var(--accent-primary)',
+                borderColor: 'rgba(16, 185, 129, 0.35)',
                 fontSize: '13px',
                 fontWeight: 600,
                 padding: '11px',

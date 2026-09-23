@@ -144,7 +144,7 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
                   >
                     {badgeText}
                   </div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                     {title}
                   </h4>
                 </div>

@@ -125,12 +125,12 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           stateKind === 'LOGGED'
             ? 'var(--bg-card)'
             : stateKind === 'ACTIVE_DELIVERY'
-            ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.88) 100%)'
+            ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, var(--bg-card) 100%)'
             : stateKind === 'FUTURE'
-            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.14) 0%, rgba(15, 23, 42, 0.88) 100%)'
+            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.14) 0%, var(--bg-card) 100%)'
             : stateKind === 'PRE_WINDOW'
-            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(15, 23, 42, 0.92) 100%)'
-            : 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(15, 23, 42, 0.88) 100%)',
+            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, var(--bg-card) 100%)'
+            : 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, var(--bg-card) 100%)',
         border:
           stateKind === 'ACTIVE_DELIVERY'
             ? '1px solid rgba(16, 185, 129, 0.35)'
@@ -309,7 +309,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {stateKind === 'PRE_WINDOW' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {incBreakfast ? 'Breakfast Arriving Soon 🍳' : 'Lunch Arriving Soon 🍱'}
                 </div>
                 <InfoPopover
@@ -322,7 +322,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   }
                 />
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
                 {incBreakfast ? 'Expected window: 8:00 AM – 10:00 AM IST' : 'Expected window: 12:30 PM – 2:30 PM IST'}
               </div>
 
@@ -333,7 +333,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   style={{
                     padding: '6px 12px',
                     fontSize: '11px',
-                    color: '#fbbf24',
+                    color: 'var(--accent-breakfast)',
                     borderColor: 'rgba(245, 158, 11, 0.35)',
                   }}
                 >
@@ -347,7 +347,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {stateKind === 'FUTURE' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {daysUntilStart === 1 ? 'Starts Tomorrow' : `Starts on ${formattedStartDate}`}
                 </div>
                 <InfoPopover
@@ -356,7 +356,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   content={`Your plan "${activePackage?.title}" begins on ${formattedStartDate}. No meals are scheduled for today.`}
                 />
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
                 Package: {activePackage?.title} ({activePackage?.totalDays} Days)
               </div>
 
@@ -367,8 +367,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   style={{
                     padding: '6px 12px',
                     fontSize: '11px',
-                    color: '#94a3b8',
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    color: 'var(--text-secondary)',
                   }}
                 >
                   <span>Log early meal / extra</span>
@@ -381,7 +380,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {stateKind === 'OFF_DAY' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   Scheduled Off-Day ({todayDayName})
                 </div>
                 <InfoPopover
@@ -390,7 +389,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   content={`${todayDayName}s are excluded from your delivery schedule. No tiffin is expected today.`}
                 />
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
                 No tiffin delivery scheduled today.
               </div>
 
@@ -401,7 +400,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   style={{
                     padding: '6px 12px',
                     fontSize: '11px',
-                    color: '#c4b5fd',
+                    color: 'var(--accent-carryover)',
                     borderColor: 'rgba(139, 92, 246, 0.3)',
                   }}
                 >
@@ -415,7 +414,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {stateKind === 'ACTIVE_DELIVERY' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#f8fafc' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {incBreakfast && incLunch && 'Today\'s Meals (Breakfast & Lunch)'}
                   {incBreakfast && !incLunch && 'Today\'s Breakfast 🍳'}
                   {!incBreakfast && incLunch && 'Today\'s Lunch 🍱'}
@@ -455,7 +454,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   style={{
                     padding: '9px 8px',
                     fontSize: '11.5px',
-                    color: '#c4b5fd',
+                    color: 'var(--accent-carryover)',
                     borderColor: 'rgba(139, 92, 246, 0.4)',
                     gap: '4px',
                     whiteSpace: 'nowrap',
@@ -489,15 +488,15 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>Today's Meals Confirmed ✓</span>
                     {(todayRecord?.breakfast?.autoDelivered || todayRecord?.lunch?.autoDelivered) && (
-                      <span style={{ fontSize: '10px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', padding: '1px 6px', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '10px', color: '#2563eb', background: 'rgba(59, 130, 246, 0.15)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
                         ⚡ Auto
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 500 }}>
                     {isCookOff
                       ? '👨‍🍳 Cook Off (Saved to carry-over extension)'
                       : [
@@ -509,12 +508,12 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                   </div>
                   {/* Dish items if logged */}
                   {todayRecord?.breakfast?.menuItem && (
-                    <div style={{ fontSize: '11px', color: '#fbbf24', marginTop: '3px' }}>
+                    <div style={{ fontSize: '11.5px', color: 'var(--accent-breakfast)', marginTop: '3px', fontWeight: 600 }}>
                       🍳 Breakfast: <strong>{todayRecord.breakfast.menuItem}</strong>
                     </div>
                   )}
                   {todayRecord?.lunch?.menuItem && (
-                    <div style={{ fontSize: '11px', color: '#34d399', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11.5px', color: 'var(--accent-lunch)', marginTop: '2px', fontWeight: 600 }}>
                       🍱 Lunch: <strong>{todayRecord.lunch.menuItem}</strong>
                     </div>
                   )}
@@ -538,7 +537,7 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
                           }
                         }}
                         className="ios-btn ios-btn-secondary"
-                        style={{ padding: '6px 8px', fontSize: '11px', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ padding: '6px 8px', fontSize: '11px', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         title="Delete today's record"
                       >
                         <Trash2 size={12} />
@@ -553,10 +552,10 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
           {/* CASE 5: No Active Plan */}
           {stateKind === 'NO_PLAN' && (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '2px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
                 Welcome to TiffinFlow! 🍱
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4, marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '8px' }}>
                 Create or activate a meal subscription above to start tracking deliveries and smart carry-overs.
               </div>
             </div>

@@ -79,7 +79,7 @@ export const FirstUserExperience: React.FC<FirstUserExperienceProps> = ({
               fontSize: '24px',
               fontWeight: 800,
               lineHeight: 1.25,
-              color: '#f8fafc',
+              color: 'var(--text-primary)',
               margin: '0 0 10px',
               letterSpacing: '-0.02em',
             }}
@@ -162,7 +162,7 @@ export const FirstUserExperience: React.FC<FirstUserExperienceProps> = ({
             🍱
           </div>
           <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
               1. Flexible Meal Subscriptions
             </h3>
             <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -200,7 +200,7 @@ export const FirstUserExperience: React.FC<FirstUserExperienceProps> = ({
             🔄
           </div>
           <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
               2. Smart Automatic Carry-Overs
             </h3>
             <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -238,7 +238,7 @@ export const FirstUserExperience: React.FC<FirstUserExperienceProps> = ({
             💬
           </div>
           <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
               3. 1-Tap WhatsApp Billing
             </h3>
             <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>

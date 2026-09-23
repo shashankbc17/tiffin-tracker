@@ -132,14 +132,14 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
         <div 
           style={{ 
             display: 'flex', 
-            flexDirection: 'column',
-            gap: '8px',
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)', 
+            flexDirection: 'column', 
+            gap: '8px', 
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, var(--bg-card) 100%)', 
             border: '1px solid rgba(139, 92, 246, 0.35)', 
             padding: '10px 14px', 
             borderRadius: 'var(--radius-md)', 
             fontSize: '12px', 
-            color: '#ddd6fe' 
+            color: 'var(--text-primary)' 
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -154,7 +154,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
                     }
                   }}
                   className="ios-btn ios-btn-secondary"
-                  style={{ padding: '4px 9px', fontSize: '11px', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}
+                  style={{ padding: '4px 9px', fontSize: '11px', color: 'var(--accent-breakfast)', borderColor: 'rgba(245, 158, 11, 0.4)' }}
                   title="Remove auto-marked entries"
                 >
                   🧹 Clear Auto-Selected
@@ -169,7 +169,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
                     }
                   }}
                   className="ios-btn ios-btn-secondary"
-                  style={{ padding: '4px 9px', fontSize: '11px', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                  style={{ padding: '4px 9px', fontSize: '11px', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.4)' }}
                   title="Clear all records in this month"
                 >
                   🗑️ Clear {monthName.split(' ')[0]}
@@ -185,18 +185,31 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <button 
             onClick={handlePrevMonth}
-            style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: 'white', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ 
+              background: 'var(--btn-secondary-bg)', 
+              border: '1px solid var(--glass-border)', 
+              color: 'var(--text-primary)', 
+              borderRadius: '50%', 
+              width: '32px', 
+              height: '32px', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            title="Previous Month"
           >
             <ChevronLeft size={18} />
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-heading)', margin: 0 }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-heading)', margin: 0, color: 'var(--text-primary)' }}>
               {monthName}
             </h3>
             <InfoPopover
               title="Calendar Color Guide"
-              color="#34d399"
+              color="var(--accent-primary)"
               content={
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
@@ -216,7 +229,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
                       <span>🏖️ Cook Off</span>
                     </div>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
                     💡 Tap any date on the calendar to mark, skip, or edit portions for that day.
                   </div>
                 </div>
@@ -226,7 +239,20 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
 
           <button 
             onClick={handleNextMonth}
-            style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: 'white', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ 
+              background: 'var(--btn-secondary-bg)', 
+              border: '1px solid var(--glass-border)', 
+              color: 'var(--text-primary)', 
+              borderRadius: '50%', 
+              width: '32px', 
+              height: '32px', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            title="Next Month"
           >
             <ChevronRight size={18} />
           </button>

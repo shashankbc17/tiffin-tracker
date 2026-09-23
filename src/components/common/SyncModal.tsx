@@ -298,7 +298,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
               marginBottom: '16px',
             }}
           >
-            <div style={{ fontWeight: 700, fontSize: '13px', color: '#f8fafc', marginBottom: '4px' }}>
+            <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', marginBottom: '4px' }}>
               👤 Sign In with Google on Both Devices
             </div>
             <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '0 0 10px 0', lineHeight: 1.5 }}>

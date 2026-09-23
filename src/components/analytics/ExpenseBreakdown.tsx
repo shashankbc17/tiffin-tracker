@@ -155,7 +155,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                color: '#f8fafc',
+                color: 'var(--text-primary)',
                 margin: 0,
               }}
             >
@@ -288,7 +288,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               marginBottom: '4px',
             }}
           >
-            <span style={{ fontWeight: 600, color: '#f8fafc' }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
               📅{' '}
               {new Date(pastEditDate + 'T00:00:00').toLocaleDateString('en-US', {
                 weekday: 'short',
@@ -413,7 +413,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              color: '#f8fafc',
+              color: 'var(--text-primary)',
             }}
           >
             <Calendar size={15} color="var(--accent-primary)" />
@@ -428,23 +428,10 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         <button
           type="button"
           onClick={() => setIsMonthPickerOpen(true)}
-          className="ios-btn"
-          style={{
-            width: '100%',
-            padding: '11px 14px',
-            background: 'rgba(16, 185, 129, 0.12)',
-            border: '1.5px solid rgba(16, 185, 129, 0.38)',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            color: '#f8fafc',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
+          className="ios-btn month-picker-btn"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Calendar size={16} color="#34d399" />
+            <Calendar size={16} color="var(--accent-lunch)" />
             <span style={{ fontSize: '13.5px', fontWeight: 700 }}>
               {monthlyStats.monthLabel}
             </span>
@@ -521,7 +508,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Calendar size={18} color="#34d399" />
-                    <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                    <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                       Select Report Month
                     </h4>
                   </div>
@@ -582,7 +569,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: isSelected ? 700 : 500, color: isSelected ? '#34d399' : '#f8fafc' }}>
+                          <span style={{ fontSize: '14px', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--accent-lunch)' : 'var(--text-primary)' }}>
                             {m.label}
                           </span>
                           {countInMonth > 0 && (
@@ -640,15 +627,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
       {/* 3. MONTHLY REPORT SUMMARY BANNER FOR SELECTED MONTH */}
       <div
-        className="ios-card"
-        style={{
-          background:
-            'linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(15, 23, 42, 0.9) 100%)',
-          borderColor: 'rgba(16, 185, 129, 0.35)',
-          position: 'relative',
-          overflow: 'hidden',
-          padding: '14px 16px',
-        }}
+        className="ios-card monthly-summary-card"
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
@@ -656,11 +635,11 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               <span
                 style={{
                   fontSize: '11px',
-                  color: '#34d399',
+                  color: 'var(--accent-lunch)',
                   fontWeight: 700,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
-                  background: 'rgba(16, 185, 129, 0.15)',
+                  background: 'var(--accent-lunch-subtle)',
                   padding: '2px 8px',
                   borderRadius: 'var(--radius-full)',
                 }}
@@ -687,13 +666,13 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 fontSize: '28px',
                 fontWeight: 800,
                 fontFamily: 'var(--font-heading)',
-                color: '#34d399',
+                color: 'var(--accent-lunch)',
                 margin: '2px 0',
               }}
             >
               {currency}{monthlyStats.totalSpent.toLocaleString()}
             </div>
-            <div style={{ fontSize: '11.5px', color: '#c4b5fd' }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--accent-carryover)' }}>
               ✨ Saved {currency}{monthlyStats.carriedOverValue.toLocaleString()} in carry-over skips
             </div>
           </div>
@@ -712,12 +691,12 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         >
           {isPlanIncludesBf && (
             <div style={{ color: 'var(--text-secondary)' }}>
-              🍳 Breakfasts: <strong style={{ color: '#fbbf24' }}>{monthlyStats.breakfastDelivered}</strong>
+              🍳 Breakfasts: <strong style={{ color: 'var(--accent-breakfast)' }}>{monthlyStats.breakfastDelivered}</strong>
             </div>
           )}
           {isPlanIncludesLunch && (
             <div style={{ color: 'var(--text-secondary)' }}>
-              🍱 Lunches: <strong style={{ color: '#34d399' }}>{monthlyStats.lunchDelivered}</strong>
+              🍱 Lunches: <strong style={{ color: 'var(--accent-lunch)' }}>{monthlyStats.lunchDelivered}</strong>
             </div>
           )}
           <div style={{ color: 'var(--text-secondary)' }}>
@@ -731,15 +710,8 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
       {/* 4. COMBINED FOOD STATEMENT & WHATSAPP SUMMARY */}
       <div
-        className="ios-card"
-        style={{
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
-          border: '1.5px solid rgba(16, 185, 129, 0.45)',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
-          position: 'relative',
-          overflow: 'hidden',
-          padding: '16px',
-        }}
+        className="ios-card statement-card"
+        style={{ padding: '16px' }}
       >
         {/* Header Strip */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
@@ -762,7 +734,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <h3 style={{ fontSize: '15.5px', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+                <h3 style={{ fontSize: '15.5px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                   Food Statement &amp; WhatsApp Summary
                 </h3>
                 <InfoPopover
@@ -771,7 +743,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                   content="Sends an official PDF statement to your cook along with a short, clean companion message summarizing monthly meals, skips, and billing."
                 />
               </div>
-              <span style={{ fontSize: '11.5px', color: '#34d399', fontWeight: 600 }}>
+              <span style={{ fontSize: '11.5px', color: 'var(--accent-lunch)', fontWeight: 600 }}>
                 {monthlyStats.monthLabel} · Statement PDF goes with concise text summary
               </span>
             </div>
@@ -794,28 +766,16 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         </div>
 
         {/* Shortened Bare Minimum WhatsApp Text Preview */}
-        <div
-          style={{
-            background: 'rgba(0, 0, 0, 0.35)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '10px 12px',
-            fontSize: '12px',
-            lineHeight: 1.5,
-            color: '#cbd5e1',
-            marginBottom: '12px',
-            userSelect: 'text',
-          }}
-        >
+        <div className="code-preview-box">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               💬 WhatsApp Companion Message (Goes with PDF)
             </span>
-            <span style={{ fontSize: '10.5px', color: '#25D366', fontWeight: 600 }}>
+            <span style={{ fontSize: '10.5px', color: 'var(--accent-lunch)', fontWeight: 600 }}>
               To {config.catererName || 'Cook'}
             </span>
           </div>
-          <div style={{ whiteSpace: 'pre-line', fontFamily: 'monospace', fontSize: '11.5px', color: '#e2e8f0' }}>
+          <div className="code-text" style={{ whiteSpace: 'pre-line', fontFamily: 'monospace', fontSize: '11.5px' }}>
             {monthlySummaryText}
           </div>
         </div>
@@ -987,7 +947,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                      <span style={{ fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                         {formattedRowDate}
                       </span>
                       {rec.isCookOff && (
@@ -1022,9 +982,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                                 : 'rgba(255,255,255,0.05)',
                             color:
                               bStat === 'delivered'
-                                ? '#fbbf24'
+                                ? 'var(--accent-breakfast)'
                                 : bStat === 'skipped'
-                                ? '#c4b5fd'
+                                ? 'var(--accent-carryover)'
                                 : 'var(--text-muted)',
                           }}
                         >
@@ -1048,9 +1008,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                                 : 'rgba(255,255,255,0.05)',
                             color:
                               lStat === 'delivered'
-                                ? '#34d399'
+                                ? 'var(--accent-lunch)'
                                 : lStat === 'skipped'
-                                ? '#c4b5fd'
+                                ? 'var(--accent-carryover)'
                                 : 'var(--text-muted)',
                           }}
                         >
@@ -1068,25 +1028,15 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 
                   {/* Expanded Full Details */}
                   {isExpanded && (
-                    <div
-                      style={{
-                        padding: '10px 12px 12px 12px',
-                        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                        fontSize: '11.5px',
-                      }}
-                    >
+                    <div className="history-row-expanded">
                       {/* Breakfast Detail */}
                       {shouldShowRowBf && (
                         <div
                           style={{
-                            background: 'rgba(255, 255, 255, 0.03)',
+                            background: 'var(--subtle-card-bg)',
                             padding: '8px 10px',
                             borderRadius: '6px',
-                            border: '1px solid rgba(251, 191, 36, 0.2)',
+                            border: '1px solid var(--accent-breakfast-subtle)',
                           }}
                         >
                           <div
@@ -1099,7 +1049,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                             <span
                               style={{
                                 fontWeight: 700,
-                                color: '#fbbf24',
+                                color: 'var(--accent-breakfast)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px',
@@ -1130,10 +1080,10 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                       {shouldShowRowLunch && (
                         <div
                           style={{
-                            background: 'rgba(255, 255, 255, 0.03)',
+                            background: 'var(--subtle-card-bg)',
                             padding: '8px 10px',
                             borderRadius: '6px',
-                            border: '1px solid rgba(16, 185, 129, 0.2)',
+                            border: '1px solid var(--accent-lunch-subtle)',
                           }}
                         >
                           <div
@@ -1146,7 +1096,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                             <span
                               style={{
                                 fontWeight: 700,
-                                color: '#34d399',
+                                color: 'var(--accent-lunch)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px',

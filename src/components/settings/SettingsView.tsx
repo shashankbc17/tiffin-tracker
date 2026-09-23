@@ -583,7 +583,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <Smartphone size={16} />
           </div>
           <div>
-            <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#f8fafc' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
               Install as Mobile App
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
