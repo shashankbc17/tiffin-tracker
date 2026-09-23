@@ -30,6 +30,8 @@ It solves the age-old problem: **when the cook takes leave or you skip a meal, t
    - Google Sign-In with Cloud Firestore persistence.
    - Works 100% offline out-of-the-box with immediate LocalStorage caching and sample demo data.
 
+📖 **Detailed Version & Revision History:** See [CHANGELOG.md](CHANGELOG.md) for full release notes and commit history.
+
 ---
 
 ## 📱 How to Run on Your iPhone (No Mac Needed!)
