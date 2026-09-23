@@ -19,6 +19,17 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍱</text></svg>" />
     <link rel="manifest" href="./assets/manifest-BolOpS2D.json" />
 
+    <!-- Theme initialisation to prevent flash on reload -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('tiffin_theme') || 'system';
+          var isDark = saved === 'dark' || (saved === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Trailing slash normalization for iOS PWA Home Screen -->
     <script>
       if (window.location.pathname === '/tiffin-tracker') {
@@ -30,8 +41,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="./assets/index-lu6C73a4.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-D1YxxqPh.css">
+    <script type="module" crossorigin src="./assets/index-CwnoK6RV.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D_Qf87CX.css">
   </head>
   <body>
     <div id="root"></div>
