@@ -60,6 +60,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [showAllLogs, setShowAllLogs] = useState(false);
 
   const handleOpenExtractModal = () => {
     if (onOpenStatementModal) {
@@ -87,6 +88,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
     .filter((d) => d.startsWith(selectedMonthKey))
     .sort()
     .reverse();
+
+  // Smart scaling: display recent 7 logs unless user expands
+  const displayedDates = showAllLogs || monthDates.length <= 7 ? monthDates : monthDates.slice(0, 7);
 
   // Monthly WhatsApp statement text
   const monthlySummaryText = generateMonthlyWhatsAppSummary(monthlyStats, activePackage, config);
@@ -131,14 +135,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* 1. SEPARATE SECTION: Edit Past History (Only visible when a plan is active) */}
       {Boolean(activePackage && activePackage.status === 'active') && (
-        <div
-          className="ios-card"
-          style={{
-            border: '1px solid rgba(139, 92, 246, 0.35)',
-            background:
-              'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(15, 23, 42, 0.9) 100%)',
-          }}
-        >
+        <div className="ios-card edit-history-card">
         <div
           style={{
             display: 'flex',
@@ -159,12 +156,12 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 margin: 0,
               }}
             >
-              <History size={16} color="#c4b5fd" />
+              <History size={16} className="edit-history-title-icon" />
               <span>Edit Past History</span>
             </h3>
             <InfoPopover
               title="Edit Past History"
-              color="#c4b5fd"
+              color="var(--accent-carryover)"
               content={
                 <div>
                   <p style={{ margin: '0 0 8px 0' }}>
@@ -173,11 +170,11 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                   <div
                     style={{
                       padding: '8px 10px',
-                      background: 'rgba(139, 92, 246, 0.12)',
-                      border: '1px solid rgba(139, 92, 246, 0.25)',
+                      background: 'var(--subtle-card-bg)',
+                      border: '1px solid var(--glass-border)',
                       borderRadius: '6px',
                       fontSize: '12px',
-                      color: '#ddd6fe',
+                      color: 'var(--text-secondary)',
                       lineHeight: '1.4',
                     }}
                   >
@@ -187,16 +184,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               }
             />
           </div>
-          <span
-            style={{
-              fontSize: '10.5px',
-              color: '#c4b5fd',
-              background: 'rgba(139, 92, 246, 0.18)',
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-full)',
-              fontWeight: 600,
-            }}
-          >
+          <span className="edit-history-badge">
             Past 30 Days
           </span>
         </div>
@@ -215,21 +203,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 key={preset.days}
                 type="button"
                 onClick={() => setPastPreset(preset.days)}
-                style={{
-                  padding: '6px 4px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: isPresetActive
-                    ? '1px solid #8b5cf6'
-                    : '1px solid var(--glass-border)',
-                  background: isPresetActive
-                    ? 'rgba(139, 92, 246, 0.25)'
-                    : 'rgba(255, 255, 255, 0.04)',
-                  color: isPresetActive ? '#ddd6fe' : 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
+                className={`edit-history-preset-btn ${isPresetActive ? 'active' : 'inactive'}`}
               >
                 {preset.label}
               </button>
@@ -269,17 +243,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         </div>
 
         {/* Status card preview for the selected past date */}
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '10px 12px',
-            marginTop: '10px',
-            fontSize: '12px',
-            lineHeight: 1.5,
-          }}
-        >
+        <div className="edit-history-preview">
           <div
             style={{
               display: 'flex',
@@ -301,8 +265,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               <span
                 style={{
                   fontSize: '10.5px',
-                  color: '#34d399',
-                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: 'var(--funds-text-primary)',
+                  background: 'var(--funds-badge-bg)',
+                  border: '1px solid var(--funds-badge-border)',
                   padding: '2px 7px',
                   borderRadius: '4px',
                   fontWeight: 600,
@@ -314,8 +279,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               <span
                 style={{
                   fontSize: '10.5px',
-                  color: '#fbbf24',
-                  background: 'rgba(245, 158, 11, 0.15)',
+                  color: 'var(--accent-breakfast)',
+                  background: 'var(--accent-breakfast-subtle)',
+                  border: '1px solid var(--accent-breakfast-subtle)',
                   padding: '2px 7px',
                   borderRadius: '4px',
                   fontWeight: 600,
@@ -329,28 +295,28 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           {hasPastRecord ? (
             <div style={{ color: 'var(--text-secondary)', fontSize: '11.5px' }}>
               {pastRec?.isCookOff ? (
-                <span style={{ color: '#f87171', fontWeight: 600 }}>🏖️ Cook Off Day</span>
+                <span style={{ color: 'var(--accent-skip)', fontWeight: 600 }}>🏖️ Cook Off Day</span>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {pastBStat !== 'none' && (isPlanIncludesBf || pastBStat === 'extra') && (
                     <div>
                       🍳 Breakfast:{' '}
-                      <strong style={{ color: pastBStat === 'delivered' ? '#fbbf24' : '#c4b5fd' }}>
+                      <strong style={{ color: pastBStat === 'delivered' ? 'var(--accent-breakfast)' : 'var(--accent-carryover)' }}>
                         {pastBStat}
                       </strong>
                       {pastRec?.breakfast?.menuItem && (
-                        <span style={{ color: '#94a3b8' }}> — {pastRec.breakfast.menuItem}</span>
+                        <span style={{ color: 'var(--text-muted)' }}> — {pastRec.breakfast.menuItem}</span>
                       )}
                     </div>
                   )}
                   {pastLStat !== 'none' && (isPlanIncludesLunch || pastLStat === 'extra') && (
                     <div>
                       🍱 Lunch:{' '}
-                      <strong style={{ color: pastLStat === 'delivered' ? '#34d399' : '#c4b5fd' }}>
+                      <strong style={{ color: pastLStat === 'delivered' ? 'var(--accent-lunch)' : 'var(--accent-carryover)' }}>
                         {pastLStat}
                       </strong>
                       {pastRec?.lunch?.menuItem && (
-                        <span style={{ color: '#94a3b8' }}> — {pastRec.lunch.menuItem}</span>
+                        <span style={{ color: 'var(--text-muted)' }}> — {pastRec.lunch.menuItem}</span>
                       )}
                     </div>
                   )}
@@ -419,9 +385,6 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             <Calendar size={15} color="var(--accent-primary)" />
             <span>Monthly Reports</span>
           </div>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {monthDates.length} {monthDates.length === 1 ? 'log' : 'logs'} in {monthlyStats.monthLabel.split(' ')[0]}
-          </span>
         </div>
 
         {/* Large Prominent Month Selector Button */}
@@ -434,18 +397,6 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             <Calendar size={16} color="var(--accent-lunch)" />
             <span style={{ fontSize: '13.5px', fontWeight: 700 }}>
               {monthlyStats.monthLabel}
-            </span>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                background: monthDates.length > 0 ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
-                color: monthDates.length > 0 ? '#090d16' : 'var(--text-muted)',
-                padding: '2px 7px',
-                borderRadius: 'var(--radius-full)',
-              }}
-            >
-              {monthDates.length} {monthDates.length === 1 ? 'log' : 'logs'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#34d399', fontSize: '12px', fontWeight: 600 }}>
@@ -572,20 +523,6 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                           <span style={{ fontSize: '14px', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--accent-lunch)' : 'var(--text-primary)' }}>
                             {m.label}
                           </span>
-                          {countInMonth > 0 && (
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                padding: '2px 7px',
-                                borderRadius: 'var(--radius-full)',
-                                background: isSelected ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
-                                color: isSelected ? '#090d16' : 'var(--text-muted)',
-                              }}
-                            >
-                              {countInMonth} {countInMonth === 1 ? 'log' : 'logs'}
-                            </span>
-                          )}
                         </div>
                         {isSelected && <Check size={18} color="#10b981" />}
                       </button>
@@ -861,7 +798,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             >
               <Calendar size={16} color="var(--text-muted)" />
               <span>
-                Activity Logs · {monthlyStats.monthLabel} ({monthDates.length})
+                Activity Logs · {monthlyStats.monthLabel}
               </span>
             </h3>
             <InfoPopover
@@ -899,7 +836,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {monthDates.map((dateStr) => {
+            {displayedDates.map((dateStr) => {
               const rec = records[dateStr];
               const isExpanded = expandedDate === dateStr;
 
@@ -1164,6 +1101,37 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 </div>
               );
             })}
+
+            {monthDates.length > 7 && (
+              <button
+                type="button"
+                onClick={() => setShowAllLogs(!showAllLogs)}
+                className="ios-btn ios-btn-secondary"
+                style={{
+                  width: '100%',
+                  padding: '9px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  marginTop: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                {showAllLogs ? (
+                  <>
+                    <ChevronUp size={14} />
+                    <span>Show Recent Only</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={14} />
+                    <span>View Full Month Activity</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -407,13 +407,13 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
                 {currency}{moneyRemaining.toLocaleString()}
               </div>
               <div className="plan-funds-sub">
-                {currency}{moneySpent.toLocaleString()} spent of {currency}{totalPlanBudget.toLocaleString()} total plan value
+                {currency}{moneyRemaining.toLocaleString()} left · {currency}{moneySpent.toLocaleString()} spent of {currency}{totalPlanBudget.toLocaleString()}
               </div>
             </div>
 
             <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-              <span className="plan-funds-badge">
-                {percentFundsLeft}% Funds Left
+              <span className="plan-funds-badge" style={{ whiteSpace: 'nowrap' }}>
+                {percentFundsLeft}% Remaining
               </span>
               {stats.carriedOverValue > 0 && (
                 <span style={{ fontSize: '11px', color: 'var(--accent-carryover)', fontWeight: 600 }}>

@@ -186,7 +186,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
       )}
 
       {/* Month Navigation Card */}
-      <div className="ios-card" style={{ padding: '16px 20px' }}>
+      <div className="ios-card" style={{ padding: '16px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <button 
             onClick={handlePrevMonth}
