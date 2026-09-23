@@ -41,6 +41,7 @@ import { IosTabBar, TabKey } from './components/common/IosTabBar';
 import { MealCalendar } from './components/calendar/MealCalendar';
 import { DayDetailModal } from './components/calendar/DayDetailModal';
 import { PackageSummaryCard } from './components/package/PackageSummaryCard';
+import { PlanManagementView } from './components/package/PlanManagementView';
 import { NewPackageModal } from './components/package/NewPackageModal';
 import { ExpenseBreakdown } from './components/analytics/ExpenseBreakdown';
 import { SettingsView } from './components/settings/SettingsView';
@@ -530,15 +531,17 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleDeletePackage = async (deleteLogs: boolean) => {
-    if (!activePackage) return;
-    const nextPackages = packages.filter((p) => p.id !== activePackage.id);
+  const handleDeletePackageById = async (packageId: string, deleteLogs: boolean = false) => {
+    const nextPackages = packages.filter((p) => p.id !== packageId);
     setPackages(nextPackages);
     saveLocalPackages(nextPackages);
 
-    const nextActiveId = nextPackages[0]?.id || null;
-    setActivePackageId(nextActiveId);
-    saveLocalActivePackageId(nextActiveId);
+    let nextActiveId = activePackageId;
+    if (activePackageId === packageId) {
+      nextActiveId = nextPackages[0]?.id || null;
+      setActivePackageId(nextActiveId);
+      saveLocalActivePackageId(nextActiveId);
+    }
 
     const nextRecords = deleteLogs ? {} : records;
     if (deleteLogs) {
@@ -553,6 +556,11 @@ export const App: React.FC = () => {
         await syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, nextActiveId);
       }
     }
+  };
+
+  const handleDeletePackage = async (deleteLogs: boolean) => {
+    if (!activePackage) return;
+    await handleDeletePackageById(activePackage.id, deleteLogs);
   };
 
   const handleSelectPackage = (id: string) => {
@@ -804,31 +812,20 @@ export const App: React.FC = () => {
           )
         )}
 
-        {/* Dedicated Plan Details Tab */}
+        {/* Dedicated Plan Creation & Subscription Management Tab */}
         {activeTab === 'package' && (
-          packages.length === 0 ? (
-            <FirstUserExperience
-              onOpenNewPackage={handleOpenCreateModal}
-              onOpenGuide={() => setIsHowToUseModalOpen(true)}
-              onLoadSampleData={handleLoadSampleData}
-            />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <PackageSummaryCard
-                pkg={activePackage}
-                packages={packages}
-                selectedPackageId={activePackageId}
-                onSelectPackage={handleSelectPackage}
-                stats={stats}
-                config={config}
-                records={records}
-                onOpenNewPackage={handleOpenCreateModal}
-                onEditPackage={handleOpenEditModal}
-                onDeletePackage={handleDeletePackage}
-                onExtractStatement={() => setIsStatementModalOpen(true)}
-              />
-            </div>
-          )
+          <PlanManagementView
+            packages={packages}
+            activePackageId={activePackageId}
+            config={config}
+            records={records}
+            stats={stats}
+            onSelectPackage={handleSelectPackage}
+            onSavePackage={handleSavePackage}
+            onEditPackage={handleOpenEditModal}
+            onDeletePackage={(id) => handleDeletePackageById(id, false)}
+            onOpenCreateModal={handleOpenCreateModal}
+          />
         )}
 
         {/* Financial & WhatsApp Statement Tab with Expandable Activity Logs */}

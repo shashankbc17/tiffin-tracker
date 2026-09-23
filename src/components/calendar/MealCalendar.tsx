@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DayRecord, RateConfig, PackagePlan } from '../../types';
-import { formatDate, getIstNow } from '../../services/carryOverEngine';
+import { formatDate, getIstNow, calculateCarryOver, isMealActiveOnDate } from '../../services/carryOverEngine';
 import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
 import { TodayActionBar } from './TodayActionBar';
@@ -30,6 +30,11 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
   const todayStr = getIstNow().dateStr;
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Compute active plan dates and dynamic end date for the 4-state calendar view
+  const stats = calculateCarryOver(activePackage, records, config);
+  const planStart = activePackage ? activePackage.startDate : null;
+  const planEnd = activePackage ? stats.extendedEndDate : null;
 
   const year = currentMonthDate.getFullYear();
   const month = currentMonthDate.getMonth(); // 0-indexed
@@ -208,29 +213,30 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
               {monthName}
             </h3>
             <InfoPopover
-              title="Calendar Color Guide"
+              title="Calendar 4-State Visual Guide"
               color="var(--accent-primary)"
               content={
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div className="dot-indicator dot-breakfast" />
-                      <span>🍳 Breakfast</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="legend-pip" style={{ background: 'var(--cal-delivered-border)' }} />
+                      <span><strong>Delivered (Green):</strong> Meals served &amp; confirmed for the day.</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div className="dot-indicator dot-lunch" />
-                      <span>🍱 Lunch</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="legend-pip" style={{ background: 'var(--cal-skipped-border)' }} />
+                      <span><strong>Skipped / Off (Red):</strong> Meal skipped or cook took leave (carried over).</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div className="dot-indicator dot-carryover" />
-                      <span>⏭️ Skipped (Carry-over)</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="legend-pip" style={{ background: 'var(--cal-planned-border)' }} />
+                      <span><strong>In Plan (Blue):</strong> Active subscription day awaiting delivery.</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>🏖️ Cook Off</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="legend-pip" style={{ background: 'var(--cal-nodeliv-border)' }} />
+                      <span><strong>No Delivery (Neutral):</strong> Non-delivery day (e.g. Sunday or outside plan).</span>
                     </div>
                   </div>
                   <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
-                    💡 Tap any date on the calendar to mark, skip, or edit portions for that day.
+                    💡 Tap any date on the calendar to log, skip, or edit breakfast &amp; lunch for that day.
                   </div>
                 </div>
               }
@@ -258,6 +264,26 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
           </button>
         </div>
 
+        {/* 4-State Visual Legend Bar */}
+        <div className="calendar-legend-bar">
+          <div className="legend-item" style={{ color: 'var(--cal-delivered-text)' }}>
+            <span className="legend-pip" style={{ background: 'var(--cal-delivered-border)' }} />
+            <span>Delivered</span>
+          </div>
+          <div className="legend-item" style={{ color: 'var(--cal-skipped-text)' }}>
+            <span className="legend-pip" style={{ background: 'var(--cal-skipped-border)' }} />
+            <span>Skipped</span>
+          </div>
+          <div className="legend-item" style={{ color: 'var(--cal-planned-text)' }}>
+            <span className="legend-pip" style={{ background: 'var(--cal-planned-border)' }} />
+            <span>In Plan</span>
+          </div>
+          <div className="legend-item" style={{ color: 'var(--cal-nodeliv-text)' }}>
+            <span className="legend-pip" style={{ background: 'var(--cal-nodeliv-border)' }} />
+            <span>No Delivery</span>
+          </div>
+        </div>
+
         {/* Days of week header */}
         <div className="calendar-grid" style={{ marginBottom: '8px' }}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
@@ -265,7 +291,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
           ))}
         </div>
 
-        {/* Calendar Cells */}
+        {/* Calendar Cells with 4-State Indicators */}
         <div className="calendar-grid">
           {daysArray.map((dayNum, idx) => {
             if (dayNum === null) {
@@ -280,69 +306,87 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
             const lStatus = record?.lunch?.status;
             const isCookOff = record?.isCookOff;
             const dayOfWeek = new Date(year, month, dayNum).getDay();
-            const isScheduledOff = activePackage?.activeDaysOfWeek
-              ? !activePackage.activeDaysOfWeek.includes(dayOfWeek)
-              : false;
 
-            const hasConfirmedDelivery = (bStatus && bStatus !== 'none') || (lStatus && lStatus !== 'none') || isCookOff;
+            // 1. Is this day within active subscription date range?
+            const isInPlanWindow = Boolean(planStart && planEnd && curDateStr >= planStart && curDateStr <= planEnd);
+
+            // 2. Is delivery scheduled on this day of week?
+            const isDeliveryScheduled = activePackage
+              ? (isMealActiveOnDate(curDateStr, activePackage, 'breakfast') || isMealActiveOnDate(curDateStr, activePackage, 'lunch'))
+              : (dayOfWeek !== 0);
+
+            // 3. Status checks
+            const hasDelivered = (!isCookOff) && (
+              (bStatus === 'delivered' || bStatus === 'extra') ||
+              (lStatus === 'delivered' || lStatus === 'extra')
+            );
+            const hasSkipped = Boolean(isCookOff || bStatus === 'skipped' || lStatus === 'skipped');
+
+            // 4. Resolve exact State among 4 possibilities:
+            // State 3: Red if any skipped or cook off
+            // State 2: Green if delivered and no skips
+            // State 4: Blue/Planned if within active plan & scheduled & awaiting delivery
+            // State 1: Neutral / No Delivery if off day or outside plan
+            let dayState: 'delivered' | 'skipped' | 'planned' | 'nodeliv';
+
+            if (hasSkipped) {
+              dayState = 'skipped';
+            } else if (hasDelivered) {
+              dayState = 'delivered';
+            } else if (isInPlanWindow && isDeliveryScheduled) {
+              dayState = 'planned';
+            } else {
+              dayState = 'nodeliv';
+            }
 
             return (
               <div
                 key={curDateStr}
                 onClick={() => setSelectedDate(curDateStr)}
-                className={`calendar-day-cell ${isToday ? 'today' : ''}`}
-                style={{
-                  background: isCookOff 
-                    ? 'rgba(239, 68, 68, 0.12)' 
-                    : isScheduledOff && !hasConfirmedDelivery
-                    ? 'rgba(255, 255, 255, 0.015)'
-                    : undefined,
-                  borderColor: isCookOff 
-                    ? 'rgba(239, 68, 68, 0.3)' 
-                    : isToday 
-                    ? 'var(--accent-primary)' 
-                    : undefined,
-                  opacity: isScheduledOff && !hasConfirmedDelivery ? 0.45 : 1
-                }}
+                className={`calendar-day-cell cal-state-${dayState} ${isToday ? 'today' : ''}`}
+                title={`${curDateStr}: ${dayState.toUpperCase()}`}
               >
-                <span className="calendar-day-number" style={{ color: isToday ? 'var(--accent-primary)' : 'inherit', fontWeight: isToday ? 800 : 600 }}>
+                <span className="calendar-day-number">
                   {dayNum}
                 </span>
 
                 <div className="day-badges-row">
-                  {/* Cook Off Badge or Dots */}
-                  {isCookOff ? (
-                    <span style={{ fontSize: '10px' }}>🏖️</span>
-                  ) : (
+                  {/* Badges reflecting the 4 states */}
+                  {dayState === 'skipped' && (
+                    isCookOff ? (
+                      <span style={{ fontSize: '10px' }} title="Cook Off Day">🏖️</span>
+                    ) : (
+                      <span style={{ fontSize: '10px', fontWeight: 800 }} title="Skipped / Carried over">⏭️</span>
+                    )
+                  )}
+
+                  {dayState === 'delivered' && (
                     <>
-                      {/* Breakfast dot - only shows when confirmed */}
-                      {bStatus && bStatus !== 'none' && (
+                      {bStatus && (bStatus === 'delivered' || bStatus === 'extra') && (
                         <div 
-                          className={`dot-indicator ${
-                            bStatus === 'delivered' ? 'dot-breakfast' :
-                            bStatus === 'skipped' ? 'dot-carryover' : 'dot-indicator'
-                          }`}
-                          style={{
-                            background: bStatus === 'extra' ? '#3b82f6' : undefined,
-                          }}
-                          title={`Breakfast: ${bStatus}`}
+                          className="dot-indicator dot-breakfast"
+                          title="Breakfast Delivered"
                         />
                       )}
-
-                      {/* Lunch dot - only shows when confirmed */}
-                      {lStatus && lStatus !== 'none' && (
+                      {lStatus && (lStatus === 'delivered' || lStatus === 'extra') && (
                         <div 
-                          className={`dot-indicator ${
-                            lStatus === 'delivered' ? 'dot-lunch' :
-                            lStatus === 'skipped' ? 'dot-carryover' : 'dot-indicator'
-                          }`}
-                          style={{
-                            background: lStatus === 'extra' ? '#3b82f6' : undefined,
-                          }}
-                          title={`Lunch: ${lStatus}`}
+                          className="dot-indicator dot-lunch"
+                          title="Lunch Delivered"
                         />
                       )}
                     </>
+                  )}
+
+                  {dayState === 'planned' && (
+                    <span style={{ fontSize: '9px', fontWeight: 700, opacity: 0.9 }} title="Scheduled in plan">
+                      ⏳
+                    </span>
+                  )}
+
+                  {dayState === 'nodeliv' && (
+                    <span style={{ fontSize: '9px', opacity: 0.4 }} title="No delivery scheduled">
+                      —
+                    </span>
                   )}
                 </div>
               </div>
