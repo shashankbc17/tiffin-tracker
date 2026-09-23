@@ -4,7 +4,16 @@ This document tracks all features, architectural improvements, and UI enhancemen
 
 ---
 
-### [Latest] - 2026-09-23 · Commit `3989e88`
+### [Latest] - 2026-09-23
+#### 📱 Mobile Orientation & Layout Polish for Food Statement & PDF Modal
+- **2x2 Summary Metrics Grid:** Transformed the 4 summary stat cards (`TOTAL DEBITED`, `MEALS SERVED`, `CARRY-OVER CREDIT`, `REMAINING IN PLAN`) from a cramped 4-column layout into a clean, balanced 2x2 grid. Metric titles, values, and subtitles now fit naturally without vertical text wrapping.
+- **Fixed Button Clipping in Footer:** Re-architected bottom action buttons from an overflowing 3-column row to a two-tier layout (`Download PDF` & `Export CSV` side-by-side, with `Copy WhatsApp Text Summary` cleanly beneath). Eliminates the cut-off button edge on iPhones.
+- **Statement Header & Scope Ref Wrapping:** Added `flex-wrap: wrap`, `font-family: monospace`, and `white-space: nowrap` to Reference IDs (`TF-STMT-...`) so they never break mid-hash.
+- **Table & Modal Viewport Fit:** Adjusted modal padding to `14px 12px` and enabled horizontal touch scrolling on the daily transaction ledger table to prevent horizontal page distortion on mobile viewports.
+
+---
+
+### 2026-09-23 · Commit `3989e88`
 #### 🛠️ Mobile Calendar Framing, Funds Clarity, Light Theme Polish & Log Scaling
 - **Calendar Mobile Framing:** Fixed horizontal cell overflow clipping on iPhones and narrow mobile devices (360px–390px) by configuring `.calendar-grid` with `repeat(7, minmax(0, 1fr))`, `min-width: 0`, and adjusting container padding so Saturday (column 7) fits cleanly with safe margins.
 - **Money Left in Plan Clarity:** 

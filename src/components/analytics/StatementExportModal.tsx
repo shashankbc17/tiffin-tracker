@@ -134,7 +134,7 @@ Generated via TiffinFlow Food Statement`;
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px',
+        padding: '8px',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -144,7 +144,7 @@ Generated via TiffinFlow Food Statement`;
         style={{
           width: '100%',
           maxWidth: '560px',
-          maxHeight: '92vh',
+          maxHeight: '94vh',
           backgroundColor: '#0f172a', // Bank Navy background
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: 'var(--radius-lg)',
@@ -158,7 +158,7 @@ Generated via TiffinFlow Food Statement`;
         {/* MODAL HEADER */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '14px 16px',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
             background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
             display: 'flex',
@@ -178,13 +178,14 @@ Generated via TiffinFlow Food Statement`;
                 justifyContent: 'center',
                 color: '#ffffff',
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                flexShrink: 0,
               }}
             >
               <FileText size={20} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                <h2 style={{ fontSize: '15.5px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
                   Food Statement &amp; PDF Extract
                 </h2>
                 <InfoPopover
@@ -211,6 +212,7 @@ Generated via TiffinFlow Food Statement`;
               justifyContent: 'center',
               color: '#94a3b8',
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             <X size={18} />
@@ -218,7 +220,7 @@ Generated via TiffinFlow Food Statement`;
         </div>
 
         {/* SCROLLABLE BODY */}
-        <div style={{ overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
           {/* PERIOD SELECTION BAR */}
           <div
@@ -232,11 +234,11 @@ Generated via TiffinFlow Food Statement`;
               gap: '8px',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.5px' }}>
-                Select Statement Scope
+                Statement Scope
               </span>
-              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
+              <span style={{ fontSize: '10px', color: '#34d399', fontWeight: 600, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                 Ref: {statementData.statementId}
               </span>
             </div>
@@ -264,6 +266,7 @@ Generated via TiffinFlow Food Statement`;
                   fontWeight: 600,
                   outline: 'none',
                   cursor: 'pointer',
+                  boxSizing: 'border-box',
                 }}
               >
                 {Boolean(activePackage && activePackage.status === 'active') && (
@@ -297,11 +300,13 @@ Generated via TiffinFlow Food Statement`;
             <div
               style={{
                 background: '#0f172a',
-                padding: '12px 16px',
+                padding: '10px 14px',
                 borderBottom: '3px solid #10b981',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '6px',
               }}
             >
               <div>
@@ -312,15 +317,18 @@ Generated via TiffinFlow Food Statement`;
                   Subscription Account &amp; Meal Ledger Statement
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div>
                 <span
                   style={{
                     fontSize: '9.5px',
                     fontWeight: 700,
                     color: '#34d399',
                     background: 'rgba(16, 185, 129, 0.15)',
-                    padding: '3px 7px',
+                    padding: '2px 6px',
                     borderRadius: '4px',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block',
+                    fontFamily: 'monospace',
                   }}
                 >
                   {statementData.statementId}
@@ -331,12 +339,12 @@ Generated via TiffinFlow Food Statement`;
             {/* PARTIES INFO */}
             <div
               style={{
-                padding: '12px 16px',
+                padding: '10px 14px',
                 background: '#f8fafc',
                 borderBottom: '1px solid #e2e8f0',
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                gap: '12px',
+                gap: '8px',
                 fontSize: '11px',
               }}
             >
@@ -365,14 +373,14 @@ Generated via TiffinFlow Food Statement`;
               </div>
             </div>
 
-            {/* 4 SUMMARY METRIC CARDS */}
+            {/* 4 SUMMARY METRIC CARDS - CLEAN 2x2 MOBILE-FRIENDLY GRID */}
             <div
               style={{
-                padding: '12px 16px',
+                padding: '10px 14px',
                 background: '#ffffff',
                 borderBottom: '1px solid #e2e8f0',
                 display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px',
               }}
             >
@@ -380,16 +388,16 @@ Generated via TiffinFlow Food Statement`;
               <div
                 style={{
                   background: '#f1f5f9',
-                  padding: '8px',
+                  padding: '9px 10px',
                   borderRadius: '6px',
                   border: '1px solid #e2e8f0',
                 }}
               >
-                <div style={{ fontSize: '8.5px', color: '#64748b', fontWeight: 600 }}>TOTAL DEBITED</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, letterSpacing: '0.4px' }}>TOTAL DEBITED</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '2px 0 1px' }}>
                   {statementData.currency}{statementData.totalSpent.toLocaleString()}
                 </div>
-                <div style={{ fontSize: '8px', color: '#64748b' }}>
+                <div style={{ fontSize: '9.5px', color: '#64748b' }}>
                   {statementData.effectiveDaysConsumed} days used
                 </div>
               </div>
@@ -398,17 +406,17 @@ Generated via TiffinFlow Food Statement`;
               <div
                 style={{
                   background: '#ecfdf5',
-                  padding: '8px',
+                  padding: '9px 10px',
                   borderRadius: '6px',
                   border: '1px solid #a7f3d0',
                 }}
               >
-                <div style={{ fontSize: '8.5px', color: '#059669', fontWeight: 600 }}>MEALS SERVED</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#065f46', marginTop: '2px' }}>
+                <div style={{ fontSize: '9px', color: '#059669', fontWeight: 700, letterSpacing: '0.4px' }}>MEALS SERVED</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#065f46', margin: '2px 0 1px' }}>
                   {statementData.breakfastDelivered + statementData.lunchDelivered}
                 </div>
-                <div style={{ fontSize: '8px', color: '#059669' }}>
-                  🍳 {statementData.breakfastDelivered} | 🍱 {statementData.lunchDelivered}
+                <div style={{ fontSize: '9.5px', color: '#059669' }}>
+                  🍳 {statementData.breakfastDelivered} · 🍱 {statementData.lunchDelivered}
                 </div>
               </div>
 
@@ -416,16 +424,16 @@ Generated via TiffinFlow Food Statement`;
               <div
                 style={{
                   background: '#fffbeb',
-                  padding: '8px',
+                  padding: '9px 10px',
                   borderRadius: '6px',
                   border: '1px solid #fde68a',
                 }}
               >
-                <div style={{ fontSize: '8.5px', color: '#b45309', fontWeight: 600 }}>CARRY-OVER CREDIT</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#92400e', marginTop: '2px' }}>
+                <div style={{ fontSize: '9px', color: '#b45309', fontWeight: 700, letterSpacing: '0.4px' }}>CARRY-OVER CREDIT</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#92400e', margin: '2px 0 1px' }}>
                   +{statementData.carryOverDaysSaved}d
                 </div>
-                <div style={{ fontSize: '8px', color: '#b45309' }}>
+                <div style={{ fontSize: '9.5px', color: '#b45309' }}>
                   {statementData.currency}{statementData.carriedOverValue.toLocaleString()} saved
                 </div>
               </div>
@@ -434,17 +442,17 @@ Generated via TiffinFlow Food Statement`;
               <div
                 style={{
                   background: '#f0f9ff',
-                  padding: '8px',
+                  padding: '9px 10px',
                   borderRadius: '6px',
                   border: '1px solid #bae6fd',
                 }}
               >
-                <div style={{ fontSize: '8.5px', color: '#0369a1', fontWeight: 600 }}>REMAINING PLAN</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0c4a6e', marginTop: '2px' }}>
+                <div style={{ fontSize: '9px', color: '#0369a1', fontWeight: 700, letterSpacing: '0.4px' }}>REMAINING IN PLAN</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#0c4a6e', margin: '2px 0 1px' }}>
                   {statementData.remainingDays}d
                 </div>
-                <div style={{ fontSize: '8px', color: '#0369a1' }}>
-                  of {statementData.totalDays} total
+                <div style={{ fontSize: '9.5px', color: '#0369a1' }}>
+                  of {statementData.totalDays} total days
                 </div>
               </div>
             </div>
@@ -452,7 +460,7 @@ Generated via TiffinFlow Food Statement`;
             {/* LEDGER TRANSACTIONS TITLE */}
             <div
               style={{
-                padding: '10px 16px 6px 16px',
+                padding: '10px 14px 6px 14px',
                 background: '#ffffff',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -460,16 +468,16 @@ Generated via TiffinFlow Food Statement`;
               }}
             >
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase' }}>
-                Itemized Daily Meal Ledger ({statementData.rows.length} records)
+                Itemized Daily Meal Ledger
               </span>
               <span style={{ fontSize: '9.5px', color: '#64748b' }}>
-                Clean, readable view
+                Clean view
               </span>
             </div>
 
             {/* SCROLLABLE TRANSACTION TABLE - 4 CLEAN COLUMNS */}
-            <div style={{ maxHeight: '220px', overflowY: 'auto', borderTop: '1px solid #e2e8f0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
+            <div style={{ maxHeight: '220px', overflowY: 'auto', overflowX: 'auto', borderTop: '1px solid #e2e8f0', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: '320px', borderCollapse: 'collapse', fontSize: '11.5px' }}>
                 <thead>
                   <tr style={{ background: '#1e293b', color: '#f8fafc', textAlign: 'left', position: 'sticky', top: 0 }}>
                     <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: 700 }}>Date &amp; Meal</th>
@@ -607,12 +615,12 @@ Generated via TiffinFlow Food Statement`;
         {/* BOTTOM FIXED ACTION BUTTONS */}
         <div
           style={{
-            padding: '14px 20px',
+            padding: '12px 14px',
             background: '#090d16',
             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px',
+            gap: '8px',
           }}
         >
           {/* Primary Action: Share PDF to WhatsApp */}
@@ -623,27 +631,27 @@ Generated via TiffinFlow Food Statement`;
             className="ios-btn ios-btn-whatsapp"
             style={{
               width: '100%',
-              padding: '14px',
-              fontSize: '14px',
+              padding: '13px',
+              fontSize: '13.5px',
               fontWeight: 700,
-              gap: '10px',
+              gap: '8px',
               cursor: isProcessing ? 'wait' : 'pointer',
             }}
           >
-            <Share2 size={18} />
+            <Share2 size={17} />
             <span>Share PDF Statement to WhatsApp</span>
           </button>
 
-          {/* Secondary Actions Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+          {/* Secondary Actions: 2 Equal Columns for Download & CSV */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <button
               type="button"
               disabled={isProcessing}
               onClick={handleDownloadPdf}
               className="ios-btn ios-btn-secondary"
-              style={{ padding: '10px', fontSize: '12px', gap: '6px' }}
+              style={{ padding: '10px 8px', fontSize: '12px', gap: '6px', whiteSpace: 'nowrap' }}
             >
-              <Download size={15} />
+              <Download size={14} />
               <span>Download PDF</span>
             </button>
 
@@ -652,23 +660,24 @@ Generated via TiffinFlow Food Statement`;
               disabled={isProcessing}
               onClick={handleExportCsv}
               className="ios-btn ios-btn-secondary"
-              style={{ padding: '10px', fontSize: '12px', gap: '6px' }}
+              style={{ padding: '10px 8px', fontSize: '12px', gap: '6px', whiteSpace: 'nowrap' }}
             >
-              <FileSpreadsheet size={15} color="#34d399" />
+              <FileSpreadsheet size={14} color="#34d399" />
               <span>Export CSV</span>
             </button>
-
-            <button
-              type="button"
-              disabled={isProcessing}
-              onClick={handleCopySummary}
-              className="ios-btn ios-btn-secondary"
-              style={{ padding: '10px', fontSize: '12px', gap: '6px' }}
-            >
-              {copied ? <Check size={15} color="#10b981" /> : <Copy size={15} />}
-              <span>{copied ? 'Copied' : 'Copy Text'}</span>
-            </button>
           </div>
+
+          {/* Tertiary Action: Copy WhatsApp Text Summary */}
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={handleCopySummary}
+            className="ios-btn ios-btn-secondary"
+            style={{ width: '100%', padding: '9px 12px', fontSize: '12px', gap: '6px' }}
+          >
+            {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+            <span>{copied ? 'Statement Text Copied!' : 'Copy WhatsApp Text Summary'}</span>
+          </button>
         </div>
       </div>
     </div>,
