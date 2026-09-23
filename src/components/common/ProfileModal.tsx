@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User, updateProfile } from 'firebase/auth';
-import { X, Camera, User as UserIcon, LogOut, Check, Cloud, Sparkles } from 'lucide-react';
+import { X, Camera, User as UserIcon, LogOut, Check, Cloud, Sun, Moon, Smartphone } from 'lucide-react';
+import { ThemeMode, getStoredTheme, setTheme } from '../../services/theme';
 
 interface ProfileModalProps {
   user: User | null;
@@ -28,8 +29,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     return localStorage.getItem('tiffin_custom_photo') || user?.photoURL || null;
   });
 
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getStoredTheme);
   const [isSaved, setIsSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Sync theme mode if changed outside or by system preference
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      if (e.detail) {
+        setThemeMode(e.detail);
+      }
+    };
+    window.addEventListener('tiffin_theme_changed', handleThemeChange);
+    return () => window.removeEventListener('tiffin_theme_changed', handleThemeChange);
+  }, []);
 
   // Initial letter
   const initialLetter = (displayName || 'U').trim()[0].toUpperCase();
@@ -98,18 +111,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              color: 'white',
-              borderRadius: '50%',
-              width: '28px',
-              height: '28px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="modal-close-icon-btn"
+            title="Close Profile"
           >
             <X size={16} />
           </button>
@@ -193,10 +196,63 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             />
           </div>
 
+          {/* Theme Mode Selector (White Layout / Dark / System) */}
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label className="ios-label" style={{ margin: 0 }}>
+                Theme Appearance
+              </label>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {themeMode === 'light' ? '☀️ White Layout' : themeMode === 'dark' ? '🌙 Dark Layout' : '📱 System Auto'}
+              </span>
+            </div>
+            
+            <div className="theme-picker-segmented">
+              <button
+                type="button"
+                onClick={() => {
+                  setThemeMode('light');
+                  setTheme('light');
+                }}
+                className={`theme-picker-option ${themeMode === 'light' ? 'active' : ''}`}
+                title="White / Light Theme"
+              >
+                <Sun size={15} color={themeMode === 'light' ? '#d97706' : 'currentColor'} />
+                <span>Light</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setThemeMode('dark');
+                  setTheme('dark');
+                }}
+                className={`theme-picker-option ${themeMode === 'dark' ? 'active' : ''}`}
+                title="Dark Theme"
+              >
+                <Moon size={15} color={themeMode === 'dark' ? '#38bdf8' : 'currentColor'} />
+                <span>Dark</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setThemeMode('system');
+                  setTheme('system');
+                }}
+                className={`theme-picker-option ${themeMode === 'system' ? 'active' : ''}`}
+                title="Follow Device System Setting"
+              >
+                <Smartphone size={15} color={themeMode === 'system' ? '#10b981' : 'currentColor'} />
+                <span>System</span>
+              </button>
+            </div>
+          </div>
+
           {/* Account & Cloud Sync Status Card */}
           <div
             style={{
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--subtle-card-bg)',
               padding: '12px 14px',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--glass-border)',

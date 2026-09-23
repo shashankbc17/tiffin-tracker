@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { RateConfig } from '../../types';
-import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle, Trash2, PlayCircle, X } from 'lucide-react';
+import { Save, Smartphone, Key, Cloud, Check, Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronUp, HelpCircle, Clock, AlertCircle, Trash2, PlayCircle, X, Sun, Moon, User as UserIcon } from 'lucide-react';
 import { getSavedFirebaseConfig, saveFirebaseConfig, initFirebase, DEFAULT_FIREBASE_CONFIG } from '../../services/firebase';
 import { InfoPopover } from '../common/InfoPopover';
+import { ThemeMode, getStoredTheme, setTheme } from '../../services/theme';
 
 interface SettingsViewProps {
   config: RateConfig;
@@ -13,6 +14,7 @@ interface SettingsViewProps {
   onClearAllData?: () => void;
   onWipeCloudData?: () => void;
   onOpenGuide?: () => void;
+  onOpenProfile?: () => void;
 }
 
 // Helper to extract purely the 10-digit mobile number from any stored string
@@ -36,11 +38,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onClearAllData,
   onWipeCloudData,
   onOpenGuide,
+  onOpenProfile,
 }) => {
   const [formData, setFormData] = useState<RateConfig>(config);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showFirebaseModal, setShowFirebaseModal] = useState(false);
   const [showDevSettings, setShowDevSettings] = useState(false);
+
+  // Theme Mode State for Settings view
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getStoredTheme);
+
+  useEffect(() => {
+    const handleThemeChange = (e: any) => {
+      if (e.detail) {
+        setThemeMode(e.detail);
+      }
+    };
+    window.addEventListener('tiffin_theme_changed', handleThemeChange);
+    return () => window.removeEventListener('tiffin_theme_changed', handleThemeChange);
+  }, []);
 
   // String states for numeric fields to prevent iPhone "stuck on 0" bug
   const [defaultPersonsStr, setDefaultPersonsStr] = useState(String(config.defaultPersons ?? 1));
@@ -128,7 +144,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <div 
         className="ios-card" 
         style={{ 
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.9) 100%)', 
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, var(--bg-card) 100%)', 
           borderColor: 'rgba(245, 158, 11, 0.3)', 
           display: 'flex', 
           alignItems: 'center', 
@@ -137,7 +153,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }}
       >
         <div>
-          <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Settings &amp; Preferences
           </h2>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -151,6 +167,74 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         />
       </div>
 
+      {/* Appearance & My Profile Card */}
+      <div className="ios-card" style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, fontFamily: 'var(--font-heading)' }}>
+              Appearance &amp; Theme
+            </h3>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Switch between daylight white layout and sleek dark mode
+            </div>
+          </div>
+
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="ios-btn ios-btn-secondary"
+              style={{ padding: '5px 10px', fontSize: '11px', borderRadius: 'var(--radius-full)', gap: '4px' }}
+            >
+              <UserIcon size={12} color="var(--accent-primary)" />
+              <span>My Profile</span>
+            </button>
+          )}
+        </div>
+
+        {/* 3-Way Theme Switcher */}
+        <div className="theme-picker-segmented">
+          <button
+            type="button"
+            onClick={() => {
+              setThemeMode('light');
+              setTheme('light');
+            }}
+            className={`theme-picker-option ${themeMode === 'light' ? 'active' : ''}`}
+            title="White / Light Theme"
+          >
+            <Sun size={15} color={themeMode === 'light' ? '#d97706' : 'currentColor'} />
+            <span>Light (White)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setThemeMode('dark');
+              setTheme('dark');
+            }}
+            className={`theme-picker-option ${themeMode === 'dark' ? 'active' : ''}`}
+            title="Dark Theme"
+          >
+            <Moon size={15} color={themeMode === 'dark' ? '#38bdf8' : 'currentColor'} />
+            <span>Dark</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setThemeMode('system');
+              setTheme('system');
+            }}
+            className={`theme-picker-option ${themeMode === 'system' ? 'active' : ''}`}
+            title="Follow Device System Setting"
+          >
+            <Smartphone size={15} color={themeMode === 'system' ? '#10b981' : 'currentColor'} />
+            <span>System</span>
+          </button>
+        </div>
+      </div>
+
       {/* Senior-Friendly How to Use Guide Card */}
       {onOpenGuide && (
         <div 
@@ -158,7 +242,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           className="ios-card" 
           style={{ 
             cursor: 'pointer', 
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)', 
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, var(--bg-card) 100%)', 
             borderColor: 'rgba(16, 185, 129, 0.35)',
             display: 'flex',
             alignItems: 'center',
@@ -171,7 +255,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <HelpCircle size={20} />
             </div>
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
                 📖 How to Use TiffinFlow Guide
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -179,7 +263,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
           </div>
-          <span style={{ fontSize: '12px', color: '#34d399', fontWeight: 700 }}>Open &gt;</span>
+          <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 700 }}>Open &gt;</span>
         </div>
       )}
 

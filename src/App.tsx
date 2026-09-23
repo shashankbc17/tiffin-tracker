@@ -853,6 +853,7 @@ export const App: React.FC = () => {
             onClearAllData={handleClearAllData}
             onWipeCloudData={handleWipeCloudData}
             onOpenGuide={() => setIsHowToUseModalOpen(true)}
+            onOpenProfile={() => setIsProfileModalOpen(true)}
           />
         )}
       </main>

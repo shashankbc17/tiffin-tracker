@@ -1,10 +1,23 @@
 :root {
-  /* Premium iOS Apple Palette */
+  /* Premium iOS Apple Dark Palette (Default) */
   --bg-primary: #090d16;
   --bg-secondary: #131b2e;
   --bg-card: rgba(22, 31, 52, 0.72);
   --bg-card-hover: rgba(30, 41, 68, 0.85);
   --bg-elevated: rgba(30, 42, 69, 0.95);
+  --header-bg: rgba(9, 13, 22, 0.85);
+  --tab-bar-bg: rgba(15, 23, 42, 0.88);
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-focus-bg: rgba(255, 255, 255, 0.08);
+  --btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --btn-secondary-hover: rgba(255, 255, 255, 0.12);
+  --segmented-bg: rgba(15, 23, 42, 0.7);
+  --calendar-cell-bg: rgba(255, 255, 255, 0.03);
+  --calendar-cell-border: rgba(255, 255, 255, 0.04);
+  --sheet-handle-bg: rgba(255, 255, 255, 0.2);
+  --subtle-card-bg: rgba(255, 255, 255, 0.03);
+  --banner-bg: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+  --banner-border: rgba(139, 92, 246, 0.35);
   
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-focus: rgba(16, 185, 129, 0.4);
@@ -45,19 +58,43 @@
   --radius-full: 9999px;
 }
 
-/* Light Theme Variables (Auto / Switchable) */
+/* Light Theme Variables (White Layout) */
 [data-theme="light"] {
-  --bg-primary: #f1f5f9;
-  --bg-secondary: #e2e8f0;
-  --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --bg-primary: #f8fafc;
+  --bg-secondary: #eef2f6;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: #ffffff;
   --bg-elevated: #ffffff;
+  --header-bg: rgba(248, 250, 252, 0.88);
+  --tab-bar-bg: rgba(255, 255, 255, 0.92);
+  --input-bg: rgba(0, 0, 0, 0.035);
+  --input-focus-bg: rgba(0, 0, 0, 0.05);
+  --btn-secondary-bg: rgba(0, 0, 0, 0.05);
+  --btn-secondary-hover: rgba(0, 0, 0, 0.08);
+  --segmented-bg: rgba(0, 0, 0, 0.06);
+  --calendar-cell-bg: rgba(0, 0, 0, 0.02);
+  --calendar-cell-border: rgba(0, 0, 0, 0.06);
+  --sheet-handle-bg: rgba(0, 0, 0, 0.18);
+  --subtle-card-bg: rgba(0, 0, 0, 0.025);
+  --banner-bg: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(59, 130, 246, 0.08) 100%);
+  --banner-border: rgba(139, 92, 246, 0.25);
+
   --glass-border: rgba(0, 0, 0, 0.08);
   --glass-border-focus: rgba(16, 185, 129, 0.5);
-  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
+
+  --accent-breakfast: #d97706;
+  --accent-breakfast-subtle: rgba(217, 119, 6, 0.12);
+  --accent-lunch: #059669;
+  --accent-lunch-subtle: rgba(5, 150, 105, 0.12);
+  --accent-carryover: #7c3aed;
+  --accent-carryover-subtle: rgba(124, 58, 237, 0.12);
+  --accent-skip: #dc2626;
+  --accent-skip-subtle: rgba(220, 38, 38, 0.12);
 }
 
 * {
@@ -85,6 +122,14 @@ body {
     radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
     radial-gradient(at 50% 50%, rgba(245, 158, 11, 0.05) 0px, transparent 50%);
   background-attachment: fixed;
+  transition: background-color 0.25s ease, color 0.2s ease;
+}
+
+[data-theme="light"] body {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(245, 158, 11, 0.04) 0px, transparent 50%);
 }
 
 /* App Shell Container - Centered iPhone Pro Frame on Desktop, 100% on Mobile */
@@ -99,6 +144,11 @@ body {
   border-left: 1px solid var(--glass-border);
   border-right: 1px solid var(--glass-border);
   background: var(--bg-primary);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+[data-theme="light"] .app-container {
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
 }
 
 @media (max-width: 480px) {
@@ -117,13 +167,14 @@ body {
   padding-left: 20px;
   padding-right: 20px;
   padding-bottom: 12px;
-  background: rgba(9, 13, 22, 0.82);
+  background: var(--header-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .ios-header-title {
@@ -153,13 +204,14 @@ body {
   z-index: 50;
   padding-bottom: calc(var(--safe-bottom) + 6px);
   padding-top: 10px;
-  background: rgba(15, 23, 42, 0.85);
+  background: var(--tab-bar-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--glass-border);
   display: flex;
   justify-content: space-around;
   align-items: center;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .tab-button {
@@ -269,12 +321,13 @@ body {
 /* iOS Segmented Controls */
 .segmented-control {
   display: flex;
-  background: rgba(15, 23, 42, 0.7);
+  background: var(--segmented-bg);
   padding: 4px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
   position: relative;
   gap: 4px;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .segmented-option {
@@ -324,13 +377,14 @@ body {
 }
 
 .ios-btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--btn-secondary-bg);
   color: var(--text-primary);
   border: 1px solid var(--glass-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .ios-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--btn-secondary-hover);
 }
 
 .ios-btn-whatsapp {
@@ -341,13 +395,14 @@ body {
 
 /* Carry-over Banner */
 .carryover-banner {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: var(--banner-bg);
+  border: 1px solid var(--banner-border);
   border-radius: var(--radius-lg);
   padding: 16px;
   display: flex;
   align-items: center;
   gap: 14px;
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 /* Interactive Calendar */
@@ -369,8 +424,8 @@ body {
 .calendar-day-cell {
   aspect-ratio: 1;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--calendar-cell-bg);
+  border: 1px solid var(--calendar-cell-border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -387,7 +442,7 @@ body {
 
 .calendar-day-cell.today {
   border-color: var(--accent-primary);
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .calendar-day-cell.selected {
@@ -440,7 +495,7 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 100;
@@ -458,10 +513,11 @@ body {
   border-top-right-radius: var(--radius-lg);
   border-top: 1px solid var(--glass-border);
   padding: 24px 20px calc(var(--safe-bottom) + 20px) 20px;
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
   max-height: 85vh;
   overflow-y: auto;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 @keyframes slideUp {
@@ -472,9 +528,10 @@ body {
 .sheet-handle {
   width: 40px;
   height: 5px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--sheet-handle-bg);
   border-radius: var(--radius-full);
   margin: 0 auto 18px auto;
+  transition: background-color 0.25s ease;
 }
 
 /* Form Inputs */
@@ -492,21 +549,66 @@ body {
 }
 
 .ios-input {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--input-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   color: var(--text-primary);
   font-size: 16px; /* 16px prevents iOS Safari from auto-zooming on focus */
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background-color 0.2s;
   font-family: inherit;
   width: 100%;
 }
 
 .ios-input:focus {
   border-color: var(--accent-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--input-focus-bg);
+}
+
+/* Theme Picker Cupertino Control */
+.theme-picker-segmented {
+  display: flex;
+  background: var(--segmented-bg);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  gap: 4px;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.theme-picker-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.theme-picker-option:hover {
+  color: var(--text-primary);
+}
+
+.theme-picker-option.active {
+  background: var(--bg-card);
+  color: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .theme-picker-option.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #34d399;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 /* Mobile Viewport Optimizations (iPhone 14 / 390px width) */
@@ -526,3 +628,55 @@ body {
     padding-right: 14px;
   }
 }
+
+/* Light Theme Aesthetic Polish */
+[data-theme="light"] .ios-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .badge-breakfast {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="light"] .badge-lunch {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="light"] .badge-carryover {
+  background: rgba(139, 92, 246, 0.12);
+  color: #6d28d9;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="light"] .badge-skip {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="light"] .modal-sheet {
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-close-icon-btn {
+  background: var(--btn-secondary-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close-icon-btn:hover {
+  background: var(--btn-secondary-hover);
+}
+

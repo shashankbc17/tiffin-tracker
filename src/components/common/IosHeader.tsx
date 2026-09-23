@@ -112,53 +112,6 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
                   : 'Live Sync'}
               </span>
             </button>
-
-            {/* Tap Avatar to Open Profile Modal */}
-            <button
-              onClick={onOpenProfile}
-              title="My Profile & Settings"
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {avatarMode === 'photo' && customPhoto ? (
-                <img 
-                  src={customPhoto} 
-                  alt={customName} 
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '1.5px solid var(--accent-primary)'
-                  }} 
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--accent-primary), #059669)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
-                  }}
-                >
-                  {initialLetter}
-                </div>
-              )}
-            </button>
           </div>
         ) : isAuthLoading ? (
           /* Subtle clean placeholder while Firebase resolves session on reload */
@@ -189,14 +142,62 @@ export const IosHeader: React.FC<IosHeaderProps> = ({
             <button 
               onClick={onLogin}
               className="ios-btn ios-btn-secondary"
-              style={{ padding: '6px 12px', fontSize: '12px', borderRadius: 'var(--radius-full)' }}
+              style={{ padding: '6px 10px', fontSize: '11.5px', borderRadius: 'var(--radius-full)' }}
               title="Sign in with Google on all devices to sync meals in real-time"
             >
-              <LogIn size={13} />
-              <span>Sign In to Sync</span>
+              <LogIn size={12} />
+              <span>Sign In</span>
             </button>
           </div>
         )}
+
+        {/* Tap Avatar to Open My Profile Modal (Available to all users) */}
+        <button
+          onClick={onOpenProfile}
+          title="My Profile & Appearance"
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: '2px'
+          }}
+        >
+          {avatarMode === 'photo' && customPhoto ? (
+            <img 
+              src={customPhoto} 
+              alt={customName} 
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '1.5px solid var(--accent-primary)'
+              }} 
+            />
+          ) : (
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--accent-primary), #059669)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '13px',
+                fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              {initialLetter}
+            </div>
+          )}
+        </button>
       </div>
     </header>
   );
