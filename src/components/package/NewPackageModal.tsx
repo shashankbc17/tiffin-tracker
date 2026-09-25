@@ -352,7 +352,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
