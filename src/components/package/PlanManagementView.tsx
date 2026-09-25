@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { PackagePlan, RateConfig, CarryOverStats, DayRecord } from '../../types';
-import { addActiveDays, getIstNow } from '../../services/carryOverEngine';
+import { addActiveDays, countActiveDaysBetween, getIstNow } from '../../services/carryOverEngine';
 import {
   Plus,
   Check,
   Calendar,
+  CalendarDays,
   Trash2,
   Edit3,
   Coffee,
@@ -60,6 +61,10 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
   const [title, setTitle] = useState('Meal Subscription');
   const [startDate, setStartDate] = useState(todayStr);
   const [totalDaysStr, setTotalDaysStr] = useState('20');
+  const [activeDaysOfWeek, setActiveDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [endDate, setEndDate] = useState<string>(() => {
+    return addActiveDays(todayStr, 20, [1, 2, 3, 4, 5, 6]);
+  });
   const [breakfastRateStr, setBreakfastRateStr] = useState(
     String(config.defaultBreakfastRate || 60)
   );
@@ -71,12 +76,11 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
   );
   const [includesBreakfast, setIncludesBreakfast] = useState(true);
   const [includesLunch, setIncludesLunch] = useState(true);
-  const [activeDaysOfWeek, setActiveDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [notes, setNotes] = useState('');
   const [createdSuccess, setCreatedSuccess] = useState(false);
 
   // Derived values
-  const totalDays = Math.max(1, parseInt(totalDaysStr, 10) || 20);
+  const totalDays = Math.max(1, parseInt(totalDaysStr, 10) || 1);
   const breakfastRate = Math.max(0, parseInt(breakfastRateStr, 10) || 0);
   const lunchRate = Math.max(0, parseInt(lunchRateStr, 10) || 0);
   const defaultPersons = Math.max(1, parseInt(defaultPersonsStr, 10) || 1);
@@ -85,7 +89,51 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
     (includesBreakfast ? breakfastRate : 0) + (includesLunch ? lunchRate : 0);
   const totalEstimatedCost = dailyRate * defaultPersons * totalDays;
 
-  const projectedEndDate = addActiveDays(startDate, totalDays, activeDaysOfWeek);
+  // Reactive bidirectional handlers
+  const handleStartDateChange = (newStart: string) => {
+    setStartDate(newStart);
+    if (!newStart) return;
+    if (endDate && endDate >= newStart) {
+      const activeCount = countActiveDaysBetween(newStart, endDate, activeDaysOfWeek);
+      setTotalDaysStr(String(Math.max(1, activeCount)));
+    } else {
+      const newEnd = addActiveDays(newStart, totalDays, activeDaysOfWeek);
+      setEndDate(newEnd);
+    }
+  };
+
+  const handleEndDateChange = (newEnd: string) => {
+    setEndDate(newEnd);
+    if (!newEnd || !startDate) return;
+    if (newEnd >= startDate) {
+      const activeCount = countActiveDaysBetween(startDate, newEnd, activeDaysOfWeek);
+      setTotalDaysStr(String(Math.max(1, activeCount)));
+    }
+  };
+
+  const handleTotalDaysChange = (newDaysStr: string) => {
+    setTotalDaysStr(newDaysStr);
+    const parsed = parseInt(newDaysStr, 10);
+    if (!isNaN(parsed) && parsed > 0 && startDate) {
+      const newEnd = addActiveDays(startDate, parsed, activeDaysOfWeek);
+      setEndDate(newEnd);
+    }
+  };
+
+  const handleScheduleChange = (newList: number[]) => {
+    if (newList.length === 0) {
+      alert('You must have at least one active delivery day!');
+      return;
+    }
+    setActiveDaysOfWeek(newList);
+    if (startDate && endDate && endDate >= startDate) {
+      const activeCount = countActiveDaysBetween(startDate, endDate, newList);
+      setTotalDaysStr(String(Math.max(1, activeCount)));
+    } else if (startDate && totalDays > 0) {
+      const newEnd = addActiveDays(startDate, totalDays, newList);
+      setEndDate(newEnd);
+    }
+  };
 
   const handleToggleDay = (day: number) => {
     if (activeDaysOfWeek.includes(day)) {
@@ -93,16 +141,22 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
         alert('You must have at least one active delivery day!');
         return;
       }
-      setActiveDaysOfWeek(activeDaysOfWeek.filter((d) => d !== day));
+      const updated = activeDaysOfWeek.filter((d) => d !== day);
+      handleScheduleChange(updated);
     } else {
-      setActiveDaysOfWeek([...activeDaysOfWeek, day].sort());
+      const updated = [...activeDaysOfWeek, day].sort();
+      handleScheduleChange(updated);
     }
   };
 
   const handleSetSchedulePreset = (type: 'mon-sat' | 'mon-fri' | 'all') => {
-    if (type === 'mon-sat') setActiveDaysOfWeek([1, 2, 3, 4, 5, 6]);
-    else if (type === 'mon-fri') setActiveDaysOfWeek([1, 2, 3, 4, 5]);
-    else setActiveDaysOfWeek([0, 1, 2, 3, 4, 5, 6]);
+    const list =
+      type === 'mon-sat'
+        ? [1, 2, 3, 4, 5, 6]
+        : type === 'mon-fri'
+        ? [1, 2, 3, 4, 5]
+        : [0, 1, 2, 3, 4, 5, 6];
+    handleScheduleChange(list);
   };
 
   const handleCreatePlan = (e: React.FormEvent) => {
@@ -252,107 +306,226 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
             </span>
           </div>
 
-          {/* Plan Title & Start Date */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '12px' }}>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  color: 'var(--text-secondary)',
-                  marginBottom: '5px',
-                }}
-              >
-                Plan Name / Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. October Tiffin, Lunch Plan"
-                className="ios-input"
-                style={{ width: '100%', fontSize: '13px' }}
-                required
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  color: 'var(--text-secondary)',
-                  marginBottom: '5px',
-                }}
-              >
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="ios-input"
-                style={{ width: '100%', fontSize: '13px' }}
-                required
-              />
-            </div>
+          {/* Plan Title */}
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+                marginBottom: '5px',
+              }}
+            >
+              Plan Name / Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. October Tiffin, Lunch Plan"
+              className="ios-input"
+              style={{ width: '100%', fontSize: '13.5px' }}
+              required
+            />
           </div>
 
-          {/* Duration in Days & Presets */}
-          <div>
+          {/* Date Range & Package Duration Card */}
+          <div
+            style={{
+              background: 'var(--metric-card-bg)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+              <div>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    marginBottom: '5px',
+                  }}
+                >
+                  <Calendar size={13} color="var(--accent-primary)" />
+                  <span>Start Date</span>
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="ios-input"
+                  style={{ width: '100%', fontSize: '13px' }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    marginBottom: '5px',
+                  }}
+                >
+                  <Calendar size={13} color="var(--accent-carryover)" />
+                  <span>End Date</span>
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  className="ios-input"
+                  style={{ width: '100%', fontSize: '13px' }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    marginBottom: '5px',
+                  }}
+                >
+                  <CalendarDays size={13} color="var(--accent-lunch)" />
+                  <span>Package Days</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={totalDaysStr}
+                  onChange={(e) => handleTotalDaysChange(e.target.value)}
+                  className="ios-input"
+                  style={{ width: '100%', fontSize: '14px', fontWeight: 700 }}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Live Synchronized Range Preview */}
             <div
               style={{
                 display: 'flex',
-                justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '6px',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '6px',
+                fontSize: '11.5px',
+                color: 'var(--text-secondary)',
+                borderTop: '1px dashed var(--glass-border)',
+                paddingTop: '8px',
               }}
             >
-              <label
-                style={{
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  color: 'var(--text-secondary)',
-                  margin: 0,
-                }}
-              >
-                Total Package Days (Active Delivery Days)
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>✓ Auto-Synced:</span>
+                <span>
+                  <strong>{totalDays}</strong> active delivery day{totalDays > 1 ? 's' : ''} ({startDate} → {endDate})
+                </span>
+              </div>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Ends approx: <strong>{projectedEndDate}</strong>
+                {activeDaysOfWeek.length} delivery days/week
               </span>
             </div>
+          </div>
 
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input
-                type="number"
-                min="1"
-                max="365"
-                value={totalDaysStr}
-                onChange={(e) => setTotalDaysStr(e.target.value)}
-                className="ios-input"
-                style={{ width: '90px', fontSize: '14px', fontWeight: 700 }}
-                required
-              />
-              {[15, 20, 25, 30].map((d) => (
+          {/* Delivery Schedule Days (Directly Below Dates & Duration) */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Delivery Schedule Days
+              </label>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button
-                  key={d}
                   type="button"
-                  onClick={() => setTotalDaysStr(String(d))}
+                  onClick={() => handleSetSchedulePreset('mon-sat')}
                   className="ios-btn ios-btn-secondary"
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '11.5px',
-                    fontWeight: totalDays === d ? 700 : 500,
-                    borderColor: totalDays === d ? 'var(--accent-primary)' : undefined,
-                    color: totalDays === d ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  style={{ 
+                    padding: '3px 8px', 
+                    fontSize: '10.5px',
+                    borderColor: activeDaysOfWeek.length === 6 && !activeDaysOfWeek.includes(0) ? 'var(--accent-primary)' : undefined,
+                    color: activeDaysOfWeek.length === 6 && !activeDaysOfWeek.includes(0) ? 'var(--accent-primary)' : 'var(--text-secondary)'
                   }}
                 >
-                  {d} Days
+                  Mon-Sat
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => handleSetSchedulePreset('mon-fri')}
+                  className="ios-btn ios-btn-secondary"
+                  style={{ 
+                    padding: '3px 8px', 
+                    fontSize: '10.5px',
+                    borderColor: activeDaysOfWeek.length === 5 && !activeDaysOfWeek.includes(0) && !activeDaysOfWeek.includes(6) ? 'var(--accent-primary)' : undefined,
+                    color: activeDaysOfWeek.length === 5 && !activeDaysOfWeek.includes(0) && !activeDaysOfWeek.includes(6) ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                  }}
+                >
+                  Mon-Fri
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetSchedulePreset('all')}
+                  className="ios-btn ios-btn-secondary"
+                  style={{ 
+                    padding: '3px 8px', 
+                    fontSize: '10.5px',
+                    borderColor: activeDaysOfWeek.length === 7 ? 'var(--accent-primary)' : undefined,
+                    color: activeDaysOfWeek.length === 7 ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                  }}
+                >
+                  All 7 Days
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+              {DAYS_META.map((item) => {
+                const isActive = activeDaysOfWeek.includes(item.day);
+                return (
+                  <button
+                    key={item.day}
+                    type="button"
+                    onClick={() => handleToggleDay(item.day)}
+                    style={{
+                      padding: '8px 2px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: isActive
+                        ? '1.5px solid var(--accent-primary)'
+                        : '1px solid var(--glass-border)',
+                      background: isActive ? 'var(--accent-primary-subtle)' : 'var(--metric-card-bg)',
+                      color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
+                      fontSize: '11px',
+                      fontWeight: isActive ? 700 : 500,
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              💡 Selecting delivery days auto-calculates the exact number of package days between your start date &amp; end date.
             </div>
           </div>
 
@@ -472,69 +645,6 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
                 className="ios-input"
                 style={{ width: '100%', fontSize: '13px' }}
               />
-            </div>
-          </div>
-
-          {/* Delivery Days of Week */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                Delivery Schedule Days
-              </label>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleSetSchedulePreset('mon-sat')}
-                  className="ios-btn ios-btn-secondary"
-                  style={{ padding: '3px 8px', fontSize: '10px' }}
-                >
-                  Mon-Sat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetSchedulePreset('mon-fri')}
-                  className="ios-btn ios-btn-secondary"
-                  style={{ padding: '3px 8px', fontSize: '10px' }}
-                >
-                  Mon-Fri
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetSchedulePreset('all')}
-                  className="ios-btn ios-btn-secondary"
-                  style={{ padding: '3px 8px', fontSize: '10px' }}
-                >
-                  All 7 Days
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-              {DAYS_META.map((item) => {
-                const isActive = activeDaysOfWeek.includes(item.day);
-                return (
-                  <button
-                    key={item.day}
-                    type="button"
-                    onClick={() => handleToggleDay(item.day)}
-                    style={{
-                      padding: '8px 2px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: isActive
-                        ? '1.5px solid var(--accent-primary)'
-                        : '1px solid var(--glass-border)',
-                      background: isActive ? 'var(--accent-primary-subtle)' : 'var(--subtle-card-bg)',
-                      color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
-                      fontSize: '11px',
-                      fontWeight: isActive ? 700 : 500,
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
             </div>
           </div>
 

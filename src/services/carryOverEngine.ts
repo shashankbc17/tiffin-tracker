@@ -114,6 +114,34 @@ export function addActiveDays(
 }
 
 /**
+ * Count how many active delivery days fall between startDateStr and endDateStr (inclusive)
+ */
+export function countActiveDaysBetween(
+  startDateStr: string,
+  endDateStr: string,
+  activeDaysOfWeek: number[] = [0, 1, 2, 3, 4, 5, 6]
+): number {
+  if (!startDateStr || !endDateStr || endDateStr < startDateStr) return 0;
+  if (!activeDaysOfWeek || activeDaysOfWeek.length === 0) return 0;
+
+  const [sy, sm, sd] = startDateStr.split('-').map(Number);
+  const [ey, em, ed] = endDateStr.split('-').map(Number);
+
+  const cur = new Date(sy, sm - 1, sd);
+  const end = new Date(ey, em - 1, ed);
+
+  let activeCount = 0;
+  while (cur <= end) {
+    if (activeDaysOfWeek.includes(cur.getDay())) {
+      activeCount++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  return activeCount;
+}
+
+/**
  * Check if the cutoff time has passed for a package on today's date,
  * meaning that if the package started today with no meals logged yet,
  * it must wait until the next active delivery day.
