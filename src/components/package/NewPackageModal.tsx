@@ -302,7 +302,9 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
           </div>
           <button 
             onClick={onClose} 
-            style={{ background: 'rgba(255, 255, 255, 0.1)', border: 'none', color: 'white', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            className="modal-close-icon-btn"
+            title="Close"
+            aria-label="Close"
           >
             <X size={16} />
           </button>

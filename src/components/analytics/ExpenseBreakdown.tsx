@@ -436,10 +436,10 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                   maxHeight: '85vh',
                   display: 'flex',
                   flexDirection: 'column',
-                  backgroundColor: '#131b2e',
-                  border: '1px solid rgba(255, 255, 255, 0.18)',
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--glass-border)',
                   borderRadius: '20px',
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+                  boxShadow: 'var(--glass-shadow), 0 25px 50px -12px rgba(0, 0, 0, 0.35)',
                   overflow: 'hidden',
                   animation: 'iosModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
@@ -449,8 +449,8 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 <div
                   style={{
                     padding: '14px 18px',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                    background: 'rgba(255, 255, 255, 0.04)',
+                    borderBottom: '1px solid var(--glass-border)',
+                    background: 'var(--metric-card-bg)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -458,7 +458,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar size={18} color="#34d399" />
+                    <Calendar size={18} color="var(--accent-lunch)" />
                     <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                       Select Report Month
                     </h4>
@@ -466,18 +466,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsMonthPickerOpen(false)}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '28px',
-                      height: '28px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#94a3b8',
-                      cursor: 'pointer',
-                    }}
+                    className="modal-close-icon-btn"
+                    title="Close"
+                    aria-label="Close"
                   >
                     <X size={15} />
                   </button>
@@ -509,8 +500,8 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                         style={{
                           padding: '12px 14px',
                           borderRadius: 'var(--radius-md)',
-                          border: isSelected ? '1.5px solid #10b981' : '1px solid var(--glass-border)',
-                          background: isSelected ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                          border: isSelected ? '1.5px solid var(--accent-lunch)' : '1px solid var(--glass-border)',
+                          background: isSelected ? 'var(--cal-delivered-bg)' : 'var(--metric-card-bg)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
@@ -524,7 +515,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                             {m.label}
                           </span>
                         </div>
-                        {isSelected && <Check size={18} color="#10b981" />}
+                        {isSelected && <Check size={18} color="var(--accent-lunch)" />}
                       </button>
                     );
                   })}
@@ -534,8 +525,8 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 <div
                   style={{
                     padding: '10px 18px 14px',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderTop: '1px solid var(--glass-border)',
+                    background: 'var(--metric-card-bg)',
                     display: 'flex',
                     justifyContent: 'flex-end',
                     flexShrink: 0,
@@ -551,6 +542,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                       fontWeight: 600,
                       borderRadius: 'var(--radius-full)',
                       cursor: 'pointer',
+                      color: 'var(--text-primary)',
                     }}
                   >
                     Close

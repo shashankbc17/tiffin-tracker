@@ -43,6 +43,7 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
         }}
         aria-label={ariaLabel || title}
         title={title}
+        className="info-popover-trigger"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -50,9 +51,8 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
           width: `${size + 5}px`,
           height: `${size + 5}px`,
           borderRadius: '50%',
-          border: `1.2px solid ${color}`,
-          background: 'rgba(255, 255, 255, 0.06)',
-          color: color,
+          border: color ? `1.2px solid ${color}` : undefined,
+          color: color || undefined,
           fontSize: `${size - 3}px`,
           fontWeight: 800,
           fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -60,17 +60,8 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
           padding: 0,
           lineHeight: 1,
           flexShrink: 0,
-          transition: 'all 0.15s ease',
           verticalAlign: 'middle',
           ...style,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
         }}
       >
         {badgeText}
@@ -87,7 +78,7 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
               bottom: 0,
               width: '100vw',
               height: '100vh',
-              backgroundColor: 'rgba(0, 0, 0, 0.78)',
+              backgroundColor: 'rgba(0, 0, 0, 0.65)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               zIndex: 99999,
@@ -100,16 +91,17 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
             onClick={() => setIsOpen(false)}
           >
             <div
+              className="info-popover-dialog"
               style={{
                 width: '100%',
-                maxWidth: '380px',
+                maxWidth: '400px',
                 maxHeight: 'min(520px, 86vh)',
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: '#131b2e',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--glass-border)',
                 borderRadius: '20px',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+                boxShadow: 'var(--glass-shadow), 0 25px 50px -12px rgba(0, 0, 0, 0.35)',
                 overflow: 'hidden',
                 animation: 'iosModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
@@ -119,8 +111,8 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
               <div
                 style={{
                   padding: '14px 18px',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                  background: 'rgba(255, 255, 255, 0.04)',
+                  borderBottom: '1px solid var(--glass-border)',
+                  background: 'var(--metric-card-bg)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -133,18 +125,19 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
                       width: '24px',
                       height: '24px',
                       borderRadius: '50%',
-                      background: `${color}25`,
-                      color: color,
+                      background: 'var(--accent-primary-subtle)',
+                      color: 'var(--accent-primary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '12px',
                       fontWeight: 800,
+                      flexShrink: 0,
                     }}
                   >
                     {badgeText}
                   </div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  <h4 style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                     {title}
                   </h4>
                 </div>
@@ -152,18 +145,9 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '28px',
-                    height: '28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                  }}
+                  className="modal-close-icon-btn"
+                  title="Close"
+                  aria-label="Close"
                 >
                   <X size={15} />
                 </button>
@@ -174,8 +158,8 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
                 style={{
                   padding: '16px 18px',
                   fontSize: '13px',
-                  color: 'var(--text-secondary, #94a3b8)',
-                  lineHeight: 1.55,
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.6,
                   overflowY: 'auto',
                   flex: 1,
                 }}
@@ -191,8 +175,8 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
               <div
                 style={{
                   padding: '10px 18px 14px',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderTop: '1px solid var(--glass-border)',
+                  background: 'var(--metric-card-bg)',
                   display: 'flex',
                   justifyContent: 'flex-end',
                   flexShrink: 0,
@@ -203,11 +187,12 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
                   onClick={() => setIsOpen(false)}
                   className="ios-btn ios-btn-secondary"
                   style={{
-                    padding: '8px 18px',
+                    padding: '8px 20px',
                     fontSize: '12.5px',
                     fontWeight: 600,
-                    borderRadius: 'var(--radius-full, 9999px)',
+                    borderRadius: 'var(--radius-full)',
                     cursor: 'pointer',
+                    color: 'var(--text-primary)',
                   }}
                 >
                   Got it

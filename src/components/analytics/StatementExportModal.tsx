@@ -201,19 +201,9 @@ Generated via TiffinFlow Food Statement`;
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            className="modal-close-icon-btn"
+            title="Close Statement"
+            aria-label="Close"
           >
             <X size={18} />
           </button>

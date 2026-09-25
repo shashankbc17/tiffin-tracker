@@ -35,18 +35,9 @@ export const HowToUseModal: React.FC<HowToUseModalProps> = ({ onClose }) => {
 
           <button
             onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              color: 'white',
-              borderRadius: '50%',
-              width: '32px',
-              height: '32px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="modal-close-icon-btn"
+            title="Close Guide"
+            aria-label="Close"
           >
             <X size={18} />
           </button>

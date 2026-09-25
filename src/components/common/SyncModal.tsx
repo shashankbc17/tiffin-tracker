@@ -11,7 +11,7 @@ import {
   RefreshCw, 
   LogIn, 
   Database,
-  ArrowRight
+  Wifi
 } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -49,11 +49,20 @@ export const SyncModal: React.FC<SyncModalProps> = ({
         setTesting(false);
         return;
       }
-      // Ping Firestore
-      await getDoc(doc(db, 'system', 'ping'));
+      if (!user) {
+        setTestResult({
+          status: 'error',
+          message: 'Please sign in with Google first to test multi-device cloud synchronization.',
+        });
+        setTesting(false);
+        return;
+      }
+      // Ping Firestore by reading the authenticated user's own document (fully compliant with security rules)
+      const userDocRef = doc(db, 'users', user.uid);
+      await getDoc(userDocRef);
       setTestResult({
         status: 'success',
-        message: 'Cloud Firestore is reachable and responsive! Multi-device sync is ready.',
+        message: 'Cloud Firestore is reachable and responsive! Multi-device sync is healthy and operational.',
       });
     } catch (err: any) {
       if (err.message?.includes('not exist') || err.code === 'not-found' || err.message?.includes('NOT_FOUND')) {
@@ -66,7 +75,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
         setTestResult({
           status: 'error',
           message:
-            'Permission denied. Please ensure your Firestore Security Rules allow read/write in test mode.',
+            'Permission denied. Please ensure your Firestore Security Rules allow authenticated users to read/write under users/{userId}.',
         });
       } else {
         setTestResult({
@@ -100,16 +109,19 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div
               style={{
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: '#34d399',
+                background: 'var(--accent-primary-subtle)',
+                color: 'var(--accent-primary)',
                 padding: '8px',
                 borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <Cloud size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                 Real-Time Multi-Device Sync
               </h3>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -120,27 +132,18 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 
           <button
             onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              color: 'white',
-              borderRadius: '50%',
-              width: '28px',
-              height: '28px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="modal-close-icon-btn"
+            title="Close"
+            aria-label="Close"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Live Diagnostics Card */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'var(--metric-card-bg)',
             border: '1px solid var(--glass-border)',
             borderRadius: 'var(--radius-md)',
             padding: '14px',
@@ -156,18 +159,18 @@ export const SyncModal: React.FC<SyncModalProps> = ({
             <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Monitor size={14} /> Current Device:
             </span>
-            <span style={{ color: '#34d399', fontWeight: 600 }}>🟢 Online</span>
+            <span style={{ color: 'var(--accent-lunch)', fontWeight: 600 }}>🟢 Online</span>
           </div>
 
           {/* Item 2: User Account */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Google Account:</span>
             {user ? (
-              <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '12px' }}>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '12px' }}>
                 {user.email}
               </span>
             ) : (
-              <span style={{ color: '#fbbf24', fontWeight: 600 }}>⚠️ Not Signed In</span>
+              <span style={{ color: 'var(--accent-breakfast)', fontWeight: 600 }}>⚠️ Not Signed In</span>
             )}
           </div>
 
@@ -176,7 +179,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({
             <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Database size={14} /> Cloud Project:
             </span>
-            <code style={{ color: '#a78bfa', fontSize: '11.5px', fontWeight: 600 }}>
+            <code style={{ 
+              color: 'var(--accent-carryover)', 
+              background: 'var(--input-bg)',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              border: '1px solid var(--glass-border)',
+              fontSize: '11.5px', 
+              fontWeight: 600 
+            }}>
               tiffinflow-shashank
             </code>
           </div>
@@ -185,113 +196,190 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Sync Status:</span>
             {syncStatus === 'synced' && (
-              <span style={{ color: '#34d399', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--accent-lunch)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <CheckCircle2 size={13} /> Active (&lt;100ms)
               </span>
             )}
             {syncStatus === 'local_only' && (
-              <span style={{ color: '#fbbf24', fontWeight: 600 }}>
+              <span style={{ color: 'var(--accent-breakfast)', fontWeight: 600 }}>
                 📱 Local Only (Sign in to sync)
               </span>
             )}
             {syncStatus === 'error' && (
-              <span style={{ color: '#f87171', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--accent-skip)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <AlertTriangle size={13} /> Database Setup Needed
               </span>
             )}
             {syncStatus === 'syncing' && (
-              <span style={{ color: '#60a5fa', fontWeight: 600 }}>
+              <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>
                 🔄 Syncing changes...
               </span>
             )}
           </div>
         </div>
 
-        {/* CRITICAL CALLOUT IF CLOUD DB NOT CREATED */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(245, 158, 11, 0.12) 100%)',
-            border: '1px solid rgba(239, 68, 68, 0.35)',
-            borderRadius: 'var(--radius-md)',
-            padding: '14px',
-            marginBottom: '16px',
-          }}
-        >
+        {/* 1. STATE BANNER: SYNCED (ACTIVE) */}
+        {syncStatus === 'synced' && (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: 700,
-              fontSize: '13px',
-              color: '#f87171',
-              marginBottom: '6px',
+              background: 'var(--cal-delivered-bg)',
+              border: '1px solid var(--cal-delivered-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '14px',
+              marginBottom: '16px',
             }}
           >
-            <AlertTriangle size={16} />
-            <span>Why Desktop &amp; iPhone are Not Syncing:</span>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 700,
+                fontSize: '13.5px',
+                color: 'var(--accent-lunch)',
+                marginBottom: '6px',
+              }}
+            >
+              <CheckCircle2 size={16} />
+              <span>Real-Time Multi-Device Sync Active</span>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>
+              Your meal records, active packages, and settings synchronize seamlessly with Google Cloud Firestore. Any entry you log on this device will reflect on your iPhone and other devices instantly (&lt;100ms).
+            </p>
           </div>
+        )}
 
-          <p style={{ fontSize: '12px', color: '#e2e8f0', margin: '0 0 10px 0', lineHeight: 1.5 }}>
-            In Firebase, creating a project does not automatically create the database. The Cloud
-            Firestore database has <strong>not been created yet</strong> in your Firebase project{' '}
-            <code style={{ color: '#fbbf24' }}>tiffinflow-shashank</code>.
-          </p>
-
+        {/* 2. STATE BANNER: LOCAL ONLY */}
+        {syncStatus === 'local_only' && (
           <div
             style={{
-              fontSize: '11.5px',
-              color: 'var(--text-secondary)',
-              lineHeight: 1.6,
-              background: 'rgba(0, 0, 0, 0.3)',
-              padding: '10px 12px',
-              borderRadius: '6px',
-              marginBottom: '12px',
+              background: 'var(--accent-breakfast-subtle)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              padding: '14px',
+              marginBottom: '16px',
             }}
           >
-            <strong>How to enable in 30 Seconds:</strong>
-            <ol style={{ margin: '6px 0 0 16px', padding: 0 }}>
-              <li>
-                Click the <strong>"Open Firebase &amp; Create Database"</strong> button below.
-              </li>
-              <li>
-                Click <strong>"Create database"</strong>.
-              </li>
-              <li>
-                Select <strong>"Start in test mode"</strong> and click <strong>Enable</strong>.
-              </li>
-              <li>Sign into the same Google account on both devices.</li>
-            </ol>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 700,
+                fontSize: '13px',
+                color: 'var(--accent-breakfast)',
+                marginBottom: '6px',
+              }}
+            >
+              <Smartphone size={16} />
+              <span>Local Offline Mode</span>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>
+              You are currently using local device storage. Sign into your Google account below to automatically sync across your iPhone and computer.
+            </p>
           </div>
+        )}
 
-          <a
-            href="https://console.firebase.google.com/project/tiffinflow-shashank/firestore"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ios-btn ios-btn-primary"
+        {/* 3. STATE BANNER: ERROR / SETUP NEEDED (ONLY SHOWN IF ACTUALLY FAILING) */}
+        {syncStatus === 'error' && (
+          <div
             style={{
-              width: '100%',
-              padding: '11px 14px',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              background: 'linear-gradient(135deg, #ef4444, #f59e0b)',
-              textDecoration: 'none',
-              boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
+              background: 'var(--cal-skipped-bg)',
+              border: '1px solid var(--cal-skipped-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '14px',
+              marginBottom: '16px',
             }}
           >
-            <ExternalLink size={15} />
-            <span>1-Click: Create Firestore Database Now</span>
-          </a>
-        </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 700,
+                fontSize: '13px',
+                color: 'var(--accent-skip)',
+                marginBottom: '6px',
+              }}
+            >
+              <AlertTriangle size={16} />
+              <span>Cloud Firestore Setup Needed:</span>
+            </div>
 
-        {/* Step 2: Google Sign In Requirement */}
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+              {syncErrorMsg || (
+                <>
+                  In Firebase, creating a project does not automatically create the database. The Cloud
+                  Firestore database has <strong>not been created yet</strong> in your Firebase project{' '}
+                  <code style={{ 
+                    color: 'var(--text-primary)', 
+                    background: 'var(--input-bg)', 
+                    padding: '2px 5px', 
+                    borderRadius: '4px',
+                    border: '1px solid var(--glass-border)' 
+                  }}>
+                    tiffinflow-shashank
+                  </code>.
+                </>
+              )}
+            </p>
+
+            <div
+              style={{
+                fontSize: '11.5px',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.6,
+                background: 'var(--metric-card-bg)',
+                border: '1px solid var(--glass-border)',
+                padding: '10px 12px',
+                borderRadius: '6px',
+                marginBottom: '12px',
+              }}
+            >
+              <strong style={{ color: 'var(--text-primary)' }}>How to enable in 30 Seconds:</strong>
+              <ol style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                <li>
+                  Click the <strong>"Open Firebase &amp; Create Database"</strong> button below.
+                </li>
+                <li>
+                  Click <strong>"Create database"</strong>.
+                </li>
+                <li>
+                  Select <strong>"Start in test mode"</strong> and click <strong>Enable</strong>.
+                </li>
+                <li>Sign into the same Google account on both devices.</li>
+              </ol>
+            </div>
+
+            <a
+              href="https://console.firebase.google.com/project/tiffinflow-shashank/firestore"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ios-btn ios-btn-primary"
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                background: 'linear-gradient(135deg, #ef4444, #f59e0b)',
+                textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
+              }}
+            >
+              <ExternalLink size={15} />
+              <span>1-Click: Create Firestore Database Now</span>
+            </a>
+          </div>
+        )}
+
+        {/* Step: Google Sign In Requirement if not signed in */}
         {!user && (
           <div
             style={{
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--metric-card-bg)',
               border: '1px solid var(--glass-border)',
               borderRadius: 'var(--radius-md)',
               padding: '14px',
@@ -318,8 +406,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                color: '#34d399',
+                border: '1px solid var(--accent-primary)',
+                color: 'var(--accent-primary)',
               }}
             >
               <LogIn size={14} />
@@ -328,8 +416,12 @@ export const SyncModal: React.FC<SyncModalProps> = ({
           </div>
         )}
 
-        {/* Test Connection Button */}
+        {/* Diagnostics & Health Check Section */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Connection Diagnostics
+          </div>
+
           <button
             onClick={handleTestConnection}
             disabled={testing}
@@ -342,6 +434,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
+              color: 'var(--text-primary)',
             }}
           >
             <RefreshCw size={13} className={testing ? 'spin' : ''} />
@@ -352,17 +445,20 @@ export const SyncModal: React.FC<SyncModalProps> = ({
             <div
               style={{
                 padding: '10px 12px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-sm)',
                 fontSize: '11.5px',
                 background:
                   testResult.status === 'success'
-                    ? 'rgba(16, 185, 129, 0.15)'
-                    : 'rgba(239, 68, 68, 0.15)',
+                    ? 'var(--cal-delivered-bg)'
+                    : 'var(--cal-skipped-bg)',
                 border:
                   testResult.status === 'success'
-                    ? '1px solid rgba(16, 185, 129, 0.3)'
-                    : '1px solid rgba(239, 68, 68, 0.3)',
-                color: testResult.status === 'success' ? '#34d399' : '#f87171',
+                    ? '1px solid var(--cal-delivered-border)'
+                    : '1px solid var(--cal-skipped-border)',
+                color:
+                  testResult.status === 'success'
+                    ? 'var(--accent-lunch)'
+                    : 'var(--accent-skip)',
                 lineHeight: 1.5,
               }}
             >
