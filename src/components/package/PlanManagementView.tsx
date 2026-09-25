@@ -195,67 +195,95 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* 1. Header & Quick Add Trigger */}
-      <div
-        className="ios-card"
-        style={{
-          padding: '16px 18px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2
-              style={{
-                fontSize: '18px',
-                fontWeight: 800,
-                color: 'var(--text-primary)',
-                margin: 0,
-              }}
-            >
-              Meal Subscription Plans
-            </h2>
-            <InfoPopover
-              title="Subscription Plan Management"
-              color="var(--accent-primary)"
-              content="Create new meal packages, configure delivery days, and switch between subscriptions. The active plan powers your calendar and carry-over extensions."
-            />
-          </div>
-          <p
-            style={{
-              fontSize: '12px',
-              color: 'var(--text-muted)',
-              margin: '3px 0 0 0',
-            }}
-          >
-            {packages.length === 0
-              ? 'No active meal plan. Add your first plan below to start tracking.'
-              : `${packages.length} ${packages.length === 1 ? 'plan' : 'plans'} configured · Tap "+ Add New Plan" to start another subscription.`}
-          </p>
-        </div>
-
-        {/* Big Add Plan Button */}
+      {isAddFormOpen ? (
         <button
           type="button"
-          onClick={() => setIsAddFormOpen(!isAddFormOpen)}
-          className="ios-btn ios-btn-primary"
+          onClick={() => setIsAddFormOpen(false)}
+          className="ios-card"
           style={{
-            padding: '9px 16px',
-            fontSize: '13px',
-            fontWeight: 700,
+            width: '100%',
+            padding: '10px 16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            borderRadius: 'var(--radius-full)',
+            justifyContent: 'space-between',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--metric-card-bg)',
+            border: '1px solid var(--glass-border)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
         >
-          {isAddFormOpen ? <ChevronUp size={16} /> : <Plus size={16} />}
-          <span>{isAddFormOpen ? 'Close Form' : '+ Add New Plan'}</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ChevronUp size={16} color="var(--accent-primary)" />
+            <span>Close Form</span>
+          </span>
+          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: 600 }}>
+            Tap to cancel ✕
+          </span>
         </button>
-      </div>
+      ) : (
+        <div
+          className="ios-card"
+          style={{
+            padding: '16px 18px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                }}
+              >
+                Meal Subscription Plans
+              </h2>
+              <InfoPopover
+                title="Subscription Plan Management"
+                color="var(--accent-primary)"
+                content="Create new meal packages, configure delivery days, and switch between subscriptions. The active plan powers your calendar and carry-over extensions."
+              />
+            </div>
+            <p
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                margin: '3px 0 0 0',
+              }}
+            >
+              {packages.length === 0
+                ? 'No active meal plan. Add your first plan below to start tracking.'
+                : `${packages.length} ${packages.length === 1 ? 'plan' : 'plans'} configured · Tap "+ Add New Plan" to start another subscription.`}
+            </p>
+          </div>
+
+          {/* Big Add Plan Button */}
+          <button
+            type="button"
+            onClick={() => setIsAddFormOpen(true)}
+            className="ios-btn ios-btn-primary"
+            style={{
+              padding: '9px 16px',
+              fontSize: '13px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderRadius: 'var(--radius-full)',
+            }}
+          >
+            <Plus size={16} />
+            <span>+ Add New Plan</span>
+          </button>
+        </div>
+      )}
 
       {/* 2. Inline Add / Create New Plan Form (When opened or when 0 plans exist) */}
       {isAddFormOpen && (
@@ -409,32 +437,6 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
                   required
                 />
               </div>
-            </div>
-
-            {/* Live Synchronized Range Preview */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                gap: '4px',
-                fontSize: '11.5px',
-                color: 'var(--text-secondary)',
-                borderTop: '1px dashed var(--glass-border)',
-                paddingTop: '8px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>✓ Auto-Synced:</span>
-                <span>
-                  <strong>{totalDays}</strong> active delivery day{totalDays > 1 ? 's' : ''} ({startDate} → {endDate})
-                </span>
-              </div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                {activeDaysOfWeek.length} delivery days/week
-              </span>
             </div>
           </div>
 

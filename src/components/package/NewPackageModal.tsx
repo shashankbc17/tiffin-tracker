@@ -497,31 +497,6 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
               </div>
             </div>
 
-            {/* Live Synchronized Range Preview */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(16, 185, 129, 0.08)',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
-                fontSize: '11.5px',
-                color: 'var(--text-secondary)',
-                flexWrap: 'wrap',
-                gap: '6px',
-              }}
-            >
-              <span>
-                Span: <strong style={{ color: 'var(--text-primary)' }}>{startDate}</strong> to{' '}
-                <strong style={{ color: 'var(--text-primary)' }}>{endDate}</strong>
-              </span>
-              <span style={{ color: 'var(--accent-lunch)', fontWeight: 700 }}>
-                ⚡ {totalDays} scheduled delivery days
-              </span>
-            </div>
-
             {/* If today or past date is selected */}
             {startDate <= todayStr && (
               <div
