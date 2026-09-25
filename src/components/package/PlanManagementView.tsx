@@ -14,6 +14,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from 'lucide-react';
 import { InfoPopover } from '../common/InfoPopover';
 
@@ -273,37 +274,25 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
           <div
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
+              justifyContent: 'center',
               alignItems: 'center',
+              gap: '8px',
               borderBottom: '1px solid var(--glass-border)',
               paddingBottom: '10px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={18} color="var(--accent-primary)" />
-              <h3
-                style={{
-                  fontSize: '15.5px',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  margin: 0,
-                }}
-              >
-                Create New Meal Subscription
-              </h3>
-            </div>
-            <span
+            <Sparkles size={18} color="var(--accent-primary)" />
+            <h3
               style={{
-                fontSize: '11px',
+                fontSize: '15.5px',
                 fontWeight: 700,
-                color: 'var(--accent-lunch)',
-                background: 'var(--accent-lunch-subtle)',
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-full)',
+                color: 'var(--text-primary)',
+                margin: 0,
+                textAlign: 'center',
               }}
             >
-              Step-by-Step
-            </span>
+              Create New Meal Subscription
+            </h3>
           </div>
 
           {/* Plan Title */}
@@ -426,17 +415,18 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
             <div
               style={{
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '6px',
+                justifyContent: 'center',
+                textAlign: 'center',
+                gap: '4px',
                 fontSize: '11.5px',
                 color: 'var(--text-secondary)',
                 borderTop: '1px dashed var(--glass-border)',
                 paddingTop: '8px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>✓ Auto-Synced:</span>
                 <span>
                   <strong>{totalDays}</strong> active delivery day{totalDays > 1 ? 's' : ''} ({startDate} → {endDate})
@@ -529,124 +519,266 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
             </div>
           </div>
 
-          {/* Meal Types to Include */}
+          {/* Meal Types to Include - Plush Buttons */}
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '11.5px',
-                fontWeight: 700,
-                color: 'var(--text-secondary)',
-                marginBottom: '6px',
-              }}
-            >
-              Included Meals
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <label
-                className="metric-stat-box"
                 style={{
-                  padding: '10px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  cursor: 'pointer',
-                  borderColor: includesBreakfast ? 'var(--accent-breakfast)' : undefined,
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  margin: 0,
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={includesBreakfast}
-                  onChange={(e) => setIncludesBreakfast(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: 'var(--accent-breakfast)' }}
-                />
+                Included Meals
+              </label>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                Tap card to add / remove
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {/* Breakfast Plush Button */}
+              <button
+                type="button"
+                onClick={() => setIncludesBreakfast(!includesBreakfast)}
+                style={{
+                  padding: '16px 10px',
+                  borderRadius: '16px',
+                  border: includesBreakfast
+                    ? '2px solid #f59e0b'
+                    : '2px dashed var(--glass-border)',
+                  background: includesBreakfast
+                    ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)'
+                    : 'var(--metric-card-bg)',
+                  boxShadow: includesBreakfast
+                    ? '0 6px 18px rgba(245, 158, 11, 0.22)'
+                    : 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: includesBreakfast ? 'scale(1.02)' : 'scale(1)',
+                }}
+              >
+                {/* Indicator Icon */}
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: includesBreakfast ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)',
+                    border: includesBreakfast ? 'none' : '1.5px solid var(--text-muted)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {includesBreakfast ? <Check size={18} strokeWidth={3} /> : null}
+                </div>
+
+                <div style={{ fontSize: '28px', lineHeight: 1 }}>🍳</div>
+
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    🍳 Breakfast
+                  <div
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      color: includesBreakfast ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    Breakfast
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: includesBreakfast ? '#f59e0b' : 'var(--text-muted)',
+                      marginTop: '2px',
+                    }}
+                  >
                     {currency}{breakfastRate}/plate
                   </div>
                 </div>
-              </label>
 
-              <label
-                className="metric-stat-box"
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    background: includesBreakfast ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    color: includesBreakfast ? '#f59e0b' : 'var(--text-muted)',
+                  }}
+                >
+                  {includesBreakfast ? '✓ Selected' : '+ Tap to Select'}
+                </span>
+              </button>
+
+              {/* Lunch Plush Button */}
+              <button
+                type="button"
+                onClick={() => setIncludesLunch(!includesLunch)}
                 style={{
-                  padding: '10px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
+                  padding: '16px 10px',
+                  borderRadius: '16px',
+                  border: includesLunch
+                    ? '2px solid #10b981'
+                    : '2px dashed var(--glass-border)',
+                  background: includesLunch
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.08) 100%)'
+                    : 'var(--metric-card-bg)',
+                  boxShadow: includesLunch
+                    ? '0 6px 18px rgba(16, 185, 129, 0.22)'
+                    : 'none',
                   cursor: 'pointer',
-                  borderColor: includesLunch ? 'var(--accent-lunch)' : undefined,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: includesLunch ? 'scale(1.02)' : 'scale(1)',
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={includesLunch}
-                  onChange={(e) => setIncludesLunch(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: 'var(--accent-lunch)' }}
-                />
+                {/* Indicator Icon */}
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: includesLunch ? '#10b981' : 'rgba(255, 255, 255, 0.08)',
+                    border: includesLunch ? 'none' : '1.5px solid var(--text-muted)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {includesLunch ? <Check size={18} strokeWidth={3} /> : null}
+                </div>
+
+                <div style={{ fontSize: '28px', lineHeight: 1 }}>🍱</div>
+
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    🍱 Lunch
+                  <div
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      color: includesLunch ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    Lunch
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: includesLunch ? '#10b981' : 'var(--text-muted)',
+                      marginTop: '2px',
+                    }}
+                  >
                     {currency}{lunchRate}/plate
                   </div>
                 </div>
-              </label>
+
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    background: includesLunch ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    color: includesLunch ? '#10b981' : 'var(--text-muted)',
+                  }}
+                >
+                  {includesLunch ? '✓ Selected' : '+ Tap to Select'}
+                </span>
+              </button>
             </div>
           </div>
 
           {/* Rates and Persons */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-            {includesBreakfast && (
+          {(includesBreakfast || includesLunch) && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px' }}>
+              {includesBreakfast && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textAlign: 'center' }}>
+                    Breakfast Rate ({currency})
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={breakfastRateStr}
+                    onChange={(e) => setBreakfastRateStr(e.target.value)}
+                    className="ios-input"
+                    style={{ width: '100%', fontSize: '13px', textAlign: 'center' }}
+                  />
+                </div>
+              )}
+
+              {includesLunch && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textAlign: 'center' }}>
+                    Lunch Rate ({currency})
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={lunchRateStr}
+                    onChange={(e) => setLunchRateStr(e.target.value)}
+                    className="ios-input"
+                    style={{ width: '100%', fontSize: '13px', textAlign: 'center' }}
+                  />
+                </div>
+              )}
+
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  Breakfast Rate ({currency})
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textAlign: 'center' }}>
+                  Default Persons
                 </label>
                 <input
                   type="number"
-                  min="0"
-                  value={breakfastRateStr}
-                  onChange={(e) => setBreakfastRateStr(e.target.value)}
+                  min="1"
+                  value={defaultPersonsStr}
+                  onChange={(e) => setDefaultPersonsStr(e.target.value)}
                   className="ios-input"
-                  style={{ width: '100%', fontSize: '13px' }}
+                  style={{ width: '100%', fontSize: '13px', textAlign: 'center' }}
                 />
               </div>
-            )}
-
-            {includesLunch && (
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  Lunch Rate ({currency})
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={lunchRateStr}
-                  onChange={(e) => setLunchRateStr(e.target.value)}
-                  className="ios-input"
-                  style={{ width: '100%', fontSize: '13px' }}
-                />
-              </div>
-            )}
-
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                Default Persons
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={defaultPersonsStr}
-                onChange={(e) => setDefaultPersonsStr(e.target.value)}
-                className="ios-input"
-                style={{ width: '100%', fontSize: '13px' }}
-              />
             </div>
-          </div>
+          )}
+
+          {/* Warning banner when neither meal is selected */}
+          {!includesBreakfast && !includesLunch && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                color: '#ef4444',
+                fontSize: '12px',
+                fontWeight: 600,
+                textAlign: 'center',
+              }}
+            >
+              <AlertTriangle size={16} />
+              <span>Please tap Breakfast or Lunch above to activate this subscription</span>
+            </div>
+          )}
 
           {/* Summary Banner & Submit */}
           <div
@@ -673,17 +805,31 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
 
           <button
             type="submit"
-            className="ios-btn ios-btn-primary"
+            disabled={!includesBreakfast && !includesLunch}
+            className={`ios-btn ${!includesBreakfast && !includesLunch ? '' : 'ios-btn-primary'}`}
             style={{
               width: '100%',
               padding: '13px',
               fontSize: '14px',
               fontWeight: 700,
               gap: '8px',
+              justifyContent: 'center',
+              cursor: !includesBreakfast && !includesLunch ? 'not-allowed' : 'pointer',
+              opacity: !includesBreakfast && !includesLunch ? 0.45 : 1,
+              background: !includesBreakfast && !includesLunch ? 'var(--glass-border)' : undefined,
+              color: !includesBreakfast && !includesLunch ? 'var(--text-muted)' : undefined,
+              boxShadow: !includesBreakfast && !includesLunch ? 'none' : undefined,
+              transition: 'all 0.2s ease',
             }}
           >
             {createdSuccess ? <Check size={18} /> : <Plus size={18} />}
-            <span>{createdSuccess ? 'Plan Created & Activated!' : 'Save & Activate Plan'}</span>
+            <span>
+              {!includesBreakfast && !includesLunch
+                ? 'Select a Meal to Activate Plan'
+                : createdSuccess
+                ? 'Plan Created & Activated!'
+                : 'Save & Activate Plan'}
+            </span>
           </button>
         </form>
       )}
