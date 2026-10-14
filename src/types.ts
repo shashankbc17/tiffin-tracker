@@ -18,6 +18,7 @@ export interface DayRecord {
   isCookOff?: boolean;
   notes?: string;
   updatedAt?: string;
+  isCleared?: boolean;
 }
 
 export interface PackagePlan {

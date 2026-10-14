@@ -4,6 +4,7 @@ import {
   getIstNow,
   isMealActiveOnDate,
   addDays,
+  getActiveMealPackage,
 } from '../../services/carryOverEngine';
 import { Check, FastForward, Clock, Edit2, Sparkles, Calendar, Coffee, Utensils, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -12,6 +13,7 @@ import { InfoPopover } from '../common/InfoPopover';
 interface TodayActionBarProps {
   todayRecord?: DayRecord;
   activePackage: PackagePlan | null;
+  packages?: PackagePlan[];
   config: RateConfig;
   isEditMode?: boolean;
   onConfirmToday: (status: 'delivered' | 'skipped', meal?: 'both' | 'breakfast' | 'lunch') => void;
@@ -22,6 +24,7 @@ interface TodayActionBarProps {
 export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   todayRecord,
   activePackage,
+  packages,
   config,
   isEditMode = false,
   onConfirmToday,
@@ -33,11 +36,13 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   const todayDayName = dayNames[todayDayOfWeek];
 
   // 1. Is there an active package?
-  const hasPackage = Boolean(activePackage);
+  const bPkg = getActiveMealPackage(packages, activePackage, 'breakfast');
+  const lPkg = getActiveMealPackage(packages, activePackage, 'lunch');
+  const hasPackage = Boolean(activePackage || (packages && packages.length > 0));
 
   // 2. Future plan check (Starts strictly in future date)
   const isFuturePlan = Boolean(
-    activePackage && todayStr < activePackage.startDate
+    activePackage && todayStr < activePackage.startDate && (!lPkg || todayStr < lPkg.startDate)
   );
   
   let daysUntilStart = 0;
@@ -54,18 +59,19 @@ export const TodayActionBar: React.FC<TodayActionBarProps> = ({
   }
 
   // 3. Meal services active today (checking independent meal schedule if specified)
-  const bActiveToday = activePackage
-    ? isMealActiveOnDate(todayStr, activePackage, 'breakfast')
-    : true;
-  const lActiveToday = activePackage
-    ? isMealActiveOnDate(todayStr, activePackage, 'lunch')
-    : true;
+  const bActiveToday = bPkg
+    ? (todayStr >= bPkg.startDate && isMealActiveOnDate(todayStr, bPkg, 'breakfast'))
+    : (activePackage ? isMealActiveOnDate(todayStr, activePackage, 'breakfast') : true);
+
+  const lActiveToday = lPkg
+    ? (todayStr >= lPkg.startDate && isMealActiveOnDate(todayStr, lPkg, 'lunch'))
+    : (activePackage ? isMealActiveOnDate(todayStr, activePackage, 'lunch') : true);
 
   const incBreakfast = bActiveToday;
   const incLunch = lActiveToday;
 
   // Scheduled off-day check (neither meal active today)
-  const isScheduledOff = Boolean(activePackage && !bActiveToday && !lActiveToday);
+  const isScheduledOff = Boolean(hasPackage && !bActiveToday && !lActiveToday);
 
   // 5. IST Delivery Timing Windows:
   // Breakfast delivery window: 8:00 AM to 10:30 AM IST (auto cutoff 11:00 AM)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DayRecord, MealStatus, RateConfig, PackagePlan } from '../../types';
-import { getIstNow, addDays } from '../../services/carryOverEngine';
+import { getIstNow, addDays, getEffectiveMealRates } from '../../services/carryOverEngine';
 import { X, Coffee, UtensilsCrossed, Users, Check, AlertCircle, Trash2, Lock, Clock } from 'lucide-react';
 
 interface DayDetailModalProps {
@@ -8,6 +8,7 @@ interface DayDetailModalProps {
   record?: DayRecord;
   config: RateConfig;
   activePackage: PackagePlan | null;
+  packages?: PackagePlan[];
   onSave: (updatedRecord: DayRecord) => void;
   onClear?: (dateStr: string) => void;
   onClose: () => void;
@@ -18,12 +19,14 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   record,
   config,
   activePackage,
+  packages,
   onSave,
   onClear,
   onClose,
 }) => {
-  const incBreakfast = activePackage ? activePackage.includesBreakfast !== false : true;
-  const incLunch = activePackage ? activePackage.includesLunch !== false : true;
+  const effectiveRates = getEffectiveMealRates(packages, activePackage, config);
+  const incBreakfast = effectiveRates.incBreakfast;
+  const incLunch = effectiveRates.incLunch;
   const planPersons = activePackage?.defaultPersons || config.defaultPersons || 1;
 
   const { dateStr: todayStr } = getIstNow();
@@ -101,9 +104,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       } else {
         onSave({
           date: dateStr,
-          breakfast: { status: 'none', persons: planPersons, rate: config.defaultBreakfastRate },
-          lunch: { status: 'none', persons: planPersons, rate: config.defaultLunchRate },
+          breakfast: { status: 'none', persons: planPersons, rate: effectiveRates.breakfastRate },
+          lunch: { status: 'none', persons: planPersons, rate: effectiveRates.lunchRate },
           isCookOff: false,
+          isCleared: true,
           updatedAt: new Date().toISOString(),
         });
       }
@@ -116,7 +120,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       breakfast: {
         status: incBreakfast ? bStatus : 'none',
         persons: incBreakfast ? bPersons : 0,
-        rate: activePackage?.breakfastRate || config.defaultBreakfastRate,
+        rate: effectiveRates.breakfastRate,
         notes: bStatus === 'skipped' ? 'Carried over' : undefined,
         menuItem: bMenuItem.trim() || undefined,
         autoDelivered: bAutoDelivered,
@@ -124,7 +128,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       lunch: {
         status: incLunch ? lStatus : 'none',
         persons: incLunch ? lPersons : 0,
-        rate: activePackage?.lunchRate || config.defaultLunchRate,
+        rate: effectiveRates.lunchRate,
         notes: lStatus === 'skipped' ? 'Carried over' : undefined,
         menuItem: lMenuItem.trim() || undefined,
         autoDelivered: lAutoDelivered,
@@ -144,9 +148,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     } else {
       onSave({
         date: dateStr,
-        breakfast: { status: 'none', persons: planPersons, rate: config.defaultBreakfastRate },
-        lunch: { status: 'none', persons: planPersons, rate: config.defaultLunchRate },
+        breakfast: { status: 'none', persons: planPersons, rate: effectiveRates.breakfastRate },
+        lunch: { status: 'none', persons: planPersons, rate: effectiveRates.lunchRate },
         isCookOff: false,
+        isCleared: true,
+        updatedAt: new Date().toISOString(),
       });
     }
     onClose();

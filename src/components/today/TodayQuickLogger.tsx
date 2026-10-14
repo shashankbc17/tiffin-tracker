@@ -1,6 +1,6 @@
 import React from 'react';
 import { DayRecord, MealStatus, RateConfig, PackagePlan } from '../../types';
-import { formatDate } from '../../services/carryOverEngine';
+import { formatDate, getEffectiveMealRates } from '../../services/carryOverEngine';
 import { Check, X, Users, AlertCircle, Sparkles, Coffee, UtensilsCrossed, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -8,6 +8,7 @@ interface TodayQuickLoggerProps {
   todayRecord: DayRecord;
   config: RateConfig;
   activePackage: PackagePlan | null;
+  packages?: PackagePlan[];
   onUpdateRecord: (updated: DayRecord) => void;
   onResetToday?: () => void;
 }
@@ -16,6 +17,7 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
   todayRecord,
   config,
   activePackage,
+  packages,
   onUpdateRecord,
   onResetToday,
 }) => {
@@ -27,13 +29,15 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
     day: 'numeric',
   });
 
+  const effectiveRates = getEffectiveMealRates(packages, activePackage, config);
+
   const todayDayOfWeek = todayDateObj.getDay();
   const isScheduledOff = activePackage?.activeDaysOfWeek 
     ? !activePackage.activeDaysOfWeek.includes(todayDayOfWeek)
     : false;
 
-  const incBreakfast = activePackage ? activePackage.includesBreakfast !== false : true;
-  const incLunch = activePackage ? activePackage.includesLunch !== false : true;
+  const incBreakfast = effectiveRates.incBreakfast;
+  const incLunch = effectiveRates.incLunch;
 
   const handleMealStatusChange = (type: 'breakfast' | 'lunch', status: MealStatus) => {
     const updated: DayRecord = {
@@ -42,8 +46,8 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
         ...todayRecord[type],
         status,
         rate: type === 'breakfast' 
-          ? (activePackage?.breakfastRate || config.defaultBreakfastRate)
-          : (activePackage?.lunchRate || config.defaultLunchRate),
+          ? effectiveRates.breakfastRate
+          : effectiveRates.lunchRate,
         persons: todayRecord[type]?.persons || config.defaultPersons || 1,
       },
       updatedAt: new Date().toISOString(),
@@ -183,7 +187,7 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
               <div>
                 <div style={{ fontWeight: 700, fontSize: '15px' }}>Breakfast</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {currency}{todayRecord.breakfast?.rate || config.defaultBreakfastRate} / meal
+                  {currency}{todayRecord.breakfast?.rate || effectiveRates.breakfastRate} / meal
                 </div>
               </div>
             </div>
@@ -273,7 +277,7 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
               <div>
                 <div style={{ fontWeight: 700, fontSize: '15px' }}>Lunch</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {currency}{todayRecord.lunch?.rate || config.defaultLunchRate} / meal
+                  {currency}{todayRecord.lunch?.rate || effectiveRates.lunchRate} / meal
                 </div>
               </div>
             </div>

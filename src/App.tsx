@@ -346,7 +346,7 @@ export const App: React.FC = () => {
     };
   }, [user]);
 
-  // Automated Delivery Check (Runs on launch + every 60 seconds)
+  // Automated Delivery Check (Runs on launch + every 60 seconds + on window focus/visible)
   useEffect(() => {
     const checkAndApplyAutoDelivery = () => {
       const { updatedRecords, hasChanges } = runAutoDeliveryCheck(packages, records, config);
@@ -361,8 +361,74 @@ export const App: React.FC = () => {
 
     checkAndApplyAutoDelivery();
     const interval = setInterval(checkAndApplyAutoDelivery, 60000);
-    return () => clearInterval(interval);
+
+    const handleFocusOrVisible = () => {
+      if (document.visibilityState === 'visible') {
+        checkAndApplyAutoDelivery();
+      }
+    };
+    window.addEventListener('focus', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
+    };
   }, [packages, records, config, user, activePackageId]);
+
+  // Self-healing rate reconciliation: If user configured a package with custom lunchRate (e.g. 120)
+  // or breakfastRate, heal any records for that package's dates where rate was set to old 90 default
+  useEffect(() => {
+    const lPkg = packages.find((p) => p.status === 'active' && p.includesLunch && p.lunchRate > 0) || activePackage;
+    const bPkg = packages.find((p) => p.status === 'active' && p.includesBreakfast && p.breakfastRate > 0) || activePackage;
+
+    if (!lPkg && !bPkg) return;
+
+    let hasHealed = false;
+    const healedRecords = { ...records };
+
+    for (const [dateStr, rec] of Object.entries(records)) {
+      let recModified = false;
+      let newB = rec.breakfast ? { ...rec.breakfast } : undefined;
+      let newL = rec.lunch ? { ...rec.lunch } : undefined;
+
+      // Reconcile lunch rate for dates governed by lunch package
+      if (lPkg && lPkg.lunchRate && dateStr >= lPkg.startDate && newL) {
+        // If lunch rate was 90 (old fallback) while package is e.g. 120
+        if (newL.rate !== lPkg.lunchRate && (newL.rate === 90 || !newL.rate)) {
+          newL.rate = lPkg.lunchRate;
+          recModified = true;
+        }
+      }
+
+      // Reconcile breakfast rate for dates governed by breakfast package
+      if (bPkg && bPkg.breakfastRate && dateStr >= bPkg.startDate && newB) {
+        if (newB.rate !== bPkg.breakfastRate && (newB.rate === 60 || !newB.rate)) {
+          newB.rate = bPkg.breakfastRate;
+          recModified = true;
+        }
+      }
+
+      if (recModified) {
+        healedRecords[dateStr] = {
+          ...rec,
+          breakfast: newB || rec.breakfast,
+          lunch: newL || rec.lunch,
+          updatedAt: new Date().toISOString(),
+        };
+        hasHealed = true;
+      }
+    }
+
+    if (hasHealed) {
+      setRecords(healedRecords);
+      saveLocalRecords(healedRecords);
+      if (user) {
+        syncUserDataToCloud(user.uid, config, packages, healedRecords, activePackageId);
+      }
+    }
+  }, [packages, activePackageId]);
 
   // Compute live carry-over and stats for currently active package
   const stats = calculateCarryOver(activePackage, records, config);
@@ -389,11 +455,18 @@ export const App: React.FC = () => {
 
   const handleClearRecord = (dateStr: string) => {
     const next = { ...records };
-    delete next[dateStr];
+    next[dateStr] = {
+      date: dateStr,
+      breakfast: { status: 'none', persons: 1, rate: config.defaultBreakfastRate || 60 },
+      lunch: { status: 'none', persons: 1, rate: config.defaultLunchRate || 90 },
+      isCookOff: false,
+      isCleared: true,
+      updatedAt: new Date().toISOString(),
+    };
     setRecords(next);
     saveLocalRecords(next);
     if (user) {
-      deleteRecordFromCloud(user.uid, dateStr);
+      syncSingleRecordToCloud(user.uid, next[dateStr]);
     }
   };
 
@@ -480,9 +553,8 @@ export const App: React.FC = () => {
             )
           );
 
-          // When creating a new plan, assume every scheduled food was delivered so plan is deducted up to current date.
-          // When modifying an existing plan, backfill unlogged days.
-          if (isCreatingNewPlan || !hasExistingDeliveredOrSkipped) {
+          // When creating or modifying a plan, only backfill unlogged days so existing user logs (e.g. skips) are never erased
+          if (!hasExistingDeliveredOrSkipped) {
             nextRecords[cur] = {
               date: cur,
               breakfast: isBActive
@@ -802,6 +874,7 @@ export const App: React.FC = () => {
                 records={records}
                 config={config}
                 activePackage={activePackage}
+                packages={packages}
                 isEditMode={isHomeEditMode}
                 onSaveRecord={handleUpdateRecord}
                 onClearRecord={handleClearRecord}
@@ -834,6 +907,7 @@ export const App: React.FC = () => {
             stats={stats}
             config={config}
             activePackage={activePackage}
+            packages={packages}
             records={records}
             onOpenDayDetails={(dateStr) => setHistoryDetailDate(dateStr)}
             onOpenStatementModal={() => setIsStatementModalOpen(true)}
@@ -899,6 +973,7 @@ export const App: React.FC = () => {
           record={records[historyDetailDate]}
           config={config}
           activePackage={activePackage}
+          packages={packages}
           onSave={handleUpdateRecord}
           onClear={handleClearRecord}
           onClose={() => setHistoryDetailDate(null)}

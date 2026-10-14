@@ -17,7 +17,7 @@ export const DEFAULT_CONFIG: RateConfig = {
   defaultPersons: 1,
   catererName: '',
   catererPhone: '',
-  autoDeliveryEnabled: false,
+  autoDeliveryEnabled: true,
   breakfastCutoffHour: 11, // 11:00 AM IST
   lunchCutoffHour: 15, // 3:00 PM IST
 };
@@ -62,7 +62,7 @@ export function loadLocalConfig(): RateConfig {
     return { 
       ...DEFAULT_CONFIG, 
       ...parsed, 
-      autoDeliveryEnabled: parsed.autoDeliveryEnabled === true && parsed.explicitAutoDelivery === true 
+      autoDeliveryEnabled: parsed.autoDeliveryEnabled !== false 
     };
   } catch {
     return DEFAULT_CONFIG;

@@ -32,11 +32,13 @@ export function getIstNow(): {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Kolkata',
     hour12: false,
+    hourCycle: 'h23',
     hour: 'numeric',
     minute: 'numeric',
   }).formatToParts(now);
 
-  const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+  let hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+  if (hour === 24) hour = 0;
   const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
 
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -284,12 +286,12 @@ export function calculateCarryOver(
     if (day.isCookOff) {
       if (isBreakfastActive) {
         bSkipped += planPersons;
-        const bRate = day.breakfast?.rate || pkg.breakfastRate || config.defaultBreakfastRate;
+        const bRate = pkg.breakfastRate || day.breakfast?.rate || config.defaultBreakfastRate;
         carriedOverValue += bRate * planPersons;
       }
       if (isLunchActive) {
         lSkipped += planPersons;
-        const lRate = day.lunch?.rate || pkg.lunchRate || config.defaultLunchRate;
+        const lRate = pkg.lunchRate || day.lunch?.rate || config.defaultLunchRate;
         carriedOverValue += lRate * planPersons;
       }
       continue;
@@ -297,7 +299,7 @@ export function calculateCarryOver(
 
     // Breakfast calculation
     if (pkg.includesBreakfast && day.breakfast) {
-      const bRate = day.breakfast.rate || pkg.breakfastRate || config.defaultBreakfastRate;
+      const bRate = pkg.breakfastRate || day.breakfast.rate || config.defaultBreakfastRate;
       // Future dates must not count as delivered
       if (!isFuture && (day.breakfast.status === 'delivered' || day.breakfast.status === 'extra')) {
         const deliveredCount = day.breakfast.persons || planPersons;
@@ -319,7 +321,7 @@ export function calculateCarryOver(
 
     // Lunch calculation
     if (pkg.includesLunch && day.lunch) {
-      const lRate = day.lunch.rate || pkg.lunchRate || config.defaultLunchRate;
+      const lRate = pkg.lunchRate || day.lunch.rate || config.defaultLunchRate;
       // Future dates must not count as delivered
       if (!isFuture && (day.lunch.status === 'delivered' || day.lunch.status === 'extra')) {
         const deliveredCount = day.lunch.persons || planPersons;
@@ -432,12 +434,75 @@ _Generated via TiffinFlow App_`;
  * - Lunch delivery window cutoff: 3:00 PM IST (15:00) (or config.lunchCutoffHour)
  * Works seamlessly on webhosted static sites (GitHub Pages) on app open & periodic interval.
  */
+/**
+ * Find the package that provides a given meal type (breakfast or lunch)
+ * Prioritizes active packages that explicitly opt into that meal.
+ */
+export function getActiveMealPackage(
+  packages: PackagePlan[] | undefined,
+  activePackage: PackagePlan | null,
+  meal: 'breakfast' | 'lunch'
+): PackagePlan | null {
+  if (activePackage) {
+    if (meal === 'breakfast' && activePackage.includesBreakfast) return activePackage;
+    if (meal === 'lunch' && activePackage.includesLunch) return activePackage;
+  }
+  if (packages && packages.length > 0) {
+    const matchingActive = packages.find(
+      (p) => p.status === 'active' && (meal === 'breakfast' ? p.includesBreakfast : p.includesLunch)
+    );
+    if (matchingActive) return matchingActive;
+    const anyMatching = packages.find(
+      (p) => (meal === 'breakfast' ? p.includesBreakfast : p.includesLunch)
+    );
+    if (anyMatching) return anyMatching;
+  }
+  return activePackage;
+}
+
+/**
+ * Compute the effective rate and active status for breakfast and lunch across active packages.
+ */
+export function getEffectiveMealRates(
+  packages: PackagePlan[] | undefined,
+  activePackage: PackagePlan | null,
+  config: RateConfig
+): {
+  breakfastRate: number;
+  lunchRate: number;
+  incBreakfast: boolean;
+  incLunch: boolean;
+  breakfastPkg: PackagePlan | null;
+  lunchPkg: PackagePlan | null;
+} {
+  const bPkg = getActiveMealPackage(packages, activePackage, 'breakfast');
+  const lPkg = getActiveMealPackage(packages, activePackage, 'lunch');
+
+  const incBreakfast = Boolean(
+    (bPkg && bPkg.includesBreakfast) ||
+    (packages && packages.some((p) => p.status === 'active' && p.includesBreakfast)) ||
+    (activePackage ? activePackage.includesBreakfast !== false : true)
+  );
+  const incLunch = Boolean(
+    (lPkg && lPkg.includesLunch) ||
+    (packages && packages.some((p) => p.status === 'active' && p.includesLunch)) ||
+    (activePackage ? activePackage.includesLunch !== false : true)
+  );
+
+  const breakfastRate =
+    bPkg?.breakfastRate || activePackage?.breakfastRate || config.defaultBreakfastRate || 60;
+  const lunchRate =
+    lPkg?.lunchRate || activePackage?.lunchRate || config.defaultLunchRate || 90;
+
+  return { breakfastRate, lunchRate, incBreakfast, incLunch, breakfastPkg: bPkg, lunchPkg: lPkg };
+}
+
 export function runAutoDeliveryCheck(
   packages: PackagePlan[],
   records: Record<string, DayRecord>,
   config: RateConfig
 ): { updatedRecords: Record<string, DayRecord>; hasChanges: boolean } {
-  if (!config.autoDeliveryEnabled) {
+  if (config.autoDeliveryEnabled === false) {
     return { updatedRecords: records, hasChanges: false };
   }
 
@@ -453,79 +518,94 @@ export function runAutoDeliveryCheck(
   let hasChanges = false;
   const updatedRecords = { ...records };
 
-  // Automated delivery ONLY evaluates today's window once passed, NEVER retroactively mutates past history!
-  const cur = todayStr;
-  const existing = updatedRecords[cur];
-  if (existing?.isCookOff) {
-    return { updatedRecords: records, hasChanges: false };
-  }
-
-  const isPastBreakfastCutoff = istHour >= breakfastCutoff;
-  const isPastLunchCutoff = istHour >= lunchCutoff;
-
-  let dayModified = false;
-  let bEntry = existing?.breakfast ? { ...existing.breakfast } : null;
-  let lEntry = existing?.lunch ? { ...existing.lunch } : null;
-
+  // Find earliest startDate among active packages (capped at last 14 days)
+  let earliestStart = todayStr;
   for (const pkg of activePackages) {
-    if (cur < pkg.startDate) continue;
-
-    // Breakfast auto-delivery
-    if (pkg.includesBreakfast && isMealActiveOnDate(cur, pkg, 'breakfast')) {
-      const currentBStatus = bEntry?.status || 'none';
-      if (currentBStatus === 'none' && isPastBreakfastCutoff) {
-        const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
-        const rate = pkg.breakfastRate || config.defaultBreakfastRate || 60;
-        bEntry = {
-          status: 'delivered',
-          persons: bEntry?.persons && bEntry.persons > 0 ? bEntry.persons : planPersons,
-          rate: bEntry?.rate && bEntry.rate > 0 ? bEntry.rate : rate,
-          notes: bEntry?.notes || 'Auto-marked delivered',
-          menuItem: bEntry?.menuItem,
-          autoDelivered: true,
-        };
-        dayModified = true;
-      }
-    }
-
-    // Lunch auto-delivery
-    if (pkg.includesLunch && isMealActiveOnDate(cur, pkg, 'lunch')) {
-      const currentLStatus = lEntry?.status || 'none';
-      if (currentLStatus === 'none' && isPastLunchCutoff) {
-        const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
-        const rate = pkg.lunchRate || config.defaultLunchRate || 90;
-        lEntry = {
-          status: 'delivered',
-          persons: lEntry?.persons && lEntry.persons > 0 ? lEntry.persons : planPersons,
-          rate: lEntry?.rate && lEntry.rate > 0 ? lEntry.rate : rate,
-          notes: lEntry?.notes || 'Auto-marked delivered',
-          menuItem: lEntry?.menuItem,
-          autoDelivered: true,
-        };
-        dayModified = true;
-      }
+    if (pkg.startDate && pkg.startDate < earliestStart) {
+      earliestStart = pkg.startDate;
     }
   }
+  const minDateLimit = addDays(todayStr, -14);
+  const scanStartDate = earliestStart < minDateLimit ? minDateLimit : earliestStart;
 
-  if (dayModified) {
-    const planPersons = config.defaultPersons || 1;
-    updatedRecords[cur] = {
-      date: cur,
-      breakfast: bEntry || {
-        status: 'none',
-        persons: planPersons,
-        rate: config.defaultBreakfastRate || 60,
-      },
-      lunch: lEntry || {
-        status: 'none',
-        persons: planPersons,
-        rate: config.defaultLunchRate || 90,
-      },
-      isCookOff: false,
-      notes: existing?.notes,
-      updatedAt: new Date().toISOString(),
-    };
-    hasChanges = true;
+  let curDate = scanStartDate;
+  while (curDate <= todayStr) {
+    const isToday = curDate === todayStr;
+    const isPastBreakfastCutoff = isToday ? istHour >= breakfastCutoff : true;
+    const isPastLunchCutoff = isToday ? istHour >= lunchCutoff : true;
+
+    const existing = updatedRecords[curDate];
+    if (existing?.isCookOff || existing?.isCleared) {
+      curDate = addDays(curDate, 1);
+      continue;
+    }
+
+    let dayModified = false;
+    let bEntry = existing?.breakfast ? { ...existing.breakfast } : null;
+    let lEntry = existing?.lunch ? { ...existing.lunch } : null;
+
+    for (const pkg of activePackages) {
+      if (curDate < pkg.startDate) continue;
+
+      // Breakfast auto-delivery
+      if (pkg.includesBreakfast && isMealActiveOnDate(curDate, pkg, 'breakfast')) {
+        const currentBStatus = bEntry?.status || 'none';
+        if (currentBStatus === 'none' && isPastBreakfastCutoff) {
+          const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
+          const rate = pkg.breakfastRate || config.defaultBreakfastRate || 60;
+          bEntry = {
+            status: 'delivered',
+            persons: bEntry?.persons && bEntry.persons > 0 ? bEntry.persons : planPersons,
+            rate: bEntry?.rate && bEntry.rate > 0 ? bEntry.rate : rate,
+            notes: bEntry?.notes || 'Auto-marked delivered',
+            menuItem: bEntry?.menuItem,
+            autoDelivered: true,
+          };
+          dayModified = true;
+        }
+      }
+
+      // Lunch auto-delivery
+      if (pkg.includesLunch && isMealActiveOnDate(curDate, pkg, 'lunch')) {
+        const currentLStatus = lEntry?.status || 'none';
+        if (currentLStatus === 'none' && isPastLunchCutoff) {
+          const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
+          const rate = pkg.lunchRate || config.defaultLunchRate || 90;
+          lEntry = {
+            status: 'delivered',
+            persons: lEntry?.persons && lEntry.persons > 0 ? lEntry.persons : planPersons,
+            rate: lEntry?.rate && lEntry.rate > 0 ? lEntry.rate : rate,
+            notes: lEntry?.notes || 'Auto-marked delivered',
+            menuItem: lEntry?.menuItem,
+            autoDelivered: true,
+          };
+          dayModified = true;
+        }
+      }
+    }
+
+    if (dayModified) {
+      const planPersons = config.defaultPersons || 1;
+      updatedRecords[curDate] = {
+        date: curDate,
+        breakfast: bEntry || {
+          status: 'none',
+          persons: planPersons,
+          rate: config.defaultBreakfastRate || 60,
+        },
+        lunch: lEntry || {
+          status: 'none',
+          persons: planPersons,
+          rate: config.defaultLunchRate || 90,
+        },
+        isCookOff: false,
+        notes: existing?.notes,
+        updatedAt: new Date().toISOString(),
+      };
+      hasChanges = true;
+    }
+
+    curDate = addDays(curDate, 1);
   }
 
   return { updatedRecords, hasChanges };

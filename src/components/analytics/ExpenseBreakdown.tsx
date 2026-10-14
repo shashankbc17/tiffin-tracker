@@ -7,6 +7,7 @@ import {
   getLast6Months,
   getIstNow,
   addDays,
+  getEffectiveMealRates,
 } from '../../services/carryOverEngine';
 import {
   Share2,
@@ -35,6 +36,7 @@ interface ExpenseBreakdownProps {
   stats: CarryOverStats;
   config: RateConfig;
   activePackage: PackagePlan | null;
+  packages?: PackagePlan[];
   records: Record<string, DayRecord>;
   onOpenDayDetails?: (dateStr: string) => void;
   onOpenStatementModal?: (monthKey?: string) => void;
@@ -44,6 +46,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   stats,
   config,
   activePackage,
+  packages,
   records,
   onOpenDayDetails,
   onOpenStatementModal,
@@ -52,9 +55,11 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   const { dateStr: todayStr } = getIstNow();
   const oneMonthAgoStr = addDays(todayStr, -30);
 
-  // Check meal types included in active package
-  const isPlanIncludesBf = activePackage ? activePackage.includesBreakfast !== false : true;
-  const isPlanIncludesLunch = activePackage ? activePackage.includesLunch !== false : true;
+  const effectiveRates = getEffectiveMealRates(packages, activePackage, config);
+
+  // Check meal types included in active package or across plans
+  const isPlanIncludesBf = effectiveRates.incBreakfast;
+  const isPlanIncludesLunch = effectiveRates.incLunch;
 
   const [copied, setCopied] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -988,7 +993,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                             </span>
                             <span style={{ color: 'var(--text-muted)' }}>
                               {bPersons} Person(s) · {currency}
-                              {rec.breakfast?.rate || config.defaultBreakfastRate}/p
+                              {rec.breakfast?.rate || effectiveRates.breakfastRate}/p
                             </span>
                           </div>
                           <div style={{ marginTop: '4px', color: 'var(--text-secondary)' }}>
@@ -1035,7 +1040,9 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                             </span>
                             <span style={{ color: 'var(--text-muted)' }}>
                               {lPersons} Person(s) · {currency}
-                              {rec.lunch?.rate || config.defaultLunchRate}/p
+                              {((rec.lunch?.rate && rec.lunch.rate !== 90) || effectiveRates.lunchRate === 90)
+                                ? (rec.lunch?.rate || effectiveRates.lunchRate)
+                                : effectiveRates.lunchRate}/p
                             </span>
                           </div>
                           <div style={{ marginTop: '4px', color: 'var(--text-secondary)' }}>

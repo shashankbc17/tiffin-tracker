@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { DayRecord, RateConfig, PackagePlan } from '../../types';
-import { formatDate, getIstNow, calculateCarryOver, isMealActiveOnDate } from '../../services/carryOverEngine';
+import {
+  formatDate,
+  getIstNow,
+  calculateCarryOver,
+  isMealActiveOnDate,
+  getEffectiveMealRates,
+} from '../../services/carryOverEngine';
 import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
 import { TodayActionBar } from './TodayActionBar';
@@ -10,6 +16,7 @@ interface MealCalendarProps {
   records: Record<string, DayRecord>;
   config: RateConfig;
   activePackage: PackagePlan | null;
+  packages?: PackagePlan[];
   isEditMode?: boolean;
   onSaveRecord: (record: DayRecord) => void;
   onClearRecord?: (dateStr: string) => void;
@@ -21,6 +28,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
   records,
   config,
   activePackage,
+  packages,
   isEditMode = false,
   onSaveRecord,
   onClearRecord,
@@ -30,6 +38,9 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
   const todayStr = getIstNow().dateStr;
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Compute effective rates and meal inclusions across packages
+  const effectiveRates = getEffectiveMealRates(packages, activePackage, config);
 
   // Compute active plan dates and dynamic end date for the 4-state calendar view
   const stats = calculateCarryOver(activePackage, records, config);
@@ -56,8 +67,8 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
     status: 'delivered' | 'skipped',
     meal?: 'both' | 'breakfast' | 'lunch'
   ) => {
-    const incBreakfast = activePackage ? activePackage.includesBreakfast !== false : true;
-    const incLunch = activePackage ? activePackage.includesLunch !== false : true;
+    const incBreakfast = effectiveRates.incBreakfast;
+    const incLunch = effectiveRates.incLunch;
 
     // Current or fallback meal entries
     const existing = records[todayStr];
@@ -87,7 +98,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
       breakfast: {
         status: bStatus,
         persons: existing?.breakfast?.persons || planPersons,
-        rate: existing?.breakfast?.rate || activePackage?.breakfastRate || config.defaultBreakfastRate,
+        rate: effectiveRates.breakfastRate,
         notes: bStatus === 'skipped' ? 'Carried over' : existing?.breakfast?.notes,
         menuItem: existing?.breakfast?.menuItem,
         autoDelivered: existing?.breakfast?.autoDelivered,
@@ -95,7 +106,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
       lunch: {
         status: lStatus,
         persons: existing?.lunch?.persons || planPersons,
-        rate: existing?.lunch?.rate || activePackage?.lunchRate || config.defaultLunchRate,
+        rate: effectiveRates.lunchRate,
         notes: lStatus === 'skipped' ? 'Carried over' : existing?.lunch?.notes,
         menuItem: existing?.lunch?.menuItem,
         autoDelivered: existing?.lunch?.autoDelivered,
@@ -125,6 +136,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
       <TodayActionBar
         todayRecord={records[todayStr]}
         activePackage={activePackage}
+        packages={packages}
         config={config}
         isEditMode={isEditMode}
         onConfirmToday={handleQuickConfirmToday}
@@ -402,6 +414,7 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
           record={records[selectedDate]}
           config={config}
           activePackage={activePackage}
+          packages={packages}
           onSave={onSaveRecord}
           onClear={onClearRecord}
           onClose={() => setSelectedDate(null)}
