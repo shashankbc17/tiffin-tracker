@@ -265,61 +265,69 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
     currentList: number[],
     target: 'combined' | 'breakfast' | 'lunch',
     accentColor = 'var(--accent-primary)'
-  ) => (
-    <div>
-      {/* Quick Presets */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', margin: '6px 0 8px 0' }}>
-        <button
-          type="button"
-          onClick={() => handleSchedulePreset('mon-sat', target)}
-          style={{
-            padding: '6px 4px',
-            borderRadius: 'var(--radius-xs)',
-            border: currentList.length === 6 && !currentList.includes(0) ? `1px solid ${accentColor}` : '1px solid var(--glass-border)',
-            background: currentList.length === 6 && !currentList.includes(0) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
-            color: currentList.length === 6 && !currentList.includes(0) ? '#34d399' : 'var(--text-secondary)',
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          Mon - Sat
-        </button>
+  ) => {
+    const isMonSat = currentList.length === 6 && !currentList.includes(0);
+    const isWeekdays = currentList.length === 5 && !currentList.includes(0) && !currentList.includes(6);
+    const isAll7 = currentList.length === 7;
 
-        <button
-          type="button"
-          onClick={() => handleSchedulePreset('weekdays', target)}
-          style={{
-            padding: '6px 4px',
-            borderRadius: 'var(--radius-xs)',
-            border: currentList.length === 5 && !currentList.includes(0) && !currentList.includes(6) ? `1px solid ${accentColor}` : '1px solid var(--glass-border)',
-            background: currentList.length === 5 && !currentList.includes(0) && !currentList.includes(6) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
-            color: currentList.length === 5 && !currentList.includes(0) && !currentList.includes(6) ? '#34d399' : 'var(--text-secondary)',
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          Mon - Fri
-        </button>
+    return (
+      <div>
+        {/* Quick Presets */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', margin: '4px 0 8px 0' }}>
+          <button
+            type="button"
+            onClick={() => handleSchedulePreset('mon-sat', target)}
+            style={{
+              padding: '6px 4px',
+              borderRadius: 'var(--radius-xs)',
+              border: isMonSat ? `1px solid ${accentColor}` : '1px solid var(--glass-border)',
+              background: isMonSat ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
+              color: isMonSat ? '#34d399' : 'var(--text-secondary)',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Mon–Sat (6D)
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleSchedulePreset('all', target)}
-          style={{
-            padding: '6px 4px',
-            borderRadius: 'var(--radius-xs)',
-            border: currentList.length === 7 ? `1px solid ${accentColor}` : '1px solid var(--glass-border)',
-            background: currentList.length === 7 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
-            color: currentList.length === 7 ? '#34d399' : 'var(--text-secondary)',
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          All 7 Days
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => handleSchedulePreset('weekdays', target)}
+            style={{
+              padding: '6px 4px',
+              borderRadius: 'var(--radius-xs)',
+              border: isWeekdays ? `1px solid ${accentColor}` : '1px solid var(--glass-border)',
+              background: isWeekdays ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
+              color: isWeekdays ? '#34d399' : 'var(--text-secondary)',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Mon–Fri (5D)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSchedulePreset('all', target)}
+            style={{
+              padding: '6px 4px',
+              borderRadius: 'var(--radius-xs)',
+              border: isAll7 ? `1px solid ${accentColor}` : '1px solid var(--glass-border)',
+              background: isAll7 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
+              color: isAll7 ? '#34d399' : 'var(--text-secondary)',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            All 7 Days
+          </button>
+        </div>
 
       {/* Day pills */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
@@ -349,6 +357,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
       </div>
     </div>
   );
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -402,15 +411,16 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
               marginBottom: '16px',
             }}
           >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+            {/* 2-Column Start Date & End Date */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {/* Start Date */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                  <label className="ios-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', margin: 0, fontSize: '11.5px' }}>
-                    <Calendar size={13} color="var(--accent-primary)" />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="ios-label" style={{ display: 'flex', alignItems: 'center', gap: '4px', margin: 0, fontSize: '11px', whiteSpace: 'nowrap' }}>
+                    <Calendar size={12} color="var(--accent-primary)" />
                     <span>Start Date</span>
                   </label>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '3px' }}>
                     <button
                       type="button"
                       onClick={() => handleStartDateChange(todayStr)}
@@ -418,10 +428,10 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                         background: startDate === todayStr ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
                         border: startDate === todayStr ? '1px solid #10b981' : '1px solid var(--glass-border)',
                         color: startDate === todayStr ? '#34d399' : 'var(--text-muted)',
-                        fontSize: '10px',
+                        fontSize: '9.5px',
                         fontWeight: 600,
-                        padding: '2px 6px',
-                        borderRadius: 'var(--radius-sm)',
+                        padding: '1px 5px',
+                        borderRadius: 'var(--radius-xs)',
                         cursor: 'pointer',
                       }}
                     >
@@ -434,10 +444,10 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                         background: startDate === addDays(todayStr, 1) ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
                         border: startDate === addDays(todayStr, 1) ? '1px solid #3b82f6' : '1px solid var(--glass-border)',
                         color: startDate === addDays(todayStr, 1) ? '#93c5fd' : 'var(--text-muted)',
-                        fontSize: '10px',
+                        fontSize: '9.5px',
                         fontWeight: 600,
-                        padding: '2px 6px',
-                        borderRadius: 'var(--radius-sm)',
+                        padding: '1px 5px',
+                        borderRadius: 'var(--radius-xs)',
                         cursor: 'pointer',
                       }}
                     >
@@ -450,34 +460,75 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                   className="ios-input"
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
-                  style={{ width: '100%', fontSize: '13px' }}
+                  style={{ width: '100%', fontSize: '13px', padding: '8px 8px' }}
                   required
                 />
               </div>
 
               {/* End Date */}
               <div>
-                <label className="ios-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', fontSize: '11.5px' }}>
-                  <Calendar size={13} color="var(--accent-carryover)" />
-                  <span>End Date</span>
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', height: '18px', marginBottom: '6px' }}>
+                  <label className="ios-label" style={{ display: 'flex', alignItems: 'center', gap: '4px', margin: 0, fontSize: '11px', whiteSpace: 'nowrap' }}>
+                    <Calendar size={12} color="var(--accent-carryover)" />
+                    <span>End Date</span>
+                  </label>
+                </div>
                 <input
                   type="date"
                   className="ios-input"
                   value={endDate}
                   min={startDate}
                   onChange={(e) => handleEndDateChange(e.target.value)}
-                  style={{ width: '100%', fontSize: '13px' }}
+                  style={{ width: '100%', fontSize: '13px', padding: '8px 8px' }}
                   required
                 />
               </div>
+            </div>
 
-              {/* Package Days */}
+            {/* Total Active Delivery Days Row */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '9px 12px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--glass-border)',
+              }}
+            >
               <div>
-                <label className="ios-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', fontSize: '11.5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   <CalendarDays size={13} color="var(--accent-lunch)" />
-                  <span>Active Days</span>
-                </label>
+                  <span>Total Active Days</span>
+                </div>
+                <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Delivery meals in this package
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleTotalDaysChange(String(Math.max(1, totalDays - 1)))}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid var(--glass-border)',
+                    color: 'var(--text-primary)',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="Decrease 1 day"
+                >
+                  −
+                </button>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -491,9 +542,36 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                       handleTotalDaysChange(val);
                     }
                   }}
-                  style={{ width: '100%', fontSize: '14px', fontWeight: 700 }}
+                  style={{
+                    width: '56px',
+                    textAlign: 'center',
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    padding: '6px 4px',
+                  }}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => handleTotalDaysChange(String(totalDays + 1))}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid var(--glass-border)',
+                    color: 'var(--text-primary)',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="Increase 1 day"
+                >
+                  +
+                </button>
               </div>
             </div>
 
@@ -552,44 +630,6 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
                   <span>{separateMealDays ? 'Different Days for B & L' : 'Same Days for B & L'}</span>
                 </button>
               )}
-            </div>
-
-            {/* Presets Bar */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
-              {[
-                { label: 'Mon–Sat (6D)', type: 'mon-sat' as const },
-                { label: 'Mon–Fri (5D)', type: 'weekdays' as const },
-                { label: 'All 7 Days', type: 'all' as const },
-              ].map((p) => {
-                const isSelected =
-                  p.type === 'all'
-                    ? activeDaysOfWeek.length === 7
-                    : p.type === 'weekdays'
-                    ? activeDaysOfWeek.length === 5 && !activeDaysOfWeek.includes(0) && !activeDaysOfWeek.includes(6)
-                    : activeDaysOfWeek.length === 6 && !activeDaysOfWeek.includes(0);
-
-                return (
-                  <button
-                    key={p.type}
-                    type="button"
-                    onClick={() => handleSchedulePreset(p.type, 'combined')}
-                    style={{
-                      flex: 1,
-                      padding: '5px 8px',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '11.5px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      border: isSelected ? '1px solid var(--accent-lunch)' : '1px solid var(--glass-border)',
-                      background: isSelected ? 'var(--accent-lunch-subtle)' : 'rgba(255,255,255,0.03)',
-                      color: isSelected ? 'var(--accent-lunch)' : 'var(--text-secondary)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
             </div>
 
             {!separateMealDays || !includesBreakfast || !includesLunch ? (
@@ -819,7 +859,7 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
 
           {/* Rates and Persons with iPhone 0-bug protection */}
           {(includesBreakfast || includesLunch) && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: includesBreakfast && includesLunch ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '8px', marginBottom: '16px' }}>
               {includesBreakfast && (
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textAlign: 'center' }}>

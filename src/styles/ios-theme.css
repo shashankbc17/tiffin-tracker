@@ -652,8 +652,16 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.modal-sheet::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 @keyframes slideUp {
