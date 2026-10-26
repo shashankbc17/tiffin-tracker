@@ -377,16 +377,75 @@ export const App: React.FC = () => {
     };
   }, [packages, records, config, user, activePackageId]);
 
-  // Self-healing rate reconciliation: If user configured a package with custom lunchRate (e.g. 120)
-  // or breakfastRate, heal any records for that package's dates where rate was set to old 90 default
+  // Self-healing rate & record reconciliation:
+  // 1. Reconcile breakfast package defaultPersons to 2 (2 plates/day) and budget to ₹3,400
+  // 2. Reconcile custom lunch rate (₹120) and persons (1 person)
+  // 3. Heal Oct 12 breakfast to delivered (late delivery confirmed in chat)
+  // 4. Update lunch skip records with descriptive comments
   useEffect(() => {
-    const lPkg = packages.find((p) => p.status === 'active' && p.includesLunch && p.lunchRate > 0) || activePackage;
-    const bPkg = packages.find((p) => p.status === 'active' && p.includesBreakfast && p.breakfastRate > 0) || activePackage;
+    // 1. Check if breakfast package needs defaultPersons / budget reconciliation
+    let pkgsModified = false;
+    const reconciledPkgs = packages.map((p) => {
+      if (p.includesBreakfast && !p.includesLunch) {
+        let changed = false;
+        const updated = { ...p };
+        if (updated.defaultPersons !== 2) {
+          updated.defaultPersons = 2;
+          changed = true;
+        }
+        if (updated.totalDays === 28 && updated.totalAmountPaid === 2400) {
+          updated.totalAmountPaid = 3400;
+          changed = true;
+        }
+        if (changed) {
+          pkgsModified = true;
+          return updated;
+        }
+      }
+      return p;
+    });
+
+    if (pkgsModified) {
+      setPackages(reconciledPkgs);
+      saveLocalPackages(reconciledPkgs);
+      if (user) {
+        syncUserDataToCloud(user.uid, config, reconciledPkgs, records, activePackageId);
+      }
+    }
+
+    const currentPkgs = pkgsModified ? reconciledPkgs : packages;
+    const lPkg = currentPkgs.find((p) => p.status === 'active' && p.includesLunch && p.lunchRate > 0) || activePackage;
+    const bPkg = currentPkgs.find((p) => p.status === 'active' && p.includesBreakfast && p.breakfastRate > 0) || activePackage;
 
     if (!lPkg && !bPkg) return;
 
     let hasHealed = false;
     const healedRecords = { ...records };
+
+    // Specific lunch skip descriptive comments
+    const lunchSkipDescriptions: Record<string, string> = {
+      '2026-10-10': "Cook off: Paksha ritual at cook's home (Carried over)",
+      '2026-10-15': 'Cook skip: Srinath messaged "Today no lunch" (Breakfast delivered)',
+      '2026-10-19': 'User skip: Out of town travel (Day 1 of 3, till Oct 21)',
+      '2026-10-20': 'User skip: Out of town travel (Day 2 of 3)',
+      '2026-10-21': 'User skip: Out of town travel (Day 3 of 3 - Resumed Oct 22)',
+    };
+
+    // Heal Oct 12 breakfast: food arrived late but was delivered
+    if (healedRecords['2026-10-12'] && healedRecords['2026-10-12'].breakfast?.status === 'skipped') {
+      healedRecords['2026-10-12'] = {
+        ...healedRecords['2026-10-12'],
+        breakfast: {
+          ...healedRecords['2026-10-12'].breakfast,
+          status: 'delivered',
+          persons: 2,
+          rate: 60,
+          notes: 'Delivered late (confirmed)',
+        },
+        updatedAt: new Date().toISOString(),
+      };
+      hasHealed = true;
+    }
 
     for (const [dateStr, rec] of Object.entries(records)) {
       let recModified = false;
@@ -412,11 +471,17 @@ export const App: React.FC = () => {
           newB.rate = bPkg.breakfastRate;
           recModified = true;
         }
-        const expectedBPersons = bPkg.defaultPersons || 1;
+        const expectedBPersons = bPkg.defaultPersons || 2;
         if (newB.persons !== expectedBPersons) {
           newB.persons = expectedBPersons;
           recModified = true;
         }
+      }
+
+      // Check lunch skip notes
+      if (lunchSkipDescriptions[dateStr] && newL && newL.status === 'skipped' && (!newL.notes || newL.notes === 'Carried over' || newL.notes === 'Out of town')) {
+        newL.notes = lunchSkipDescriptions[dateStr];
+        recModified = true;
       }
 
       if (recModified) {
@@ -434,7 +499,7 @@ export const App: React.FC = () => {
       setRecords(healedRecords);
       saveLocalRecords(healedRecords);
       if (user) {
-        syncUserDataToCloud(user.uid, config, packages, healedRecords, activePackageId);
+        syncUserDataToCloud(user.uid, config, currentPkgs, healedRecords, activePackageId);
       }
     }
   }, [packages, activePackageId]);
