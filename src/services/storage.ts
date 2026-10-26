@@ -43,10 +43,10 @@ export function generateVerifiedWhatsAppPlansAndRecords(): {
     includesLunch: false,
     breakfastRate: 60,
     lunchRate: 0,
-    defaultPersons: 1,
-    totalAmountPaid: 2200, // ₹1,200 initial + ₹1,000 advance on Sept 26
+    defaultPersons: 2, // 2 persons / plates per delivery
+    totalAmountPaid: 2400,
     status: 'active',
-    notes: 'Started Sept 21. Extended with ₹1,000 cash advance on Sept 26.',
+    notes: 'Started Sept 21. 2 persons per day. Extended with ₹1,000 cash advance on Sept 26.',
   };
 
   const lunchPkg: PackagePlan = {
@@ -60,62 +60,62 @@ export function generateVerifiedWhatsAppPlansAndRecords(): {
     includesLunch: true,
     breakfastRate: 0,
     lunchRate: 120,
-    defaultPersons: 1,
+    defaultPersons: 1, // Strictly 1 person (4 chapathis)
     totalAmountPaid: 2400,
     status: 'active',
     notes: 'Started Oct 9. 20 days @ ₹120/day (4 chapathis) for 1 person. Paid ₹2,400 on Oct 8.',
   };
 
   const records: Record<string, DayRecord> = {
-    // Week 1 (Breakfast Plan Start)
-    '2026-09-21': { date: '2026-09-21', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-09-22': { date: '2026-09-22', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-09-23': { date: '2026-09-23', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-09-24': { date: '2026-09-24', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-09-25': { date: '2026-09-25', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-09-26': { date: '2026-09-26', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false, notes: 'Sent ₹1,000 advance to extend plan' },
+    // Week 1 (Breakfast Plan Start - 2 persons per day)
+    '2026-09-21': { date: '2026-09-21', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-22': { date: '2026-09-22', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-23': { date: '2026-09-23', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-24': { date: '2026-09-24', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-25': { date: '2026-09-25', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-26': { date: '2026-09-26', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false, notes: 'Sent ₹1,000 advance to extend plan' },
 
     // Week 2
-    '2026-09-28': { date: '2026-09-28', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-09-29': { date: '2026-09-29', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-09-30': { date: '2026-09-30', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-28': { date: '2026-09-28', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-29': { date: '2026-09-29', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-09-30': { date: '2026-09-30', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
     // Cook off (Srinath mother unwell)
-    '2026-10-01': { date: '2026-10-01', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Srinath mother unwell (Carried over)' }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: true, notes: 'Cook off: Mother unwell' },
-    '2026-10-02': { date: '2026-10-02', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Srinath mother unwell (Carried over)' }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: true, notes: 'Cook off: Mother unwell' },
-    '2026-10-03': { date: '2026-10-03', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Cook on leave (Carried over)' }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: true, notes: 'Cook off' },
+    '2026-10-01': { date: '2026-10-01', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Srinath mother unwell (Carried over)' }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: true, notes: 'Cook off: Mother unwell' },
+    '2026-10-02': { date: '2026-10-02', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Srinath mother unwell (Carried over)' }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: true, notes: 'Cook off: Mother unwell' },
+    '2026-10-03': { date: '2026-10-03', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Cook on leave (Carried over)' }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: true, notes: 'Cook off' },
 
     // Week 3
-    '2026-10-05': { date: '2026-10-05', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-10-06': { date: '2026-10-06', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-10-07': { date: '2026-10-07', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-10-08': { date: '2026-10-08', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false, notes: 'Paid ₹2,400 for new 20-day Lunch plan' },
+    '2026-10-05': { date: '2026-10-05', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-06': { date: '2026-10-06', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-07': { date: '2026-10-07', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-08': { date: '2026-10-08', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'none', persons: 1, rate: 120 }, isCookOff: false, notes: 'Paid ₹2,400 for new 20-day Lunch plan' },
 
     // October Plan Start (Oct 9)
-    '2026-10-09': { date: '2026-10-09', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120, menuItem: '4 Chapathis' }, isCookOff: false },
+    '2026-10-09': { date: '2026-10-09', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120, menuItem: '4 Chapathis' }, isCookOff: false },
     // Cook off (Paksha ritual)
-    '2026-10-10': { date: '2026-10-10', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Cook leave: Paksha ritual' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Cook leave: Paksha ritual' }, isCookOff: true, notes: 'Cook off: Paksha ritual at home' },
+    '2026-10-10': { date: '2026-10-10', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Cook leave: Paksha ritual' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Cook leave: Paksha ritual' }, isCookOff: true, notes: 'Cook off: Paksha ritual at home' },
     
     // Week 4
-    // Breakfast missed, Lunch delivered (3 chapathis)
-    '2026-10-12': { date: '2026-10-12', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Srinath missed breakfast' }, lunch: { status: 'delivered', persons: 1, rate: 120, menuItem: '3 Chapathis' }, isCookOff: false },
-    '2026-10-13': { date: '2026-10-13', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-10-14': { date: '2026-10-14', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
-    // Cook off for lunch only
-    '2026-10-15': { date: '2026-10-15', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Srinath: Today no lunch' }, isCookOff: false },
-    '2026-10-16': { date: '2026-10-16', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-10-17': { date: '2026-10-17', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    // Oct 12: Breakfast missed by cook, Lunch delivered (3 chapathis)
+    '2026-10-12': { date: '2026-10-12', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Srinath missed breakfast' }, lunch: { status: 'delivered', persons: 1, rate: 120, menuItem: '3 Chapathis' }, isCookOff: false },
+    '2026-10-13': { date: '2026-10-13', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-14': { date: '2026-10-14', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    // Oct 15: Breakfast delivered ("Breakfast barthidhe"), Lunch skipped ("Today no lunch")
+    '2026-10-15': { date: '2026-10-15', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Srinath: Today no lunch' }, isCookOff: false },
+    '2026-10-16': { date: '2026-10-16', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-17': { date: '2026-10-17', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
 
     // Week 5 (User out of town - 3 days skip)
-    '2026-10-19': { date: '2026-10-19', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Out of town' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Out of town' }, isCookOff: false, notes: 'Out of town' },
-    '2026-10-20': { date: '2026-10-20', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Out of town' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Out of town' }, isCookOff: false, notes: 'Out of town' },
-    '2026-10-21': { date: '2026-10-21', breakfast: { status: 'skipped', persons: 1, rate: 60, notes: 'Out of town' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Out of town' }, isCookOff: false, notes: 'Out of town' },
+    '2026-10-19': { date: '2026-10-19', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Out of town' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Out of town' }, isCookOff: false, notes: 'Out of town' },
+    '2026-10-20': { date: '2026-10-20', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Out of town' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Out of town' }, isCookOff: false, notes: 'Out of town' },
+    '2026-10-21': { date: '2026-10-21', breakfast: { status: 'skipped', persons: 2, rate: 60, notes: 'Out of town' }, lunch: { status: 'skipped', persons: 1, rate: 120, notes: 'Out of town' }, isCookOff: false, notes: 'Out of town' },
     // Service Resumed Thursday Oct 22
-    '2026-10-22': { date: '2026-10-22', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-10-23': { date: '2026-10-23', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
-    '2026-10-24': { date: '2026-10-24', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-22': { date: '2026-10-22', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-23': { date: '2026-10-23', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-24': { date: '2026-10-24', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
 
     // Week 6 (Current Day)
-    '2026-10-26': { date: '2026-10-26', breakfast: { status: 'delivered', persons: 1, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
+    '2026-10-26': { date: '2026-10-26', breakfast: { status: 'delivered', persons: 2, rate: 60 }, lunch: { status: 'delivered', persons: 1, rate: 120 }, isCookOff: false },
   };
 
   return {
