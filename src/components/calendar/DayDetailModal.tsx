@@ -27,7 +27,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const effectiveRates = getEffectiveMealRates(packages, activePackage, config);
   const incBreakfast = effectiveRates.incBreakfast;
   const incLunch = effectiveRates.incLunch;
-  const planPersons = activePackage?.defaultPersons || config.defaultPersons || 1;
+  const bPlanPersons = effectiveRates.breakfastPersons;
+  const lPlanPersons = effectiveRates.lunchPersons;
 
   const { dateStr: todayStr } = getIstNow();
   const oneMonthAgoStr = addDays(todayStr, -30);
@@ -40,7 +41,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     return raw && raw !== 'none' ? raw : 'none';
   });
   const [bPersons, setBPersons] = useState<number>(
-    record?.breakfast?.persons && record.breakfast.persons > 0 ? record.breakfast.persons : planPersons
+    record?.breakfast?.persons && record.breakfast.persons > 0 ? record.breakfast.persons : bPlanPersons
   );
   const [bMenuItem, setBMenuItem] = useState<string>(record?.breakfast?.menuItem || '');
   const [bAutoDelivered] = useState<boolean>(record?.breakfast?.autoDelivered || false);
@@ -51,7 +52,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     return raw && raw !== 'none' ? raw : 'none';
   });
   const [lPersons, setLPersons] = useState<number>(
-    record?.lunch?.persons && record.lunch.persons > 0 ? record.lunch.persons : planPersons
+    record?.lunch?.persons && record.lunch.persons > 0 ? record.lunch.persons : lPlanPersons
   );
   const [lMenuItem, setLMenuItem] = useState<string>(record?.lunch?.menuItem || '');
   const [lAutoDelivered] = useState<boolean>(record?.lunch?.autoDelivered || false);
@@ -104,8 +105,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       } else {
         onSave({
           date: dateStr,
-          breakfast: { status: 'none', persons: planPersons, rate: effectiveRates.breakfastRate },
-          lunch: { status: 'none', persons: planPersons, rate: effectiveRates.lunchRate },
+          breakfast: { status: 'none', persons: bPlanPersons, rate: effectiveRates.breakfastRate },
+          lunch: { status: 'none', persons: lPlanPersons, rate: effectiveRates.lunchRate },
           isCookOff: false,
           isCleared: true,
           updatedAt: new Date().toISOString(),
@@ -148,8 +149,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     } else {
       onSave({
         date: dateStr,
-        breakfast: { status: 'none', persons: planPersons, rate: effectiveRates.breakfastRate },
-        lunch: { status: 'none', persons: planPersons, rate: effectiveRates.lunchRate },
+        breakfast: { status: 'none', persons: bPlanPersons, rate: effectiveRates.breakfastRate },
+        lunch: { status: 'none', persons: lPlanPersons, rate: effectiveRates.lunchRate },
         isCookOff: false,
         isCleared: true,
         updatedAt: new Date().toISOString(),
@@ -321,11 +322,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 >
                   -
                 </button>
-                <span style={{ fontSize: '12px', fontWeight: 700, minWidth: '24px', textAlign: 'center', color: bPersons < planPersons ? '#fbbf24' : 'white' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, minWidth: '24px', textAlign: 'center', color: bPersons < bPlanPersons ? '#fbbf24' : 'white' }}>
                   {bPersons}p
                 </span>
                 <button 
-                  onClick={() => setBPersons(bStatus === 'extra' ? bPersons + 1 : Math.min(planPersons, bPersons + 1))} 
+                  onClick={() => setBPersons(bStatus === 'extra' ? bPersons + 1 : Math.min(bPlanPersons, bPersons + 1))} 
                   style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '4px', width: '22px', height: '22px', cursor: 'pointer' }}
                 >
                   +
@@ -379,9 +380,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             </div>
 
             {/* Partial Delivery Carryover Callout */}
-            {bStatus === 'delivered' && bPersons < planPersons && (
+            {bStatus === 'delivered' && bPersons < bPlanPersons && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.15)', padding: '5px 8px', borderRadius: '6px' }}>
-                💡 Delivered to {bPersons} of {planPersons} persons. {planPersons - bPersons} person portion carried forward!
+                💡 Delivered to {bPersons} of {bPlanPersons} persons. {bPlanPersons - bPersons} person portion carried forward!
               </div>
             )}
           </div>
@@ -408,11 +409,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 >
                   -
                 </button>
-                <span style={{ fontSize: '12px', fontWeight: 700, minWidth: '24px', textAlign: 'center', color: lPersons < planPersons ? '#34d399' : 'white' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, minWidth: '24px', textAlign: 'center', color: lPersons < lPlanPersons ? '#34d399' : 'white' }}>
                   {lPersons}p
                 </span>
                 <button 
-                  onClick={() => setLPersons(lStatus === 'extra' ? lPersons + 1 : Math.min(planPersons, lPersons + 1))} 
+                  onClick={() => setLPersons(lStatus === 'extra' ? lPersons + 1 : Math.min(lPlanPersons, lPersons + 1))} 
                   style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '4px', width: '22px', height: '22px', cursor: 'pointer' }}
                 >
                   +
@@ -466,9 +467,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             </div>
 
             {/* Partial Delivery Carryover Callout */}
-            {lStatus === 'delivered' && lPersons < planPersons && (
+            {lStatus === 'delivered' && lPersons < lPlanPersons && (
               <div style={{ marginTop: '8px', fontSize: '11px', color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.15)', padding: '5px 8px', borderRadius: '6px' }}>
-                💡 Delivered to {lPersons} of {planPersons} persons. {planPersons - lPersons} person portion carried forward!
+                💡 Delivered to {lPersons} of {lPlanPersons} persons. {lPlanPersons - lPersons} person portion carried forward!
               </div>
             )}
           </div>

@@ -474,6 +474,8 @@ export function getEffectiveMealRates(
   incLunch: boolean;
   breakfastPkg: PackagePlan | null;
   lunchPkg: PackagePlan | null;
+  breakfastPersons: number;
+  lunchPersons: number;
 } {
   const bPkg = getActiveMealPackage(packages, activePackage, 'breakfast');
   const lPkg = getActiveMealPackage(packages, activePackage, 'lunch');
@@ -492,9 +494,27 @@ export function getEffectiveMealRates(
   const breakfastRate =
     bPkg?.breakfastRate || activePackage?.breakfastRate || config.defaultBreakfastRate || 60;
   const lunchRate =
-    lPkg?.lunchRate || activePackage?.lunchRate || config.defaultLunchRate || 90;
+    lPkg?.lunchRate || activePackage?.lunchRate || config.defaultLunchRate || 120;
 
-  return { breakfastRate, lunchRate, incBreakfast, incLunch, breakfastPkg: bPkg, lunchPkg: lPkg };
+  const breakfastPersons =
+    bPkg?.defaultPersons ||
+    (activePackage?.includesBreakfast ? activePackage.defaultPersons : config.defaultPersons) ||
+    1;
+  const lunchPersons =
+    lPkg?.defaultPersons ||
+    (activePackage?.includesLunch ? activePackage.defaultPersons : config.defaultPersons) ||
+    1;
+
+  return {
+    breakfastRate,
+    lunchRate,
+    incBreakfast,
+    incLunch,
+    breakfastPkg: bPkg,
+    lunchPkg: lPkg,
+    breakfastPersons,
+    lunchPersons,
+  };
 }
 
 export function runAutoDeliveryCheck(
@@ -518,14 +538,14 @@ export function runAutoDeliveryCheck(
   let hasChanges = false;
   const updatedRecords = { ...records };
 
-  // Find earliest startDate among active packages (capped at last 14 days)
+  // Find earliest startDate among active packages (capped at last 30 days)
   let earliestStart = todayStr;
   for (const pkg of activePackages) {
     if (pkg.startDate && pkg.startDate < earliestStart) {
       earliestStart = pkg.startDate;
     }
   }
-  const minDateLimit = addDays(todayStr, -14);
+  const minDateLimit = addDays(todayStr, -30);
   const scanStartDate = earliestStart < minDateLimit ? minDateLimit : earliestStart;
 
   let curDate = scanStartDate;
@@ -535,7 +555,8 @@ export function runAutoDeliveryCheck(
     const isPastLunchCutoff = isToday ? istHour >= lunchCutoff : true;
 
     const existing = updatedRecords[curDate];
-    if (existing?.isCookOff || existing?.isCleared) {
+    // Respect cook off days or explicit full skips
+    if (existing?.isCookOff) {
       curDate = addDays(curDate, 1);
       continue;
     }
@@ -570,7 +591,7 @@ export function runAutoDeliveryCheck(
         const currentLStatus = lEntry?.status || 'none';
         if (currentLStatus === 'none' && isPastLunchCutoff) {
           const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
-          const rate = pkg.lunchRate || config.defaultLunchRate || 90;
+          const rate = pkg.lunchRate || config.defaultLunchRate || 120;
           lEntry = {
             status: 'delivered',
             persons: lEntry?.persons && lEntry.persons > 0 ? lEntry.persons : planPersons,

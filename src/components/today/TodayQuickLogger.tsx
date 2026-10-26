@@ -38,6 +38,8 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
 
   const incBreakfast = effectiveRates.incBreakfast;
   const incLunch = effectiveRates.incLunch;
+  const bPlanPersons = effectiveRates.breakfastPersons;
+  const lPlanPersons = effectiveRates.lunchPersons;
 
   const handleMealStatusChange = (type: 'breakfast' | 'lunch', status: MealStatus) => {
     const updated: DayRecord = {
@@ -48,7 +50,7 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
         rate: type === 'breakfast' 
           ? effectiveRates.breakfastRate
           : effectiveRates.lunchRate,
-        persons: todayRecord[type]?.persons || config.defaultPersons || 1,
+        persons: todayRecord[type]?.persons || (type === 'breakfast' ? bPlanPersons : lPlanPersons),
       },
       updatedAt: new Date().toISOString(),
     };
@@ -67,7 +69,7 @@ export const TodayQuickLogger: React.FC<TodayQuickLoggerProps> = ({
   };
 
   const handlePersonsChange = (type: 'breakfast' | 'lunch', delta: number) => {
-    const currentPersons = todayRecord[type]?.persons || config.defaultPersons || 1;
+    const currentPersons = todayRecord[type]?.persons || (type === 'breakfast' ? bPlanPersons : lPlanPersons);
     const newPersons = Math.max(1, currentPersons + delta);
     onUpdateRecord({
       ...todayRecord,

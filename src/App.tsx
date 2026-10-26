@@ -393,19 +393,28 @@ export const App: React.FC = () => {
       let newB = rec.breakfast ? { ...rec.breakfast } : undefined;
       let newL = rec.lunch ? { ...rec.lunch } : undefined;
 
-      // Reconcile lunch rate for dates governed by lunch package
-      if (lPkg && lPkg.lunchRate && dateStr >= lPkg.startDate && newL) {
-        // If lunch rate was 90 (old fallback) while package is e.g. 120
-        if (newL.rate !== lPkg.lunchRate && (newL.rate === 90 || !newL.rate)) {
+      // Reconcile lunch rate and persons for dates governed by lunch package
+      if (lPkg && dateStr >= lPkg.startDate && newL) {
+        if (lPkg.lunchRate && (newL.rate !== lPkg.lunchRate && (newL.rate === 90 || !newL.rate))) {
           newL.rate = lPkg.lunchRate;
+          recModified = true;
+        }
+        const expectedLPersons = lPkg.defaultPersons || 1;
+        if (newL.persons !== expectedLPersons) {
+          newL.persons = expectedLPersons;
           recModified = true;
         }
       }
 
-      // Reconcile breakfast rate for dates governed by breakfast package
-      if (bPkg && bPkg.breakfastRate && dateStr >= bPkg.startDate && newB) {
-        if (newB.rate !== bPkg.breakfastRate && (newB.rate === 60 || !newB.rate)) {
+      // Reconcile breakfast rate and persons for dates governed by breakfast package
+      if (bPkg && dateStr >= bPkg.startDate && newB) {
+        if (bPkg.breakfastRate && (newB.rate !== bPkg.breakfastRate && (newB.rate === 60 || !newB.rate))) {
           newB.rate = bPkg.breakfastRate;
+          recModified = true;
+        }
+        const expectedBPersons = bPkg.defaultPersons || 1;
+        if (newB.persons !== expectedBPersons) {
+          newB.persons = expectedBPersons;
           recModified = true;
         }
       }
@@ -653,14 +662,16 @@ export const App: React.FC = () => {
 
   const handleLoadSampleData = () => {
     const sample = generateSampleData();
-    setPackages([sample.defaultPkg]);
-    saveLocalPackages([sample.defaultPkg]);
-    setActivePackageId(sample.defaultPkg.id);
-    saveLocalActivePackageId(sample.defaultPkg.id);
+    const pkgs = sample.packages || [sample.defaultPkg];
+    setPackages(pkgs);
+    saveLocalPackages(pkgs);
+    const activeId = pkgs.find(p => p.status === 'active')?.id || sample.defaultPkg.id;
+    setActivePackageId(activeId);
+    saveLocalActivePackageId(activeId);
     setRecords(sample.records);
     saveLocalRecords(sample.records);
     if (user) {
-      syncUserDataToCloud(user.uid, config, [sample.defaultPkg], sample.records, sample.defaultPkg.id);
+      syncUserDataToCloud(user.uid, config, pkgs, sample.records, activeId);
     }
   };
 

@@ -634,24 +634,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {onResetData && (
-            <button
-              type="button"
-              onClick={onResetData}
-              className="ios-btn ios-btn-secondary"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '10px 14px',
-                fontSize: '12.5px',
-                color: '#a78bfa',
-                borderColor: 'rgba(139, 92, 246, 0.4)',
-              }}
-            >
-              <PlayCircle size={15} />
-              <span>Load Starter Sample Data (Demo)</span>
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={onResetData}
+                className="ios-btn ios-btn-secondary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  fontSize: '12.5px',
+                  color: '#34d399',
+                  borderColor: 'rgba(16, 185, 129, 0.4)',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  fontWeight: 600,
+                }}
+              >
+                <PlayCircle size={15} color="#34d399" />
+                <span>Sync Verified WhatsApp Data (Srinath Audit)</span>
+              </button>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4', padding: '0 4px' }}>
+                Pre-populates the verified Sept 21 Breakfast Plan + Oct 9 Lunch Plan (₹120/day, 1 person) with all exact delivery and skip dates from your WhatsApp chat.
+              </div>
+            </div>
           )}
 
           {onClearAllData && (
