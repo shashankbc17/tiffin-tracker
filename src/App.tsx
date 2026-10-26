@@ -378,12 +378,12 @@ export const App: React.FC = () => {
   }, [packages, records, config, user, activePackageId]);
 
   // Self-healing rate & record reconciliation:
-  // 1. Reconcile breakfast package defaultPersons to 2 (2 plates/day) and budget to ₹3,400
+  // 1. Reconcile breakfast package defaultPersons to 2 (2 plates/day), breakfastRate to ₹50, and budget to ₹3,400
   // 2. Reconcile custom lunch rate (₹120) and persons (1 person)
   // 3. Heal Oct 12 breakfast to delivered (late delivery confirmed in chat)
   // 4. Update lunch skip records with descriptive comments
   useEffect(() => {
-    // 1. Check if breakfast package needs defaultPersons / budget reconciliation
+    // 1. Check if breakfast package needs defaultPersons / rate / budget reconciliation
     let pkgsModified = false;
     const reconciledPkgs = packages.map((p) => {
       if (p.includesBreakfast && !p.includesLunch) {
@@ -391,6 +391,10 @@ export const App: React.FC = () => {
         const updated = { ...p };
         if (updated.defaultPersons !== 2) {
           updated.defaultPersons = 2;
+          changed = true;
+        }
+        if (updated.breakfastRate !== 50) {
+          updated.breakfastRate = 50;
           changed = true;
         }
         if (updated.totalDays === 28 && updated.totalAmountPaid === 2400) {
@@ -439,7 +443,7 @@ export const App: React.FC = () => {
           ...healedRecords['2026-10-12'].breakfast,
           status: 'delivered',
           persons: 2,
-          rate: 60,
+          rate: 50,
           notes: 'Delivered late (confirmed)',
         },
         updatedAt: new Date().toISOString(),
@@ -467,8 +471,9 @@ export const App: React.FC = () => {
 
       // Reconcile breakfast rate and persons for dates governed by breakfast package
       if (bPkg && dateStr >= bPkg.startDate && newB) {
-        if (bPkg.breakfastRate && (newB.rate !== bPkg.breakfastRate && (newB.rate === 60 || !newB.rate))) {
-          newB.rate = bPkg.breakfastRate;
+        const expectedBRate = bPkg.breakfastRate || 50;
+        if (newB.rate !== expectedBRate) {
+          newB.rate = expectedBRate;
           recModified = true;
         }
         const expectedBPersons = bPkg.defaultPersons || 2;
@@ -531,8 +536,8 @@ export const App: React.FC = () => {
     const next = { ...records };
     next[dateStr] = {
       date: dateStr,
-      breakfast: { status: 'none', persons: 1, rate: config.defaultBreakfastRate || 60 },
-      lunch: { status: 'none', persons: 1, rate: config.defaultLunchRate || 90 },
+      breakfast: { status: 'none', persons: 1, rate: config.defaultBreakfastRate || 50 },
+      lunch: { status: 'none', persons: 1, rate: config.defaultLunchRate || 120 },
       isCookOff: false,
       isCleared: true,
       updatedAt: new Date().toISOString(),
@@ -635,23 +640,23 @@ export const App: React.FC = () => {
                 ? {
                     status: 'delivered',
                     persons: newPkg.defaultPersons || config.defaultPersons || 1,
-                    rate: newPkg.breakfastRate || config.defaultBreakfastRate || 60,
+                    rate: newPkg.breakfastRate || config.defaultBreakfastRate || 50,
                   }
                 : {
                     status: 'none',
                     persons: 1,
-                    rate: config.defaultBreakfastRate || 60,
+                    rate: config.defaultBreakfastRate || 50,
                   },
               lunch: isLActive
                 ? {
                     status: 'delivered',
                     persons: newPkg.defaultPersons || config.defaultPersons || 1,
-                    rate: newPkg.lunchRate || config.defaultLunchRate || 90,
+                    rate: newPkg.lunchRate || config.defaultLunchRate || 120,
                   }
                 : {
                     status: 'none',
                     persons: 1,
-                    rate: config.defaultLunchRate || 90,
+                    rate: config.defaultLunchRate || 120,
                   },
               isCookOff: false,
               notes: 'Initial plan deduction',

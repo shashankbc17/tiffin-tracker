@@ -59,10 +59,10 @@ export const NewPackageModal: React.FC<NewPackageModalProps> = ({
   // String states for numeric fields to prevent iPhone "stuck on 0" bug
   const [totalDaysStr, setTotalDaysStr] = useState(String(initialPackage?.totalDays || 30));
   const [breakfastRateStr, setBreakfastRateStr] = useState(
-    String(initialPackage?.breakfastRate ?? config.defaultBreakfastRate ?? 60)
+    String(initialPackage?.breakfastRate ?? config.defaultBreakfastRate ?? 50)
   );
   const [lunchRateStr, setLunchRateStr] = useState(
-    String(initialPackage?.lunchRate ?? config.defaultLunchRate ?? 90)
+    String(initialPackage?.lunchRate ?? config.defaultLunchRate ?? 120)
   );
   const [defaultPersonsStr, setDefaultPersonsStr] = useState(
     String(initialPackage?.defaultPersons ?? config.defaultPersons ?? 1)

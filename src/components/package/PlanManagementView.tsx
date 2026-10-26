@@ -67,10 +67,10 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
     return addActiveDays(todayStr, 20, [1, 2, 3, 4, 5, 6]);
   });
   const [breakfastRateStr, setBreakfastRateStr] = useState(
-    String(config.defaultBreakfastRate || 60)
+    String(config.defaultBreakfastRate || 50)
   );
   const [lunchRateStr, setLunchRateStr] = useState(
-    String(config.defaultLunchRate || 90)
+    String(config.defaultLunchRate || 120)
   );
   const [defaultPersonsStr, setDefaultPersonsStr] = useState(
     String(config.defaultPersons || 1)

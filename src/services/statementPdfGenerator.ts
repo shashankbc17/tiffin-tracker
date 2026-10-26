@@ -56,8 +56,8 @@ export function generateBankStatementData(
 ): StatementSummaryData {
   const currency = config.currency || '₹';
   const planPersons = pkg?.defaultPersons || config.defaultPersons || 1;
-  const defaultBRate = pkg?.breakfastRate || config.defaultBreakfastRate || 60;
-  const defaultLRate = pkg?.lunchRate || config.defaultLunchRate || 90;
+  const defaultBRate = pkg?.breakfastRate || config.defaultBreakfastRate || 50;
+  const defaultLRate = pkg?.lunchRate || config.defaultLunchRate || 120;
   const { dateStr: todayStr, formattedDate: todayFormatted } = getIstNow();
 
   let targetDates: string[] = [];

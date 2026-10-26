@@ -60,8 +60,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // String states for numeric fields to prevent iPhone "stuck on 0" bug
   const [defaultPersonsStr, setDefaultPersonsStr] = useState(String(config.defaultPersons ?? 1));
-  const [defaultBreakfastRateStr, setDefaultBreakfastRateStr] = useState(String(config.defaultBreakfastRate ?? 60));
-  const [defaultLunchRateStr, setDefaultLunchRateStr] = useState(String(config.defaultLunchRate ?? 90));
+  const [defaultBreakfastRateStr, setDefaultBreakfastRateStr] = useState(String(config.defaultBreakfastRate ?? 50));
+  const [defaultLunchRateStr, setDefaultLunchRateStr] = useState(String(config.defaultLunchRate ?? 120));
 
   // Phone state: raw 10 digits
   const [phone10Digits, setPhone10Digits] = useState(() => extract10DigitPhone(config.catererPhone || ''));

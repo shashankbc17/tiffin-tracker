@@ -492,7 +492,7 @@ export function getEffectiveMealRates(
   );
 
   const breakfastRate =
-    bPkg?.breakfastRate || activePackage?.breakfastRate || config.defaultBreakfastRate || 60;
+    bPkg?.breakfastRate || activePackage?.breakfastRate || config.defaultBreakfastRate || 50;
   const lunchRate =
     lPkg?.lunchRate || activePackage?.lunchRate || config.defaultLunchRate || 120;
 
@@ -573,7 +573,7 @@ export function runAutoDeliveryCheck(
         const currentBStatus = bEntry?.status || 'none';
         if (currentBStatus === 'none' && isPastBreakfastCutoff) {
           const planPersons = pkg.defaultPersons || config.defaultPersons || 1;
-          const rate = pkg.breakfastRate || config.defaultBreakfastRate || 60;
+          const rate = pkg.breakfastRate || config.defaultBreakfastRate || 50;
           bEntry = {
             status: 'delivered',
             persons: bEntry?.persons && bEntry.persons > 0 ? bEntry.persons : planPersons,
@@ -612,12 +612,12 @@ export function runAutoDeliveryCheck(
         breakfast: bEntry || {
           status: 'none',
           persons: planPersons,
-          rate: config.defaultBreakfastRate || 60,
+          rate: config.defaultBreakfastRate || 50,
         },
         lunch: lEntry || {
           status: 'none',
           persons: planPersons,
-          rate: config.defaultLunchRate || 90,
+          rate: config.defaultLunchRate || 120,
         },
         isCookOff: false,
         notes: existing?.notes,
@@ -684,8 +684,8 @@ export function calculateMonthlyStats(
   config: RateConfig
 ): MonthlyReportStats {
   const planPersons = pkg?.defaultPersons || config.defaultPersons || 1;
-  const defaultBRate = pkg?.breakfastRate || config.defaultBreakfastRate || 60;
-  const defaultLRate = pkg?.lunchRate || config.defaultLunchRate || 90;
+  const defaultBRate = pkg?.breakfastRate || config.defaultBreakfastRate || 50;
+  const defaultLRate = pkg?.lunchRate || config.defaultLunchRate || 120;
 
   let totalSpent = 0;
   let carriedOverValue = 0;
