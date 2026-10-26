@@ -664,6 +664,8 @@ export function getLast6Months(count = 6): MonthOption[] {
 export interface MonthlyReportStats {
   monthKey: string; // '2026-09'
   monthLabel: string; // 'September 2026'
+  startDate: string;
+  endDate: string;
   totalSpent: number;
   carriedOverValue: number;
   breakfastDelivered: number;
@@ -745,12 +747,18 @@ export function calculateMonthlyStats(
   }
 
   const [y, m] = monthKey.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
   const dateObj = new Date(y, m - 1, 1);
   const monthLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const startDate = `${monthKey}-01`;
+  const isCurrentMonth = monthKey === todayStr.slice(0, 7);
+  const endDate = isCurrentMonth ? todayStr : `${monthKey}-${String(daysInMonth).padStart(2, '0')}`;
 
   return {
     monthKey,
     monthLabel,
+    startDate,
+    endDate,
     totalSpent,
     carriedOverValue,
     breakfastDelivered,
@@ -776,6 +784,7 @@ export function generateMonthlyWhatsAppSummary(
   const totalSkips = monthStats.breakfastSkipped + monthStats.lunchSkipped;
 
   return `🍽️ *Tiffin Statement - ${monthStats.monthLabel}*
+📅 *Period:* ${monthStats.startDate} to ${monthStats.endDate}
 Hi ${caterer},
 • Meals Served: ${totalMeals} (${currency}${monthStats.totalSpent.toLocaleString()})
 • Skips / Saved: ${totalSkips} (${currency}${monthStats.carriedOverValue.toLocaleString()})

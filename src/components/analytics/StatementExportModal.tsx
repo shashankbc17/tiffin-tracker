@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { DayRecord, PackagePlan, RateConfig } from '../../types';
 import {
   generateBankStatementData,
+  generateFullBankStatementText,
   downloadStatementPdf,
   shareStatementToWhatsApp,
   exportStatementCsv,
@@ -21,6 +22,8 @@ import {
   Calendar,
   AlertCircle,
   ExternalLink,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
 import { InfoPopover } from '../common/InfoPopover';
 
@@ -29,6 +32,7 @@ interface StatementExportModalProps {
   onClose: () => void;
   records: Record<string, DayRecord>;
   activePackage: PackagePlan | null;
+  packages?: PackagePlan[];
   config: RateConfig;
   initialMonthKey?: string;
 }
@@ -38,6 +42,7 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
   onClose,
   records,
   activePackage,
+  packages,
   config,
   initialMonthKey,
 }) => {
@@ -45,9 +50,13 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
   const currentMonthKey = todayStr.slice(0, 7);
   const monthOptions = getLast6Months(6);
 
-  // Period mode: 'month' | 'package'
-  const [periodType, setPeriodType] = useState<'month' | 'package'>(
-    activePackage ? 'month' : 'month'
+  // Period mode: 'month' | 'package' | 'all'
+  const hasMultiplePlans = Boolean(packages && packages.length > 1);
+  const [periodType, setPeriodType] = useState<'month' | 'package' | 'all'>(
+    hasMultiplePlans ? 'all' : 'month'
+  );
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
+    activePackage?.id || null
   );
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
     initialMonthKey || currentMonthKey
@@ -59,13 +68,20 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Generate Bank Statement data model
+  // Selected package for single-package view
+  const targetPkg = periodType === 'package'
+    ? (packages?.find((p) => p.id === selectedPackageId) || activePackage)
+    : activePackage;
+
+  // Generate Bank Statement data model with full collation support
   const statementData: StatementSummaryData = generateBankStatementData(
     periodType,
     selectedMonthKey,
     records,
-    activePackage,
-    config
+    targetPkg,
+    config,
+    'Household Account',
+    packages
   );
 
   const handleShareToWhatsApp = async () => {
@@ -108,16 +124,7 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
   };
 
   const handleCopySummary = () => {
-    const text = `🍽️ *Tiffin & Meal Statement - ${statementData.periodLabel}*
-Caterer: ${statementData.catererName}
-Total Meals Served: 🍳 ${statementData.breakfastDelivered} Breakfast | 🍱 ${statementData.lunchDelivered} Lunch
-Total Consumed Value: ${statementData.currency}${statementData.totalSpent.toLocaleString()}
-Carry-over Days Saved: ${statementData.carryOverDaysSaved} Days (${statementData.currency}${statementData.carriedOverValue.toLocaleString()})
-Remaining Days in Plan: ${statementData.remainingDays} Days
-Statement Ref: ${statementData.statementId}
-
-Generated via TiffinFlow Food Statement`;
-
+    const text = generateFullBankStatementText(statementData);
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -226,7 +233,7 @@ Generated via TiffinFlow Food Statement`;
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.5px' }}>
-                Statement Scope
+                Statement Scope &amp; Period
               </span>
               <span style={{ fontSize: '10px', color: '#34d399', fontWeight: 600, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                 Ref: {statementData.statementId}
@@ -235,10 +242,20 @@ Generated via TiffinFlow Food Statement`;
 
             <div>
               <select
-                value={periodType === 'package' ? '__package__' : selectedMonthKey}
+                value={
+                  periodType === 'all'
+                    ? '__all__'
+                    : periodType === 'package'
+                    ? `__pkg_${targetPkg?.id || 'active'}__`
+                    : selectedMonthKey
+                }
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val === '__package__') {
+                  if (val === '__all__') {
+                    setPeriodType('all');
+                  } else if (val.startsWith('__pkg_')) {
+                    const pkgId = val.replace(/^__pkg_/, '').replace(/__$/, '');
+                    setSelectedPackageId(pkgId);
                     setPeriodType('package');
                   } else {
                     setSelectedMonthKey(val);
@@ -259,11 +276,24 @@ Generated via TiffinFlow Food Statement`;
                   boxSizing: 'border-box',
                 }}
               >
-                {Boolean(activePackage && activePackage.status === 'active') && (
-                  <option value="__package__" style={{ background: '#1e293b', color: '#34d399', fontWeight: 700 }}>
-                    📦 Active Plan: {activePackage?.title} (Entire Plan Duration)
+                {Boolean(packages && packages.length > 1) && (
+                  <option value="__all__" style={{ background: '#0f172a', color: '#34d399', fontWeight: 700 }}>
+                    📋 All Plans Collated (Full Subscription Cycle)
                   </option>
                 )}
+                {packages && packages.length > 0 ? (
+                  <optgroup label="Individual Subscription Plans" style={{ background: '#0f172a', color: '#94a3b8' }}>
+                    {packages.map((p) => (
+                      <option key={p.id} value={`__pkg_${p.id}__`} style={{ background: '#1e293b', color: '#ffffff' }}>
+                        📦 {p.title} (Started {p.startDate})
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : activePackage ? (
+                  <option value={`__pkg_${activePackage.id}__`} style={{ background: '#1e293b', color: '#34d399', fontWeight: 700 }}>
+                    📦 Active Plan: {activePackage.title}
+                  </option>
+                ) : null}
                 <optgroup label="Monthly Statements" style={{ background: '#0f172a', color: '#94a3b8' }}>
                   {monthOptions.map((m) => (
                     <option key={m.key} value={m.key} style={{ background: '#1e293b', color: '#ffffff' }}>
@@ -274,6 +304,134 @@ Generated via TiffinFlow Food Statement`;
               </select>
             </div>
           </div>
+
+          {/* DATE RANGE BANNER */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 95, 70, 0.2) 100%)',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '6px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Calendar size={18} color="#34d399" />
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc' }}>
+                  📅 From: <span style={{ color: '#34d399' }}>{statementData.startDate}</span> To: <span style={{ color: '#34d399' }}>{statementData.endDate}</span>
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
+                  {statementData.periodLabel}
+                </div>
+              </div>
+            </div>
+            <span
+              style={{
+                fontSize: '9.5px',
+                fontWeight: 700,
+                color: '#34d399',
+                background: 'rgba(16, 185, 129, 0.2)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontFamily: 'monospace',
+              }}
+            >
+              {statementData.rows.length} Ledger Entries
+            </span>
+          </div>
+
+          {/* COLLATED SUBSCRIPTION PLANS CARDS (Crucial: Collate Breakfast + Lunch Plans) */}
+          {statementData.collatedPlans && statementData.collatedPlans.length > 0 && (
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                padding: '10px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📋 Collated Plans ({statementData.collatedPlans.length} Active Subscriptions)
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399' }}>
+                  Combined Balance: {statementData.currency}{statementData.netRemainingBalance.toLocaleString()}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: statementData.collatedPlans.length > 1 ? 'repeat(auto-fit, minmax(240px, 1fr))' : '1fr', gap: '8px' }}>
+                {statementData.collatedPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    style={{
+                      background: 'rgba(15, 23, 42, 0.85)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '15px' }}>{plan.mealType === 'Breakfast' ? '🍳' : plan.mealType === 'Lunch' ? '🍱' : '🍽️'}</span>
+                        <strong style={{ fontSize: '12.5px', color: '#f8fafc' }}>{plan.title}</strong>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          background: plan.mealType === 'Breakfast' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(16, 185, 129, 0.18)',
+                          color: plan.mealType === 'Breakfast' ? '#fbbf24' : '#34d399',
+                        }}
+                      >
+                        {plan.mealType}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      Rate: {statementData.currency}{plan.rate}/plate ({plan.persons}p = {statementData.currency}{plan.dailyCost}/day) · Start: {plan.startDate}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginTop: '4px', background: 'rgba(255, 255, 255, 0.04)', padding: '6px 8px', borderRadius: '6px', textAlign: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase' }}>Deposited</div>
+                        <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#f8fafc' }}>
+                          {statementData.currency}{plan.amountPaid.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>{plan.totalDays} days</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase' }}>Delivered</div>
+                        <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#38bdf8' }}>
+                          {statementData.currency}{plan.spent.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>{plan.daysDelivered} days</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '9px', color: '#059669', textTransform: 'uppercase' }}>Remaining</div>
+                        <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#34d399' }}>
+                          {statementData.currency}{plan.remainingBalance.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '8.5px', color: '#34d399' }}>{plan.remainingDays}d left</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* FOOD STATEMENT CARD PREVIEW */}
           <div
@@ -357,7 +515,7 @@ Generated via TiffinFlow Food Statement`;
                 <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '12px', marginTop: '1px' }}>
                   {statementData.periodLabel}
                 </div>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>
+                <div style={{ color: '#059669', fontSize: '10.5px', fontWeight: 600 }}>
                   {statementData.startDate} to {statementData.endDate}
                 </div>
               </div>
@@ -424,7 +582,7 @@ Generated via TiffinFlow Food Statement`;
                   +{statementData.carryOverDaysSaved}d
                 </div>
                 <div style={{ fontSize: '9.5px', color: '#b45309' }}>
-                  {statementData.currency}{statementData.carriedOverValue.toLocaleString()} saved
+                  {statementData.currency}{statementData.totalCarriedOverValue.toLocaleString()} saved
                 </div>
               </div>
 
@@ -437,12 +595,12 @@ Generated via TiffinFlow Food Statement`;
                   border: '1px solid #bae6fd',
                 }}
               >
-                <div style={{ fontSize: '9px', color: '#0369a1', fontWeight: 700, letterSpacing: '0.4px' }}>REMAINING IN PLAN</div>
+                <div style={{ fontSize: '9px', color: '#0369a1', fontWeight: 700, letterSpacing: '0.4px' }}>NET REMAINING BALANCE</div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: '#0c4a6e', margin: '2px 0 1px' }}>
-                  {statementData.remainingDays}d
+                  {statementData.currency}{statementData.netRemainingBalance.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '9.5px', color: '#0369a1' }}>
-                  of {statementData.totalDays} total days
+                  {statementData.remainingDays} days remaining
                 </div>
               </div>
             </div>
@@ -458,28 +616,30 @@ Generated via TiffinFlow Food Statement`;
               }}
             >
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase' }}>
-                Itemized Daily Meal Ledger
+                Itemized Daily Meal Ledger &amp; Comments
               </span>
               <span style={{ fontSize: '9.5px', color: '#64748b' }}>
-                Clean view
+                Bank Passbook View
               </span>
             </div>
 
-            {/* SCROLLABLE TRANSACTION TABLE - 4 CLEAN COLUMNS */}
-            <div style={{ maxHeight: '220px', overflowY: 'auto', overflowX: 'auto', borderTop: '1px solid #e2e8f0', WebkitOverflowScrolling: 'touch' }}>
-              <table style={{ width: '100%', minWidth: '320px', borderCollapse: 'collapse', fontSize: '11.5px' }}>
+            {/* SCROLLABLE TRANSACTION TABLE - 6 BANK PASSBOOK COLUMNS */}
+            <div style={{ maxHeight: '250px', overflowY: 'auto', overflowX: 'auto', borderTop: '1px solid #e2e8f0', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: '460px', borderCollapse: 'collapse', fontSize: '11.5px' }}>
                 <thead>
-                  <tr style={{ background: '#1e293b', color: '#f8fafc', textAlign: 'left', position: 'sticky', top: 0 }}>
-                    <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: 700 }}>Date &amp; Meal</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10px', fontWeight: 700 }}>Food / Dish Description</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10px', fontWeight: 700 }}>Status</th>
-                    <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: 700, textAlign: 'right' }}>Amount</th>
+                  <tr style={{ background: '#1e293b', color: '#f8fafc', textAlign: 'left', position: 'sticky', top: 0, zIndex: 1 }}>
+                    <th style={{ padding: '8px 10px', fontSize: '10px', fontWeight: 700 }}>Date &amp; Day</th>
+                    <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: 700 }}>Meal &amp; Plan</th>
+                    <th style={{ padding: '8px 10px', fontSize: '10px', fontWeight: 700 }}>Food, Dish &amp; Comments</th>
+                    <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: 700, textAlign: 'right' }}>Debit</th>
+                    <th style={{ padding: '8px 10px', fontSize: '10px', fontWeight: 700, textAlign: 'right' }}>Balance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {statementData.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
                         No meals or logs recorded for this period.
                       </td>
                     </tr>
@@ -498,24 +658,40 @@ Generated via TiffinFlow Food Statement`;
                             borderBottom: '1px solid #f1f5f9',
                           }}
                         >
-                          <td style={{ padding: '8px 12px', color: '#0f172a', whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 700, fontSize: '11.5px' }}>{row.dateFormatted}</div>
-                            <div style={{ fontSize: '10.5px', color: '#64748b' }}>{sessionEmoji} {row.session}</div>
+                          <td style={{ padding: '8px 10px', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 700, fontSize: '11px' }}>{row.dateFormatted}</div>
+                          </td>
+                          <td style={{ padding: '8px 8px', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 600, fontSize: '11px' }}>{sessionEmoji} {row.session}</div>
+                            {row.planName && (
+                              <div style={{ fontSize: '9.5px', color: '#64748b' }}>{row.planName}</div>
+                            )}
                           </td>
                           <td style={{ padding: '8px 10px', color: '#0f172a' }}>
-                            <div style={{ fontWeight: 600, fontSize: '12px' }}>{row.dish}</div>
+                            <div style={{ fontWeight: 600, fontSize: '11.5px' }}>{row.dish}</div>
                             {row.notes && row.notes !== 'Kitchen closed - full carry-over credited' && !row.notes.startsWith('Auto-delivered') && (
-                              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '1px' }}>
-                                Note: {row.notes}
+                              <div
+                                style={{
+                                  fontSize: '10px',
+                                  color: '#334155',
+                                  marginTop: '2px',
+                                  background: '#f1f5f9',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  borderLeft: '2px solid #3b82f6',
+                                  display: 'inline-block',
+                                }}
+                              >
+                                💬 {row.notes}
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>
                             <span
                               style={{
-                                fontSize: '10.5px',
+                                fontSize: '10px',
                                 fontWeight: 700,
-                                padding: '3px 8px',
+                                padding: '2px 6px',
                                 borderRadius: '4px',
                                 background: isDelivered
                                   ? 'rgba(16, 185, 129, 0.15)'
@@ -534,25 +710,37 @@ Generated via TiffinFlow Food Statement`;
                               }}
                             >
                               {isDelivered
-                                ? `✓ Delivered (${row.persons}p)`
+                                ? `✓ ${row.persons}p`
                                 : isSkipped
-                                ? '⏸ Skipped'
+                                ? '⏸ Skip'
                                 : isCookOff
                                 ? '🏖️ Cook Off'
-                                : `Extra (${row.persons}p)`}
+                                : `+${row.persons}p`}
                             </span>
                           </td>
                           <td
                             style={{
-                              padding: '8px 12px',
+                              padding: '8px 8px',
                               textAlign: 'right',
                               fontWeight: 700,
-                              fontSize: '12px',
+                              fontSize: '11.5px',
                               color: row.debit > 0 ? '#0f172a' : '#64748b',
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            {row.debit > 0 ? `${statementData.currency}${row.debit}` : '₹0 (Credit)'}
+                            {row.debit > 0 ? `${statementData.currency}${row.debit}` : '₹0'}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'right',
+                              fontWeight: 700,
+                              fontSize: '11.5px',
+                              color: '#059669',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {row.runningBalance !== undefined ? `${statementData.currency}${row.runningBalance.toLocaleString()}` : '-'}
                           </td>
                         </tr>
                       );

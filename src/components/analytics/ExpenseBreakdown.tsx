@@ -8,7 +8,12 @@ import {
   getIstNow,
   addDays,
   getEffectiveMealRates,
+  calculateCarryOver,
 } from '../../services/carryOverEngine';
+import {
+  generateBankStatementData,
+  generateFullBankStatementText,
+} from '../../services/statementPdfGenerator';
 import {
   Share2,
   Copy,
@@ -28,6 +33,7 @@ import {
   FileSpreadsheet,
   Download,
   X,
+  Layers,
 } from 'lucide-react';
 import { StatementExportModal } from './StatementExportModal';
 import { InfoPopover } from '../common/InfoPopover';
@@ -62,6 +68,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   const isPlanIncludesLunch = effectiveRates.incLunch;
 
   const [copied, setCopied] = useState(false);
+  const [copiedBankStatement, setCopiedBankStatement] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
@@ -100,10 +107,28 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   // Monthly WhatsApp statement text
   const monthlySummaryText = generateMonthlyWhatsAppSummary(monthlyStats, activePackage, config);
 
+  // Full itemized bank statement formatted text with collated plans
+  const fullStatementData = generateBankStatementData(
+    'month',
+    selectedMonthKey,
+    records,
+    activePackage,
+    config,
+    'Household Account',
+    packages
+  );
+  const fullBankStatementText = generateFullBankStatementText(fullStatementData);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(monthlySummaryText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleCopyFullBankStatement = () => {
+    navigator.clipboard.writeText(fullBankStatementText);
+    setCopiedBankStatement(true);
+    setTimeout(() => setCopiedBankStatement(false), 2500);
   };
 
   const handleWhatsAppShare = () => {
@@ -587,6 +612,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                   <div>
                     <div>Consolidated billing and consumption metrics for {monthlyStats.monthLabel}:</div>
                     <div style={{ marginTop: '8px', lineHeight: '1.6' }}>
+                      • <strong>Period:</strong> {monthlyStats.startDate} to {monthlyStats.endDate}<br />
                       • <strong>Consumed Value:</strong> Total debited for served meals.<br />
                       • <strong>Carry-over Savings:</strong> Value preserved when meals were skipped or cook was off.<br />
                       • <strong>Portions:</strong> Exact count of delivered breakfast and lunch plates.
@@ -595,6 +621,11 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 }
               />
             </div>
+
+            <div style={{ fontSize: '11px', color: '#94a3b8', margin: '2px 0 4px' }}>
+              📅 Period: <strong style={{ color: '#34d399' }}>{monthlyStats.startDate}</strong> to <strong style={{ color: '#34d399' }}>{monthlyStats.endDate}</strong>
+            </div>
+
             <div
               style={{
                 fontSize: '28px',
@@ -611,6 +642,64 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Collated Active Subscriptions Overview (when multiple plans exist) */}
+        {Boolean(packages && packages.length > 1) && (
+          <div
+            style={{
+              marginTop: '10px',
+              paddingTop: '10px',
+              borderTop: '1px solid var(--glass-border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                📋 Collated Active Plans ({packages?.filter((p) => p.status === 'active').length} Subscriptions)
+              </span>
+              <span style={{ fontSize: '10.5px', color: '#34d399', fontWeight: 700 }}>
+                Combined Net Balance: {currency}{packages?.filter((p) => p.status === 'active').reduce((sum, p) => {
+                  const pStats = calculateCarryOver(p, records, config);
+                  return sum + Math.max(0, (p.totalAmountPaid || 0) - pStats.totalSpent);
+                }, 0).toLocaleString()}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '6px' }}>
+              {packages?.filter((p) => p.status === 'active').map((plan) => {
+                const planStats = calculateCarryOver(plan, records, config);
+                const remainingBal = Math.max(0, (plan.totalAmountPaid || 0) - planStats.totalSpent);
+                const isBf = plan.includesBreakfast;
+                return (
+                  <div
+                    key={plan.id}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid var(--glass-border)',
+                      borderRadius: '6px',
+                      padding: '7px 9px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {isBf ? '🍳' : '🍱'} {plan.title}
+                      </span>
+                      <strong style={{ color: '#34d399' }}>
+                        {currency}{remainingBal.toLocaleString()} left
+                      </strong>
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      Used: {planStats.effectiveDaysConsumed}d ({currency}{planStats.totalSpent.toLocaleString()}) · Skips: {planStats.carryOverDays}d · Left: {planStats.remainingDays}d
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div
           style={{
@@ -737,7 +826,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
           <button
             type="button"
             onClick={handleCopy}
@@ -770,6 +859,26 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             <span>Send Text Only</span>
           </button>
         </div>
+
+        {/* Copy Full Bank Statement Text (Collated Plans + Daily Comments) */}
+        <button
+          type="button"
+          onClick={handleCopyFullBankStatement}
+          className="ios-btn ios-btn-secondary"
+          style={{
+            width: '100%',
+            padding: '9px 12px',
+            fontSize: '12px',
+            fontWeight: 600,
+            gap: '6px',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            color: '#34d399',
+            background: 'rgba(16, 185, 129, 0.08)',
+          }}
+        >
+          {copiedBankStatement ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+          <span>{copiedBankStatement ? 'Full Bank Statement Copied!' : '📋 Copy Full Bank Statement (Collated Plans + Comments)'}</span>
+        </button>
       </div>
 
       {/* 5. MONTHLY ACTIVITY LOGS (FILTERED TO SELECTED MONTH) */}
@@ -1140,6 +1249,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         onClose={() => setIsStatementModalOpen(false)}
         records={records}
         activePackage={activePackage}
+        packages={packages}
         config={config}
         initialMonthKey={selectedMonthKey}
       />

@@ -1091,6 +1091,7 @@ export const App: React.FC = () => {
           onClose={() => setIsStatementModalOpen(false)}
           records={records}
           activePackage={activePackage}
+          packages={packages}
           config={config}
         />
       )}

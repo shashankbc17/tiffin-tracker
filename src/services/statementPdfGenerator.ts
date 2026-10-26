@@ -1,19 +1,41 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DayRecord, PackagePlan, RateConfig } from '../types';
-import { getIstNow, isMealActiveOnDate } from './carryOverEngine';
+import { getIstNow, isMealActiveOnDate, calculateCarryOver } from './carryOverEngine';
 
 export interface StatementLedgerRow {
   dateStr: string;
   dateFormatted: string;
+  dayOfWeek: string;
   session: 'Breakfast' | 'Lunch' | 'Cook Holiday';
+  planName?: string;
   dish: string;
   status: 'DELIVERED' | 'SKIPPED' | 'EXTRA' | 'COOK OFF';
   persons: number;
   rate: number;
   debit: number;
+  runningBalance?: number;
   carryOverEffect: string;
   notes?: string;
+}
+
+export interface PlanCollationSummary {
+  id: string;
+  title: string;
+  mealType: 'Breakfast' | 'Lunch' | 'Both';
+  startDate: string;
+  rate: number;
+  persons: number;
+  dailyCost: number;
+  totalDays: number;
+  amountPaid: number;
+  daysDelivered: number;
+  daysSkipped: number;
+  spent: number;
+  remainingDays: number;
+  remainingBalance: number;
+  carryOverDays: number;
+  extendedEndDate?: string;
 }
 
 export interface StatementSummaryData {
@@ -26,6 +48,11 @@ export interface StatementSummaryData {
   catererPhone: string;
   subscriberName: string;
   packageTitle: string;
+  collatedPlans: PlanCollationSummary[];
+  totalBudget: number;
+  totalSpent: number;
+  totalCarriedOverValue: number;
+  netRemainingBalance: number;
   totalDays: number;
   effectiveDaysConsumed: number;
   carryOverDaysSaved: number;
@@ -37,64 +64,141 @@ export interface StatementSummaryData {
   lunchDelivered: number;
   lunchSkipped: number;
   cookOffDays: number;
-  totalSpent: number;
-  carriedOverValue: number;
   currency: string;
   rows: StatementLedgerRow[];
 }
 
 /**
- * Compile bank-style statement data for a given month ('YYYY-MM') or active package cycle
+ * Compile bank-style statement data for a given month ('YYYY-MM'), package, or all active plans
  */
 export function generateBankStatementData(
-  periodType: 'month' | 'package',
-  monthKey: string, // e.g. '2026-09'
+  periodType: 'month' | 'package' | 'all',
+  monthKey: string, // e.g. '2026-10'
   records: Record<string, DayRecord>,
   pkg: PackagePlan | null,
   config: RateConfig,
-  subscriberName = 'Household Account'
+  subscriberName = 'Household Account',
+  packages?: PackagePlan[]
 ): StatementSummaryData {
   const currency = config.currency || '₹';
-  const planPersons = pkg?.defaultPersons || config.defaultPersons || 1;
-  const defaultBRate = pkg?.breakfastRate || config.defaultBreakfastRate || 50;
-  const defaultLRate = pkg?.lunchRate || config.defaultLunchRate || 120;
   const { dateStr: todayStr, formattedDate: todayFormatted } = getIstNow();
 
+  // 1. Identify all active packages to collate
+  const activePackages = packages && packages.length > 0
+    ? packages.filter((p) => p.status === 'active')
+    : (pkg ? [pkg] : []);
+
+  const bPkg = packages?.find((p) => p.status === 'active' && p.includesBreakfast) ||
+    (pkg?.includesBreakfast ? pkg : null);
+  const lPkg = packages?.find((p) => p.status === 'active' && p.includesLunch) ||
+    (pkg?.includesLunch ? pkg : null);
+
+  const defaultBRate = bPkg?.breakfastRate || config.defaultBreakfastRate || 50;
+  const defaultLRate = lPkg?.lunchRate || config.defaultLunchRate || 120;
+  const bPlanPersons = bPkg?.defaultPersons || config.defaultPersons || 2;
+  const lPlanPersons = lPkg?.defaultPersons || config.defaultPersons || 1;
+
+  // 2. Collate each plan's analytics
+  const collatedPlans: PlanCollationSummary[] = activePackages.map((p) => {
+    const pStats = calculateCarryOver(p, records, config);
+    const pDaily = (p.includesBreakfast ? p.breakfastRate : 0) + (p.includesLunch ? p.lunchRate : 0);
+    const pPersons = p.defaultPersons || 1;
+    const dailyCost = pDaily * pPersons;
+    const amountPaid = p.totalAmountPaid > 0 ? p.totalAmountPaid : (dailyCost * p.totalDays);
+    const remainingBalance = Math.max(0, amountPaid - pStats.totalSpent);
+
+    const mealType: 'Breakfast' | 'Lunch' | 'Both' =
+      p.includesBreakfast && p.includesLunch ? 'Both' : p.includesBreakfast ? 'Breakfast' : 'Lunch';
+
+    return {
+      id: p.id,
+      title: p.title,
+      mealType,
+      startDate: p.startDate,
+      rate: p.includesBreakfast ? p.breakfastRate : p.lunchRate,
+      persons: pPersons,
+      dailyCost,
+      totalDays: p.totalDays,
+      amountPaid,
+      daysDelivered: pStats.effectiveDaysConsumed,
+      daysSkipped: pStats.carryOverDays,
+      spent: pStats.totalSpent,
+      remainingDays: pStats.remainingDays,
+      remainingBalance,
+      carryOverDays: pStats.carryOverDays,
+      extendedEndDate: pStats.extendedEndDate,
+    };
+  });
+
+  const totalBudget = collatedPlans.length > 0
+    ? collatedPlans.reduce((sum, p) => sum + p.amountPaid, 0)
+    : (pkg?.totalAmountPaid || 0);
+
+  // 3. Determine target dates and period labels
   let targetDates: string[] = [];
   let periodLabel = '';
   let startDate = '';
   let endDate = '';
 
+  const earliestStartDate = activePackages.reduce(
+    (earliest, p) => (p.startDate < earliest ? p.startDate : earliest),
+    todayStr
+  );
+
   if (periodType === 'month') {
     const [y, m] = monthKey.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, 1);
-    periodLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    targetDates = Object.keys(records)
-      .filter((d) => d.startsWith(monthKey))
-      .sort();
-    
-    // Also include all days of this month up to today if package started
     const daysInMonth = new Date(y, m, 0).getDate();
+    const dateObj = new Date(y, m - 1, 1);
+    const monthName = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    startDate = `${monthKey}-01`;
+    const isCurrentMonth = monthKey === todayStr.slice(0, 7);
+    endDate = isCurrentMonth ? todayStr : `${monthKey}-${String(daysInMonth).padStart(2, '0')}`;
+    periodLabel = `${monthName} (${startDate} to ${endDate})`;
+
+    // Filter dates strictly in this month window
     for (let day = 1; day <= daysInMonth; day++) {
       const dStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      if (!targetDates.includes(dStr)) {
-        if (pkg && dStr >= pkg.startDate && dStr <= todayStr) {
-          targetDates.push(dStr);
+      if (dStr <= endDate) {
+        targetDates.push(dStr);
+      }
+    }
+  } else if (periodType === 'all') {
+    startDate = earliestStartDate;
+    endDate = todayStr;
+    periodLabel = `Full Subscription Period (${startDate} to ${endDate})`;
+
+    const allRecordDates = Object.keys(records).filter((d) => d >= startDate && d <= endDate);
+    const dateSet = new Set<string>(allRecordDates);
+    dateSet.add(startDate);
+    dateSet.add(endDate);
+    targetDates = Array.from(dateSet).sort();
+  } else {
+    // Single package cycle
+    startDate = pkg?.startDate || earliestStartDate;
+    endDate = todayStr;
+    periodLabel = `${pkg?.title || 'Active Subscription'} (${startDate} to ${endDate})`;
+    targetDates = Object.keys(records)
+      .filter((d) => (!pkg || d >= pkg.startDate) && d <= endDate)
+      .sort();
+  }
+
+  // 4. Calculate Opening Balance before period start (bank style)
+  let priorSpent = 0;
+  for (const [d, rec] of Object.entries(records)) {
+    if (d < startDate) {
+      if (!rec.isCookOff) {
+        if (rec.breakfast && (rec.breakfast.status === 'delivered' || rec.breakfast.status === 'extra')) {
+          priorSpent += (rec.breakfast.rate || defaultBRate) * (rec.breakfast.persons || bPlanPersons);
+        }
+        if (rec.lunch && (rec.lunch.status === 'delivered' || rec.lunch.status === 'extra')) {
+          priorSpent += (rec.lunch.rate || defaultLRate) * (rec.lunch.persons || lPlanPersons);
         }
       }
     }
-    targetDates.sort();
-    startDate = targetDates[0] || `${monthKey}-01`;
-    endDate = targetDates[targetDates.length - 1] || `${monthKey}-${daysInMonth}`;
-  } else {
-    // Package cycle
-    periodLabel = pkg ? `${pkg.title} (Full Cycle)` : 'Active Subscription Cycle';
-    startDate = pkg?.startDate || todayStr;
-    targetDates = Object.keys(records)
-      .filter((d) => !pkg || d >= pkg.startDate)
-      .sort();
-    endDate = targetDates[targetDates.length - 1] || todayStr;
   }
+
+  let runningBalance = Math.max(0, totalBudget - priorSpent);
 
   let totalSpent = 0;
   let carriedOverValue = 0;
@@ -113,169 +217,173 @@ export function generateBankStatementData(
     const dateFormatted = dateObj.toLocaleDateString('en-US', {
       day: '2-digit',
       month: 'short',
-      weekday: 'short',
     });
+    const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
 
-    const isBActive = pkg ? isMealActiveOnDate(dateStr, pkg, 'breakfast') : true;
-    const isLActive = pkg ? isMealActiveOnDate(dateStr, pkg, 'lunch') : true;
+    const isBActive = bPkg ? (dateStr >= bPkg.startDate && isMealActiveOnDate(dateStr, bPkg, 'breakfast')) : true;
+    const isLActive = lPkg ? (dateStr >= lPkg.startDate && isMealActiveOnDate(dateStr, lPkg, 'lunch')) : false;
 
-    // Cook holiday
+    // Cook holiday / off day
     if (rec?.isCookOff) {
       cookOffDays++;
-      const bPersons = planPersons;
-      const lPersons = planPersons;
       if (isBActive) {
-        breakfastSkipped += bPersons;
-        carriedOverValue += defaultBRate * bPersons;
+        breakfastSkipped += bPlanPersons;
+        carriedOverValue += defaultBRate * bPlanPersons;
       }
       if (isLActive) {
-        lunchSkipped += lPersons;
-        carriedOverValue += defaultLRate * lPersons;
+        lunchSkipped += lPlanPersons;
+        carriedOverValue += defaultLRate * lPlanPersons;
       }
 
       rows.push({
         dateStr,
-        dateFormatted,
+        dateFormatted: `${dateFormatted} (${dayOfWeek})`,
+        dayOfWeek,
         session: 'Cook Holiday',
-        dish: 'Cook Off / Holiday (No Meals Served)',
+        planName: 'All Plans',
+        dish: 'Cook Off / Holiday (Kitchen Closed)',
         status: 'COOK OFF',
-        persons: planPersons,
+        persons: bPlanPersons,
         rate: 0,
         debit: 0,
-        carryOverEffect: '+1.0 Day Credit',
-        notes: rec.notes || 'Kitchen closed - full carry-over credited',
+        runningBalance,
+        carryOverEffect: '+1.0 Day Credit (Preserved)',
+        notes: rec.notes || 'Cook off / holiday (Carried over)',
       });
       continue;
     }
 
-    // Breakfast
-    if (rec?.breakfast && (isBActive || rec.breakfast.status !== 'none')) {
-      const b = rec.breakfast;
-      const rate = b.rate || defaultBRate;
-      const persons = b.persons || planPersons;
+    // Breakfast transaction
+    if (isBActive || (rec?.breakfast && rec.breakfast.status !== 'none')) {
+      const b = rec?.breakfast;
+      const rate = b?.rate || defaultBRate;
+      const persons = b?.persons || bPlanPersons;
+      const status = b?.status || 'none';
 
-      if (!isFuture && (b.status === 'delivered' || b.status === 'extra')) {
+      if (!isFuture && (status === 'delivered' || status === 'extra')) {
         breakfastDelivered += persons;
         const debit = rate * persons;
         totalSpent += debit;
+        runningBalance = Math.max(0, runningBalance - debit);
+
         rows.push({
           dateStr,
-          dateFormatted,
+          dateFormatted: `${dateFormatted} (${dayOfWeek})`,
+          dayOfWeek,
           session: 'Breakfast',
-          dish: b.menuItem || b.notes || 'Standard Breakfast Preparation',
-          status: b.status === 'extra' ? 'EXTRA' : 'DELIVERED',
+          planName: bPkg?.title || 'Breakfast Plan',
+          dish: b?.menuItem || 'Standard Breakfast',
+          status: status === 'extra' ? 'EXTRA' : 'DELIVERED',
           persons,
           rate,
           debit,
+          runningBalance,
           carryOverEffect: 'None (Consumed)',
-          notes: b.autoDelivered ? 'Auto-delivered on schedule' : b.notes,
+          notes: b?.notes,
         });
-
-        // Check if fewer persons delivered than scheduled
-        if (b.status === 'delivered' && persons < planPersons && isBActive) {
-          const missed = planPersons - persons;
-          breakfastSkipped += missed;
-          carriedOverValue += rate * missed;
-          rows.push({
-            dateStr,
-            dateFormatted,
-            session: 'Breakfast',
-            dish: 'Partial Delivery Adjustment',
-            status: 'SKIPPED',
-            persons: missed,
-            rate,
-            debit: 0,
-            carryOverEffect: `+${Math.round((missed / (planPersons * 2)) * 10) / 10} Day Credit`,
-            notes: `${missed} person portion not served`,
-          });
-        }
-      } else if (b.status === 'skipped' && isBActive) {
+      } else if (status === 'skipped' && isBActive) {
         breakfastSkipped += persons;
         carriedOverValue += rate * persons;
+
         rows.push({
           dateStr,
-          dateFormatted,
+          dateFormatted: `${dateFormatted} (${dayOfWeek})`,
+          dayOfWeek,
           session: 'Breakfast',
-          dish: b.menuItem || b.notes || 'Meal Skipped / Paused by User',
+          planName: bPkg?.title || 'Breakfast Plan',
+          dish: b?.menuItem || 'Breakfast Skipped',
           status: 'SKIPPED',
           persons,
           rate,
           debit: 0,
+          runningBalance,
           carryOverEffect: '+0.5 Day Credit',
-          notes: b.notes || 'Carried over to extended package date',
+          notes: b?.notes || 'Carried over to extended package date',
         });
       }
     }
 
-    // Lunch
-    if (rec?.lunch && (isLActive || rec.lunch.status !== 'none')) {
-      const l = rec.lunch;
-      const rate = l.rate || defaultLRate;
-      const persons = l.persons || planPersons;
+    // Lunch transaction
+    if (isLActive || (rec?.lunch && rec.lunch.status !== 'none')) {
+      const l = rec?.lunch;
+      const rate = l?.rate || defaultLRate;
+      const persons = l?.persons || lPlanPersons;
+      const status = l?.status || 'none';
 
-      if (!isFuture && (l.status === 'delivered' || l.status === 'extra')) {
+      if (!isFuture && (status === 'delivered' || status === 'extra')) {
         lunchDelivered += persons;
         const debit = rate * persons;
         totalSpent += debit;
+        runningBalance = Math.max(0, runningBalance - debit);
+
         rows.push({
           dateStr,
-          dateFormatted,
+          dateFormatted: `${dateFormatted} (${dayOfWeek})`,
+          dayOfWeek,
           session: 'Lunch',
-          dish: l.menuItem || l.notes || 'Standard Lunch Preparation',
-          status: l.status === 'extra' ? 'EXTRA' : 'DELIVERED',
+          planName: lPkg?.title || 'Lunch Plan',
+          dish: l?.menuItem || (persons === 1 ? '4 Chapathis' : 'Standard Lunch'),
+          status: status === 'extra' ? 'EXTRA' : 'DELIVERED',
           persons,
           rate,
           debit,
+          runningBalance,
           carryOverEffect: 'None (Consumed)',
-          notes: l.autoDelivered ? 'Auto-delivered on schedule' : l.notes,
+          notes: l?.notes,
         });
-
-        if (l.status === 'delivered' && persons < planPersons && isLActive) {
-          const missed = planPersons - persons;
-          lunchSkipped += missed;
-          carriedOverValue += rate * missed;
-          rows.push({
-            dateStr,
-            dateFormatted,
-            session: 'Lunch',
-            dish: 'Partial Delivery Adjustment',
-            status: 'SKIPPED',
-            persons: missed,
-            rate,
-            debit: 0,
-            carryOverEffect: `+${Math.round((missed / (planPersons * 2)) * 10) / 10} Day Credit`,
-            notes: `${missed} person portion not served`,
-          });
-        }
-      } else if (l.status === 'skipped' && isLActive) {
+      } else if (status === 'skipped' && isLActive) {
         lunchSkipped += persons;
         carriedOverValue += rate * persons;
+
         rows.push({
           dateStr,
-          dateFormatted,
+          dateFormatted: `${dateFormatted} (${dayOfWeek})`,
+          dayOfWeek,
           session: 'Lunch',
-          dish: l.menuItem || l.notes || 'Meal Skipped / Paused by User',
+          planName: lPkg?.title || 'Lunch Plan',
+          dish: l?.menuItem || 'Lunch Skipped',
           status: 'SKIPPED',
           persons,
           rate,
           debit: 0,
+          runningBalance,
           carryOverEffect: '+0.5 Day Credit',
-          notes: l.notes || 'Carried over to extended package date',
+          notes: l?.notes || 'Carried over to extended package date',
         });
       }
     }
   }
 
-  // Calculate carry-over stats
-  const activeMealCount = ((pkg?.includesBreakfast !== false) ? 1 : 0) + ((pkg?.includesLunch !== false) ? 1 : 0);
-  const dailyPortions = Math.max(1, activeMealCount * planPersons);
+  // 5. Carry-over totals
+  const totalDays = collatedPlans.length > 0
+    ? collatedPlans.reduce((sum, p) => sum + p.totalDays, 0)
+    : (pkg?.totalDays || targetDates.length);
+
   const totalDeliveredPortions = breakfastDelivered + lunchDelivered;
   const totalSkippedPortions = breakfastSkipped + lunchSkipped;
+  const effectiveDaysConsumed = collatedPlans.length > 0
+    ? collatedPlans.reduce((sum, p) => sum + p.daysDelivered, 0)
+    : Math.round((totalDeliveredPortions / 2) * 10) / 10;
 
-  const effectiveDaysConsumed = Math.round((totalDeliveredPortions / dailyPortions) * 10) / 10;
-  const carryOverDaysSaved = Math.round((totalSkippedPortions / dailyPortions) * 10) / 10;
-  const totalDays = pkg?.totalDays || targetDates.length;
-  const remainingDays = Math.max(0, Math.round((totalDays - effectiveDaysConsumed) * 10) / 10);
+  const carryOverDaysSaved = collatedPlans.length > 0
+    ? collatedPlans.reduce((sum, p) => sum + p.daysSkipped, 0)
+    : Math.round((totalSkippedPortions / 2) * 10) / 10;
+
+  const totalCarriedOverValue = collatedPlans.length > 0
+    ? collatedPlans.reduce((sum, p) => sum + (p.daysSkipped * p.dailyCost), 0)
+    : carriedOverValue;
+
+  const remainingDays = collatedPlans.length > 0
+    ? collatedPlans.reduce((sum, p) => sum + p.remainingDays, 0)
+    : Math.max(0, totalDays - effectiveDaysConsumed);
+
+  const netRemainingBalance = collatedPlans.length > 0
+    ? collatedPlans.reduce((sum, p) => sum + p.remainingBalance, 0)
+    : Math.max(0, totalBudget - totalSpent);
+
+  const packageTitle = collatedPlans.length > 1
+    ? collatedPlans.map((p) => p.title).join(' + ')
+    : (pkg?.title || 'Meal Subscription');
 
   // Generate unique statement ID
   const hashSeed = (startDate + endDate).replace(/-/g, '').slice(-4) || '9999';
@@ -287,25 +395,114 @@ export function generateBankStatementData(
     startDate,
     endDate,
     generatedAt: `${todayFormatted}, ${getIstNow().hour.toString().padStart(2, '0')}:${getIstNow().minute.toString().padStart(2, '0')} IST`,
-    catererName: config.catererName || 'Bhaiya / Tiffin Caterer',
-    catererPhone: config.catererPhone || 'Not Configured',
+    catererName: config.catererName || 'Srinath (Caterer)',
+    catererPhone: config.catererPhone || '+91 98868 63284',
     subscriberName,
-    packageTitle: pkg?.title || 'Standard Monthly Meal Plan',
+    packageTitle,
+    collatedPlans,
+    totalBudget,
+    totalSpent,
+    totalCarriedOverValue,
+    netRemainingBalance,
     totalDays,
     effectiveDaysConsumed,
     carryOverDaysSaved,
     remainingDays,
-    originalEndDate: pkg?.startDate ? pkg.startDate : undefined,
     breakfastDelivered,
     breakfastSkipped,
     lunchDelivered,
     lunchSkipped,
     cookOffDays,
-    totalSpent,
-    carriedOverValue,
     currency,
     rows,
   };
+}
+
+/**
+ * Generate full itemized bank statement formatted text for WhatsApp & Clipboard
+ */
+export function generateFullBankStatementText(data: StatementSummaryData): string {
+  const currency = data.currency || '₹';
+
+  let plansText = '';
+  if (data.collatedPlans && data.collatedPlans.length > 0) {
+    plansText = data.collatedPlans
+      .map(
+        (p, idx) =>
+          `${idx + 1}️⃣ *${p.title}* (${p.mealType})
+   • Started: ${p.startDate} | Rate: ${currency}${p.rate}/plate (${p.persons}p = ${currency}${p.dailyCost}/day)
+   • Paid: ${currency}${p.amountPaid.toLocaleString()} (${p.totalDays} days)
+   • Delivered: ${p.daysDelivered} days (${currency}${p.spent.toLocaleString()}) | Skips: ${p.daysSkipped} days
+   • Balance: *${currency}${p.remainingBalance.toLocaleString()} left* (${p.remainingDays} days remaining${p.extendedEndDate ? `, valid till ${p.extendedEndDate}` : ''})`
+      )
+      .join('\n\n');
+  } else {
+    plansText = `• Plan: ${data.packageTitle} (${data.totalDays} days)`;
+  }
+
+  // Format daily ledger grouped by date
+  const dateMap: Record<string, StatementLedgerRow[]> = {};
+  for (const r of data.rows) {
+    if (!dateMap[r.dateStr]) dateMap[r.dateStr] = [];
+    dateMap[r.dateStr].push(r);
+  }
+
+  const ledgerLines: string[] = [];
+  const sortedDates = Object.keys(dateMap).sort();
+
+  for (const d of sortedDates) {
+    const dayRows = dateMap[d];
+    const sample = dayRows[0];
+    const parts: string[] = [];
+    let dayTotalDebit = 0;
+    let latestBalance = sample.runningBalance ?? 0;
+
+    for (const r of dayRows) {
+      dayTotalDebit += r.debit;
+      if (r.runningBalance !== undefined) latestBalance = r.runningBalance;
+
+      if (r.status === 'COOK OFF') {
+        const comment = r.notes ? ` [${r.notes}]` : '';
+        parts.push(`🏖️ *Cook Off*${comment} (Carried over)`);
+      } else if (r.status === 'DELIVERED' || r.status === 'EXTRA') {
+        const dishPart = r.dish && !r.dish.includes('Standard') ? ` (${r.dish})` : '';
+        const notePart = r.notes && !r.notes.startsWith('Auto-delivered') ? ` [${r.notes}]` : '';
+        const sessionEmoji = r.session === 'Breakfast' ? '🍳' : '🍱';
+        parts.push(`${sessionEmoji} ${r.session}: Delivered ${r.persons}p (${currency}${r.debit})${dishPart}${notePart}`);
+      } else if (r.status === 'SKIPPED') {
+        const notePart = r.notes ? ` [${r.notes}]` : ' [Carried over]';
+        const sessionEmoji = r.session === 'Breakfast' ? '🍳' : '🍱';
+        parts.push(`${sessionEmoji} ⏸ ${r.session} Skipped${notePart}`);
+      }
+    }
+
+    const dayText = `• *${sample.dateFormatted}:* ${parts.join(' | ')} | Debit: ${currency}${dayTotalDebit} | Bal: *${currency}${latestBalance.toLocaleString()}*`;
+    ledgerLines.push(dayText);
+  }
+
+  return `🍽️ *TIFFINFLOW FOOD & SUBSCRIPTION ACCOUNT STATEMENT*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 *Statement Ref:* ${data.statementId}
+📅 *Statement Period:* ${data.startDate} to ${data.endDate}
+🏷️ *Period Label:* ${data.periodLabel}
+👨‍🍳 *Caterer:* ${data.catererName} (${data.catererPhone})
+👤 *Subscriber:* ${data.subscriberName}
+⏰ *Generated:* ${data.generatedAt}
+
+📋 *COLLATED ACTIVE PLANS:*
+${plansText}
+
+💰 *FINANCIAL CONSOLIDATION:*
+• Total Deposited: ${currency}${data.totalBudget.toLocaleString()}
+• Total Consumed / Debited: ${currency}${data.totalSpent.toLocaleString()} (🍳 ${data.breakfastDelivered} Breakfast + 🍱 ${data.lunchDelivered} Lunch)
+• Carry-over Credit Saved: ${currency}${data.totalCarriedOverValue.toLocaleString()} (${data.carryOverDaysSaved} days preserved)
+• Net Remaining Balance: *${currency}${data.netRemainingBalance.toLocaleString()}*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📑 *ITEMIZED DAILY MEAL LEDGER & COMMENTS:*
+${ledgerLines.length > 0 ? ledgerLines.join('\n') : 'No recorded meals in this period.'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ *Official verified record generated via TiffinFlow*`;
 }
 
 /**
@@ -357,200 +554,242 @@ export function generateStatementPdf(data: StatementSummaryData): {
   doc.setTextColor(203, 213, 225);
   doc.text(`Generated: ${data.generatedAt}`, pageWidth - margin, 18, { align: 'right' });
 
-  let y = 36;
+  let y = 35;
 
   // 2. BANK ACCOUNT & PARTY METADATA GRID (Two Columns)
   doc.setDrawColor(226, 232, 240); // Slate 200
   doc.setFillColor(248, 250, 252); // Slate 50
-  doc.roundedRect(margin, y, pageWidth - margin * 2, 24, 2, 2, 'FD');
+  doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'FD');
 
   // Column 1: Caterer / Service Provider
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
   doc.text('SERVICE PROVIDER / CATERER', margin + 4, y + 5);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setTextColor(15, 23, 42);
-  doc.text(data.catererName, margin + 4, y + 11);
+  doc.text(data.catererName, margin + 4, y + 10.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text(`Contact: ${data.catererPhone}`, margin + 4, y + 17);
+  doc.text(`Contact: ${data.catererPhone}`, margin + 4, y + 16);
 
-  // Column 2: Subscriber & Period
+  // Column 2: Statement Period & Plan Scope
   const midX = margin + (pageWidth - margin * 2) / 2 + 4;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
-  doc.text('SUBSCRIBER & STATEMENT PERIOD', midX, y + 5);
+  doc.text('STATEMENT PERIOD & SCOPE', midX, y + 5);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-  doc.text(data.packageTitle, midX, y + 11);
+  doc.setFontSize(9.5);
+  doc.setTextColor(16, 185, 129); // Emerald
+  doc.text(`From: ${data.startDate}   To: ${data.endDate}`, midX, y + 10.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text(`Period: ${data.periodLabel} (${data.startDate} to ${data.endDate})`, midX, y + 17);
+  doc.text(`Period: ${data.periodLabel}`, midX, y + 16);
 
-  y += 28;
+  y += 25;
 
-  // 3. EXECUTIVE ACCOUNT SUMMARY CARDS (Like Bank Balance Summary)
+  // 3. COLLATED ACTIVE SUBSCRIPTIONS BOX (If multiple or single plans)
+  if (data.collatedPlans && data.collatedPlans.length > 0) {
+    const boxHeight = 8 + data.collatedPlans.length * 6.5;
+    doc.setFillColor(241, 245, 249);
+    doc.setDrawColor(203, 213, 225);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 1.5, 1.5, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text('COLLATED SUBSCRIPTION PLANS ACTIVE IN THIS PERIOD', margin + 4, y + 5);
+
+    data.collatedPlans.forEach((plan, i) => {
+      const py = y + 9.5 + i * 6.5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`• ${plan.title}:`, margin + 4, py);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(51, 65, 85);
+      doc.text(
+        `Start: ${plan.startDate} | Rate: ${data.currency}${plan.rate}/p (${plan.persons}p = ${data.currency}${plan.dailyCost}/day) | Paid: ${data.currency}${plan.amountPaid} | Delivered: ${plan.daysDelivered}d (${data.currency}${plan.spent}) | Left: ${data.currency}${plan.remainingBalance} (${plan.remainingDays}d)`,
+        margin + 44,
+        py
+      );
+    });
+
+    y += boxHeight + 4;
+  }
+
+  // 4. EXECUTIVE FINANCIAL SUMMARY CARDS
   const cardWidth = (pageWidth - margin * 2 - 9) / 4;
-  const cardHeight = 21;
+  const cardHeight = 20;
 
   // Card 1: Consumed Value
   doc.setFillColor(241, 245, 249);
+  doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, y, cardWidth, cardHeight, 1.5, 1.5, 'FD');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('TOTAL DEBITED', margin + 3, y + 5);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`${data.currency}${data.totalSpent.toLocaleString()}`, margin + 3, y + 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(100, 116, 139);
-  doc.text(`${data.effectiveDaysConsumed} days consumed`, margin + 3, y + 17);
+  doc.text('TOTAL DEBITED', margin + 3, y + 4.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${data.currency}${data.totalSpent.toLocaleString()}`, margin + 3, y + 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`${data.effectiveDaysConsumed} days consumed`, margin + 3, y + 16);
 
   // Card 2: Meals Delivered
   const c2X = margin + cardWidth + 3;
   doc.setFillColor(236, 253, 245); // emerald-50
   doc.roundedRect(c2X, y, cardWidth, cardHeight, 1.5, 1.5, 'FD');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(5, 150, 105); // emerald-600
-  doc.text('MEALS SERVED', c2X + 3, y + 5);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(6, 95, 70); // emerald-800
-  doc.text(`🍳 ${data.breakfastDelivered} | 🍱 ${data.lunchDelivered}`, c2X + 3, y + 12);
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(5, 150, 105);
-  doc.text(`${data.breakfastDelivered + data.lunchDelivered} total portions`, c2X + 3, y + 17);
+  doc.text('MEALS SERVED', c2X + 3, y + 4.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(6, 95, 70);
+  doc.text(`🍳 ${data.breakfastDelivered} | 🍱 ${data.lunchDelivered}`, c2X + 3, y + 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(5, 150, 105);
+  doc.text(`${data.breakfastDelivered + data.lunchDelivered} total plates`, c2X + 3, y + 16);
 
   // Card 3: Carried-over Credit
   const c3X = c2X + cardWidth + 3;
   doc.setFillColor(254, 243, 199); // amber-50
   doc.roundedRect(c3X, y, cardWidth, cardHeight, 1.5, 1.5, 'FD');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(180, 83, 9); // amber-700
-  doc.text('CARRY-OVER CREDIT', c3X + 3, y + 5);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(146, 64, 14); // amber-800
-  doc.text(`${data.currency}${data.carriedOverValue.toLocaleString()}`, c3X + 3, y + 12);
-  doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
   doc.setTextColor(180, 83, 9);
-  doc.text(`+${data.carryOverDaysSaved} Days Saved`, c3X + 3, y + 17);
+  doc.text('CARRY-OVER CREDIT', c3X + 3, y + 4.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(146, 64, 14);
+  doc.text(`${data.currency}${data.totalCarriedOverValue.toLocaleString()}`, c3X + 3, y + 11);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text(`+${data.carryOverDaysSaved} Days Saved`, c3X + 3, y + 16);
 
   // Card 4: Remaining Plan Balance
   const c4X = c3X + cardWidth + 3;
   doc.setFillColor(240, 249, 255); // sky-50
   doc.roundedRect(c4X, y, cardWidth, cardHeight, 1.5, 1.5, 'FD');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(3, 105, 161); // sky-700
-  doc.text('REMAINING BALANCE', c4X + 3, y + 5);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(12, 74, 110); // sky-900
-  doc.text(`${data.remainingDays} Days`, c4X + 3, y + 12);
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(3, 105, 161);
-  doc.text(`Total Plan: ${data.totalDays} Days`, c4X + 3, y + 17);
+  doc.text('NET REMAINING BALANCE', c4X + 3, y + 4.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(12, 74, 110);
+  doc.text(`${data.currency}${data.netRemainingBalance.toLocaleString()}`, c4X + 3, y + 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(3, 105, 161);
+  doc.text(`${data.remainingDays} days remaining`, c4X + 3, y + 16);
 
   y += cardHeight + 6;
 
-  // Section title for ledger
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-  doc.text('ITEMIZED MEAL TRANSACTIONS & FOOD LOG', margin, y);
-
+  // 5. ITEMIZED DAILY TRANSACTION TABLE (AutoTable)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(30, 41, 59);
-  doc.text('DAILY MEAL LEDGER & CHARGES (Itemized Records)', margin, y + 4);
+  doc.setTextColor(15, 23, 42);
+  doc.text('ITEMIZED DAILY MEAL LEDGER & COMMENTS (Bank Statement Format)', margin, y);
 
-  y += 6;
+  y += 3;
 
-  // 4. TRANSACTION LEDGER TABLE (Clean, spacious, elderly & cook friendly)
   const tableData = data.rows.map((row) => {
-    const sessionLabel = row.session === 'Breakfast' ? 'Breakfast' : row.session === 'Lunch' ? 'Lunch' : 'Holiday';
-    const dateAndMeal = `${row.dateFormatted}\n(${sessionLabel})`;
-
-    const dishDetails = row.notes && row.notes !== 'Kitchen closed - full carry-over credited' && !row.notes.startsWith('Auto-delivered')
-      ? `${row.dish}\nNote: ${row.notes}`
-      : row.dish;
+    const sessionLabel = `${row.session}${row.planName ? `\n(${row.planName})` : ''}`;
+    
+    // Dish & Notes/Comments (explicitly printing comments!)
+    let descriptionText = row.dish;
+    if (row.notes && !row.notes.startsWith('Auto-delivered') && row.notes !== row.dish) {
+      descriptionText += `\nComment: ${row.notes}`;
+    }
 
     const statusText =
       row.status === 'DELIVERED'
-        ? `Delivered (${row.persons} plate${row.persons > 1 ? 's' : ''})`
+        ? `Delivered (${row.persons}p)`
         : row.status === 'SKIPPED'
-        ? `Skipped (+${row.carryOverEffect})`
+        ? 'Skipped (Credit)'
         : row.status === 'COOK OFF'
-        ? 'Cook Holiday (Credit)'
-        : `Extra (${row.persons} plate${row.persons > 1 ? 's' : ''})`;
+        ? 'Cook Holiday'
+        : `Extra (${row.persons}p)`;
 
-    const amountText = row.debit > 0 ? `${data.currency}${row.debit.toLocaleString()}` : '₹0 (Credit)';
+    const debitText = row.debit > 0 ? `${data.currency}${row.debit.toLocaleString()}` : '₹0';
+    const balanceText = row.runningBalance !== undefined ? `${data.currency}${row.runningBalance.toLocaleString()}` : '-';
 
-    return [dateAndMeal, dishDetails, statusText, amountText];
+    return [
+      row.dateFormatted,
+      sessionLabel,
+      descriptionText,
+      statusText,
+      debitText,
+      balanceText,
+    ];
   });
 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin, bottom: 18 },
     head: [[
-      'Date & Meal',
-      'Food / Dish Description',
+      'Date & Day',
+      'Meal & Plan',
+      'Food, Dish & Comments',
       'Delivery Status',
-      'Amount'
+      'Debit',
+      'Balance'
     ]],
     body: tableData.length > 0 ? tableData : [[
       '-',
+      '-',
       'No recorded transactions in this period',
       '-',
-      '₹0.00'
+      '₹0',
+      '₹0'
     ]],
     theme: 'plain',
     headStyles: {
-      fillColor: [15, 23, 42], // Deep Navy
+      fillColor: [15, 23, 42],
       textColor: [255, 255, 255],
-      fontSize: 9.5,
+      fontSize: 8.5,
       fontStyle: 'bold',
       halign: 'left',
-      cellPadding: 3.5,
+      cellPadding: 3,
     },
     bodyStyles: {
-      fontSize: 9.2,
+      fontSize: 8,
       textColor: [30, 41, 59],
-      cellPadding: 3.5,
+      cellPadding: 2.8,
       lineColor: [226, 232, 240],
       lineWidth: 0.2,
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252], // soft alternating zebra
+      fillColor: [248, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 36, fontStyle: 'bold' },
-      1: { cellWidth: 84 },
-      2: { cellWidth: 42, fontStyle: 'bold' },
-      3: { cellWidth: 28, halign: 'right', fontStyle: 'bold', fontSize: 10 },
+      0: { cellWidth: 28, fontStyle: 'bold' },
+      1: { cellWidth: 26 },
+      2: { cellWidth: 64 },
+      3: { cellWidth: 28, fontStyle: 'bold' },
+      4: { cellWidth: 16, halign: 'right', fontStyle: 'bold' },
+      5: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },
     },
     didParseCell: (hookData) => {
-      // Color-code status column
-      if (hookData.section === 'body' && hookData.column.index === 2) {
+      // Color-code delivery status
+      if (hookData.section === 'body' && hookData.column.index === 3) {
         const text = String(hookData.cell.raw);
         if (text.startsWith('Delivered')) {
           hookData.cell.styles.textColor = [5, 150, 105]; // Emerald
@@ -562,31 +801,33 @@ export function generateStatementPdf(data: StatementSummaryData): {
           hookData.cell.styles.textColor = [124, 58, 237]; // Purple
         }
       }
-      // Highlight debit charges
-      if (hookData.section === 'body' && hookData.column.index === 3) {
+      // Highlight debits
+      if (hookData.section === 'body' && hookData.column.index === 4) {
         const text = String(hookData.cell.raw);
-        if (text !== '₹0 (Credit)' && text !== '₹0.00' && text !== '0') {
+        if (text !== '₹0' && text !== '0') {
           hookData.cell.styles.textColor = [15, 23, 42];
         } else {
-          hookData.cell.styles.textColor = [100, 116, 139];
+          hookData.cell.styles.textColor = [148, 163, 184];
         }
+      }
+      // Highlight running balance in emerald
+      if (hookData.section === 'body' && hookData.column.index === 5) {
+        hookData.cell.styles.textColor = [5, 150, 105];
       }
     },
     didDrawPage: (hookData) => {
-      // Add formal footer on each page
+      // Formal statement footer
       const currentDoc = hookData.doc;
-      const str = `Page ${hookData.pageNumber} · TiffinFlow Official Meal Subscription Ledger · Verified Electronic Record`;
-      currentDoc.setFontSize(7.5);
+      const str = `Page ${hookData.pageNumber} · TiffinFlow Official Meal Subscription Ledger · Statement Ref: ${data.statementId}`;
+      currentDoc.setFontSize(7);
       currentDoc.setTextColor(148, 163, 184);
       currentDoc.text(str, pageWidth / 2, pageHeight - 8, { align: 'center' });
-      
-      // Bottom emerald micro line
+
       currentDoc.setFillColor(16, 185, 129);
       currentDoc.rect(margin, pageHeight - 5, pageWidth - margin * 2, 0.8, 'F');
     },
   });
 
-  // Filename
   const cleanLabel = data.periodLabel.replace(/[^a-zA-Z0-9]/g, '_');
   const filename = `TiffinFlow_Statement_${cleanLabel}.pdf`;
 
@@ -617,7 +858,7 @@ export function downloadStatementPdf(data: StatementSummaryData): void {
 }
 
 /**
- * Share statement directly to WhatsApp with companion text and downloadable attachment
+ * Share statement directly to WhatsApp with companion full statement text & downloadable PDF
  */
 export async function shareStatementToWhatsApp(
   data: StatementSummaryData,
@@ -630,18 +871,11 @@ export async function shareStatementToWhatsApp(
     phone = `91${phone}`;
   }
 
-  const companionMessage = `🍽️ *Tiffin Statement - ${data.periodLabel}*
-Hi ${data.catererName},
-• Meals Served: ${data.breakfastDelivered + data.lunchDelivered} (${data.currency}${data.totalSpent.toLocaleString()})
-• Skips / Saved: ${data.carryOverDaysSaved} days (${data.currency}${data.carriedOverValue.toLocaleString()})
-• Balance Days: ${data.remainingDays} days left
-
-Attached is the official Food Statement PDF with itemized daily logs.`;
-
+  const companionMessage = generateFullBankStatementText(data);
   const encoded = encodeURIComponent(companionMessage);
   const waUrl = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
 
-  // Check if native file sharing is supported
+  // Native share if supported
   const file = new File([blob], filename, { type: 'application/pdf' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
@@ -655,15 +889,11 @@ Attached is the official Food Statement PDF with itemized daily logs.`;
       if (err.name === 'AbortError') {
         return { method: 'native_share', success: false, error: 'Cancelled by user' };
       }
-      // If native share fails, fallback to download + web WhatsApp
     }
   }
 
-  // Fallback for desktop & unsupported browsers:
-  // 1. Download the PDF file directly
+  // Fallback: download PDF and open WhatsApp web with statement text
   downloadStatementPdf(data);
-
-  // 2. Open WhatsApp link with pre-filled message
   window.open(waUrl, '_blank');
 
   return { method: 'download_and_whatsapp', success: true };
@@ -676,28 +906,33 @@ export function exportStatementCsv(data: StatementSummaryData): void {
   const escapeCsv = (val: string | number) => `"${String(val).replace(/"/g, '""')}"`;
 
   const headers = [
-    'Date',
-    'Session',
+    'Date & Day',
+    'Meal Session',
+    'Plan Name',
     'Dish / Food Item',
-    'Status',
-    'Portions',
+    'Comments & Reason',
+    'Delivery Status',
+    'Portions (Persons)',
     'Rate',
-    'Debit Amount',
+    'Debit Amount (Spent)',
+    'Running Balance',
     'Carry-Over Effect',
-    'Notes',
   ];
 
   const metaRows = [
     ['STATEMENT TITLE', 'TIFFINFLOW MEAL SUBSCRIPTION ACCOUNT STATEMENT'],
     ['STATEMENT ID', data.statementId],
-    ['PERIOD', `${data.periodLabel} (${data.startDate} to ${data.endDate})`],
+    ['STATEMENT PERIOD', `From: ${data.startDate} To: ${data.endDate}`],
+    ['PERIOD LABEL', data.periodLabel],
     ['CATERER', `${data.catererName} (${data.catererPhone})`],
-    ['TOTAL PLAN DAYS', `${data.totalDays}`],
-    ['CONSUMED DAYS', `${data.effectiveDaysConsumed}`],
-    ['CARRIED OVER DAYS SAVED', `${data.carryOverDaysSaved}`],
-    ['REMAINING DAYS', `${data.remainingDays}`],
+    ['SUBSCRIBER', data.subscriberName],
+    ['TOTAL BUDGET DEPOSITED', `${data.currency}${data.totalBudget}`],
     ['TOTAL VALUE CONSUMED', `${data.currency}${data.totalSpent}`],
-    ['CARRIED OVER VALUE SAVED', `${data.currency}${data.carriedOverValue}`],
+    ['NET REMAINING BALANCE', `${data.currency}${data.netRemainingBalance}`],
+    ['CARRIED OVER VALUE SAVED', `${data.currency}${data.totalCarriedOverValue}`],
+    ['TOTAL DAYS', `${data.totalDays}`],
+    ['CONSUMED DAYS', `${data.effectiveDaysConsumed}`],
+    ['REMAINING DAYS', `${data.remainingDays}`],
     ['GENERATED AT', data.generatedAt],
     [],
   ];
@@ -706,15 +941,17 @@ export function exportStatementCsv(data: StatementSummaryData): void {
     ...metaRows,
     headers,
     ...data.rows.map((r) => [
-      r.dateStr,
+      r.dateFormatted,
       r.session,
+      r.planName || '',
       r.dish,
+      r.notes || '',
       r.status,
       String(r.persons),
       `${r.rate}`,
       `${r.debit}`,
+      r.runningBalance !== undefined ? `${r.runningBalance}` : '',
       r.carryOverEffect,
-      r.notes || '',
     ]),
   ];
 
