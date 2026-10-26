@@ -45,7 +45,7 @@ interface ExpenseBreakdownProps {
   packages?: PackagePlan[];
   records: Record<string, DayRecord>;
   onOpenDayDetails?: (dateStr: string) => void;
-  onOpenStatementModal?: (monthKey?: string) => void;
+  onOpenStatementModal?: (monthKey?: string, range?: { startDate: string; endDate: string; label?: string }) => void;
 }
 
 export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
@@ -59,6 +59,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
 }) => {
   const currency = config.currency || '₹';
   const { dateStr: todayStr } = getIstNow();
+  const currentMonthKey = todayStr.slice(0, 7);
   const oneMonthAgoStr = addDays(todayStr, -30);
 
   const effectiveRates = getEffectiveMealRates(packages, activePackage, config);
@@ -71,56 +72,121 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
   const [copiedBankStatement, setCopiedBankStatement] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
-  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [showAllLogs, setShowAllLogs] = useState(false);
 
-  const handleOpenExtractModal = () => {
-    if (onOpenStatementModal) {
-      onOpenStatementModal(selectedMonthKey);
-    } else {
-      setIsStatementModalOpen(true);
-    }
-  };
+  // Quick view preset: '15d' | '1m' | '2m' | 'custom'
+  // DEFAULT SELECTION IS ALWAYS CURRENT MONTH ('1m')!
+  const [quickPreset, setQuickPreset] = useState<'15d' | '1m' | '2m' | 'custom'>('1m');
 
-  // 6 Months History Selector (counts back up to 6 months from current month)
+  // 6 Months History Selector for From / To dropdowns (counts back up to 6 months from current month)
   const monthOptions = getLast6Months(6);
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
-    monthOptions[0]?.key || todayStr.slice(0, 7)
-  );
+
+  // From-Month to To-Month selectors (defaults strictly to current month!)
+  const [fromMonth, setFromMonth] = useState<string>(currentMonthKey);
+  const [toMonth, setToMonth] = useState<string>(currentMonthKey);
 
   // Edit Past History state: strictly limited to within 1 month (30 days ago to today)
   const defaultPastDate = addDays(todayStr, -1);
   const [pastEditDate, setPastEditDate] = useState<string>(defaultPastDate);
 
-  // Calculate monthly stats for the selected month
-  const monthlyStats = calculateMonthlyStats(selectedMonthKey, records, activePackage, config);
+  // Compute exact startDate, endDate, and rangeLabel based on quickPreset and from/to month
+  const { startDate, endDate, rangeLabel } = React.useMemo(() => {
+    if (quickPreset === '15d') {
+      const start = addDays(todayStr, -14);
+      const end = todayStr;
+      return {
+        startDate: start,
+        endDate: end,
+        rangeLabel: `Last 15 Days (${start} to ${end})`,
+      };
+    }
+    if (quickPreset === '1m') {
+      const start = `${currentMonthKey}-01`;
+      const end = todayStr;
+      const dateObj = new Date(currentMonthKey + '-01T00:00:00');
+      const monthName = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      return {
+        startDate: start,
+        endDate: end,
+        rangeLabel: `${monthName} (${start} to ${end})`,
+      };
+    }
+    if (quickPreset === '2m') {
+      const [y, m] = currentMonthKey.split('-').map(Number);
+      const prevDateObj = new Date(y, m - 2, 1);
+      const prevY = prevDateObj.getFullYear();
+      const prevM = String(prevDateObj.getMonth() + 1).padStart(2, '0');
+      const start = `${prevY}-${prevM}-01`;
+      const end = todayStr;
+      return {
+        startDate: start,
+        endDate: end,
+        rangeLabel: `Last 2 Months (${start} to ${end})`,
+      };
+    }
 
-  // Filter dates strictly for the selected month, sorted newest first
-  const monthDates = Object.keys(records)
-    .filter((d) => d.startsWith(selectedMonthKey))
-    .sort()
-    .reverse();
+    // Custom fromMonth to toMonth
+    const actualFrom = fromMonth <= toMonth ? fromMonth : toMonth;
+    const actualTo = fromMonth <= toMonth ? toMonth : fromMonth;
+    const start = `${actualFrom}-01`;
+    const [toY, toM] = actualTo.split('-').map(Number);
+    const daysInToMonth = new Date(toY, toM, 0).getDate();
+    const isCurrentToMonth = actualTo === currentMonthKey;
+    const end = isCurrentToMonth ? todayStr : `${actualTo}-${String(daysInToMonth).padStart(2, '0')}`;
 
-  // Smart scaling: display recent 7 logs unless user expands
-  const displayedDates = showAllLogs || monthDates.length <= 7 ? monthDates : monthDates.slice(0, 7);
+    const fromLabel = new Date(actualFrom + '-01T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const toLabel = new Date(actualTo + '-01T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const label = actualFrom === actualTo ? `${fromLabel} (${start} to ${end})` : `${fromLabel} to ${toLabel} (${start} to ${end})`;
 
-  // Monthly WhatsApp statement text
-  const monthlySummaryText = generateMonthlyWhatsAppSummary(monthlyStats, activePackage, config);
+    return {
+      startDate: start,
+      endDate: end,
+      rangeLabel: label,
+    };
+  }, [quickPreset, fromMonth, toMonth, todayStr, currentMonthKey]);
 
-  // Full itemized bank statement formatted text with collated plans
-  const fullStatementData = generateBankStatementData(
-    'month',
-    selectedMonthKey,
+  // Collated Bank Statement data model for the exact selected period
+  const statementData = generateBankStatementData(
+    'custom',
+    currentMonthKey,
     records,
     activePackage,
     config,
     'Household Account',
-    packages
+    packages,
+    { startDate, endDate, label: rangeLabel }
   );
-  const fullBankStatementText = generateFullBankStatementText(fullStatementData);
+
+  const fullBankStatementText = generateFullBankStatementText(statementData);
+
+  const companionMessageText = `🍽️ *Tiffin Statement - ${rangeLabel}*
+📅 *Period:* ${startDate} to ${endDate}
+Hi ${config.catererName || 'Cook'},
+• Meals Served: ${statementData.breakfastDelivered + statementData.lunchDelivered} (${currency}${statementData.totalSpent.toLocaleString()})
+• Skips / Saved: ${statementData.carryOverDaysSaved}d (${currency}${statementData.totalCarriedOverValue.toLocaleString()})
+• Net Balance Remaining: ${currency}${statementData.netRemainingBalance.toLocaleString()} (${statementData.remainingDays} days left)
+
+Attached is the official Food Statement PDF with itemized daily logs.`;
+
+  // Filter dates strictly for the selected period, sorted newest first
+  const periodDates = Object.keys(records)
+    .filter((d) => d >= startDate && d <= endDate)
+    .sort()
+    .reverse();
+
+  // Smart scaling: display recent 7 logs unless user expands
+  const displayedDates = showAllLogs || periodDates.length <= 7 ? periodDates : periodDates.slice(0, 7);
+
+  const handleOpenExtractModal = () => {
+    if (onOpenStatementModal) {
+      onOpenStatementModal(currentMonthKey, { startDate, endDate, label: rangeLabel });
+    } else {
+      setIsStatementModalOpen(true);
+    }
+  };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(monthlySummaryText);
+    navigator.clipboard.writeText(companionMessageText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
@@ -136,7 +202,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
     if (phone && phone.length === 10) {
       phone = `91${phone}`;
     }
-    const encoded = encodeURIComponent(monthlySummaryText);
+    const encoded = encodeURIComponent(companionMessageText);
     const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
     window.open(url, '_blank');
   };
@@ -392,19 +458,19 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
       </div>
       )}
 
-      {/* 2. MONTHLY REPORT SELECTOR - COMPACT ONE-BUTTON WITH MODAL PICKER */}
-      <div className="ios-card" style={{ padding: '12px 14px' }}>
+      {/* 2. REPORT PERIOD & QUICK VIEW SELECTOR */}
+      <div className="ios-card" style={{ padding: '14px 16px' }}>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '8px',
+            marginBottom: '10px',
           }}
         >
           <div
             style={{
-              fontSize: '13px',
+              fontSize: '13.5px',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
@@ -412,326 +478,139 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               color: 'var(--text-primary)',
             }}
           >
-            <Calendar size={15} color="var(--accent-primary)" />
-            <span>Monthly Reports</span>
-          </div>
-        </div>
-
-        {/* Large Prominent Month Selector Button */}
-        <button
-          type="button"
-          onClick={() => setIsMonthPickerOpen(true)}
-          className="ios-btn month-picker-btn"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={16} color="var(--accent-lunch)" />
-            <span style={{ fontSize: '13.5px', fontWeight: 700 }}>
-              {monthlyStats.monthLabel}
-            </span>
+            <span>Report Period &amp; Quick Views</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#34d399', fontSize: '12px', fontWeight: 600 }}>
-            <span>Change Month</span>
-            <ChevronDown size={15} />
-          </div>
-        </button>
-
-        {/* Month Picker Popup Modal */}
-        {isMonthPickerOpen &&
-          createPortal(
-            <div
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: '100vw',
-                height: '100vh',
-                backgroundColor: 'rgba(0, 0, 0, 0.78)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                zIndex: 99999,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '16px',
-                boxSizing: 'border-box',
-              }}
-              onClick={() => setIsMonthPickerOpen(false)}
-            >
-              <div
-                style={{
-                  width: '100%',
-                  maxWidth: '380px',
-                  maxHeight: '85vh',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--glass-border)',
-                  borderRadius: '20px',
-                  boxShadow: 'var(--glass-shadow), 0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-                  overflow: 'hidden',
-                  animation: 'iosModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div
-                  style={{
-                    padding: '14px 18px',
-                    borderBottom: '1px solid var(--glass-border)',
-                    background: 'var(--metric-card-bg)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar size={18} color="var(--accent-lunch)" />
-                    <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                      Select Report Month
-                    </h4>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsMonthPickerOpen(false)}
-                    className="modal-close-icon-btn"
-                    title="Close"
-                    aria-label="Close"
-                  >
-                    <X size={15} />
-                  </button>
-                </div>
-
-                {/* List of Months */}
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    overflowY: 'auto',
-                    flex: 1,
-                  }}
-                >
-                  {monthOptions.map((m) => {
-                    const isSelected = selectedMonthKey === m.key;
-                    const countInMonth = Object.keys(records).filter((d) => d.startsWith(m.key)).length;
-                    return (
-                      <button
-                        key={m.key}
-                        type="button"
-                        onClick={() => {
-                          setSelectedMonthKey(m.key);
-                          setExpandedDate(null);
-                          setIsMonthPickerOpen(false);
-                        }}
-                        style={{
-                          padding: '12px 14px',
-                          borderRadius: 'var(--radius-md)',
-                          border: isSelected ? '1.5px solid var(--accent-lunch)' : '1px solid var(--glass-border)',
-                          background: isSelected ? 'var(--cal-delivered-bg)' : 'var(--metric-card-bg)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          textAlign: 'left',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--accent-lunch)' : 'var(--text-primary)' }}>
-                            {m.label}
-                          </span>
-                        </div>
-                        {isSelected && <Check size={18} color="var(--accent-lunch)" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Footer */}
-                <div
-                  style={{
-                    padding: '10px 18px 14px',
-                    borderTop: '1px solid var(--glass-border)',
-                    background: 'var(--metric-card-bg)',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    flexShrink: 0,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setIsMonthPickerOpen(false)}
-                    className="ios-btn ios-btn-secondary"
-                    style={{
-                      padding: '8px 18px',
-                      fontSize: '12.5px',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-full)',
-                      cursor: 'pointer',
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )}
-      </div>
-
-      {/* 3. MONTHLY REPORT SUMMARY BANNER FOR SELECTED MONTH */}
-      <div
-        className="ios-card monthly-summary-card"
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: 'var(--accent-lunch)',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  background: 'var(--accent-lunch-subtle)',
-                  padding: '2px 8px',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                📊 Monthly Summary · {monthlyStats.monthLabel}
-              </span>
-              <InfoPopover
-                title={`Monthly Summary for ${monthlyStats.monthLabel}`}
-                color="#34d399"
-                content={
-                  <div>
-                    <div>Consolidated billing and consumption metrics for {monthlyStats.monthLabel}:</div>
-                    <div style={{ marginTop: '8px', lineHeight: '1.6' }}>
-                      • <strong>Period:</strong> {monthlyStats.startDate} to {monthlyStats.endDate}<br />
-                      • <strong>Consumed Value:</strong> Total debited for served meals.<br />
-                      • <strong>Carry-over Savings:</strong> Value preserved when meals were skipped or cook was off.<br />
-                      • <strong>Portions:</strong> Exact count of delivered breakfast and lunch plates.
-                    </div>
-                  </div>
-                }
-              />
-            </div>
-
-            <div style={{ fontSize: '11px', color: '#94a3b8', margin: '2px 0 4px' }}>
-              📅 Period: <strong style={{ color: '#34d399' }}>{monthlyStats.startDate}</strong> to <strong style={{ color: '#34d399' }}>{monthlyStats.endDate}</strong>
-            </div>
-
-            <div
-              style={{
-                fontSize: '28px',
-                fontWeight: 800,
-                fontFamily: 'var(--font-heading)',
-                color: 'var(--accent-lunch)',
-                margin: '2px 0',
-              }}
-            >
-              {currency}{monthlyStats.totalSpent.toLocaleString()}
-            </div>
-            <div style={{ fontSize: '11.5px', color: 'var(--accent-carryover)' }}>
-              ✨ Saved {currency}{monthlyStats.carriedOverValue.toLocaleString()} in carry-over skips
-            </div>
-          </div>
-        </div>
-
-        {/* Collated Active Subscriptions Overview (when multiple plans exist) */}
-        {Boolean(packages && packages.length > 1) && (
-          <div
+          <span
             style={{
-              marginTop: '10px',
-              paddingTop: '10px',
-              borderTop: '1px solid var(--glass-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
+              fontSize: '10.5px',
+              color: '#34d399',
+              background: 'rgba(16, 185, 129, 0.15)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-full)',
+              fontWeight: 600,
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                📋 Collated Active Plans ({packages?.filter((p) => p.status === 'active').length} Subscriptions)
-              </span>
-              <span style={{ fontSize: '10.5px', color: '#34d399', fontWeight: 700 }}>
-                Combined Net Balance: {currency}{packages?.filter((p) => p.status === 'active').reduce((sum, p) => {
-                  const pStats = calculateCarryOver(p, records, config);
-                  return sum + Math.max(0, (p.totalAmountPaid || 0) - pStats.totalSpent);
-                }, 0).toLocaleString()}
-              </span>
-            </div>
+            {quickPreset === '15d'
+              ? 'Last 15 Days'
+              : quickPreset === '1m'
+              ? 'Current Month'
+              : quickPreset === '2m'
+              ? 'Last 2 Months'
+              : 'Custom Month Range'}
+          </span>
+        </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '6px' }}>
-              {packages?.filter((p) => p.status === 'active').map((plan) => {
-                const planStats = calculateCarryOver(plan, records, config);
-                const remainingBal = Math.max(0, (plan.totalAmountPaid || 0) - planStats.totalSpent);
-                const isBf = plan.includesBreakfast;
-                return (
-                  <div
-                    key={plan.id}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid var(--glass-border)',
-                      borderRadius: '6px',
-                      padding: '7px 9px',
-                      fontSize: '11px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {isBf ? '🍳' : '🍱'} {plan.title}
-                      </span>
-                      <strong style={{ color: '#34d399' }}>
-                        {currency}{remainingBal.toLocaleString()} left
-                      </strong>
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      Used: {planStats.effectiveDaysConsumed}d ({currency}{planStats.totalSpent.toLocaleString()}) · Skips: {planStats.carryOverDays}d · Left: {planStats.remainingDays}d
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* 3 Quick View Preset Buttons (Last 15 days, 1 month, 2 months) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '12px' }}>
+          <button
+            type="button"
+            onClick={() => setQuickPreset('15d')}
+            className={`edit-history-preset-btn ${quickPreset === '15d' ? 'active' : 'inactive'}`}
+            style={{ padding: '9px 4px', fontSize: '11.5px', fontWeight: 600 }}
+          >
+            ⚡ Last 15 Days
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setQuickPreset('1m');
+              setFromMonth(currentMonthKey);
+              setToMonth(currentMonthKey);
+            }}
+            className={`edit-history-preset-btn ${quickPreset === '1m' ? 'active' : 'inactive'}`}
+            style={{ padding: '9px 4px', fontSize: '11.5px', fontWeight: 600 }}
+          >
+            📅 1 Month (Current)
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickPreset('2m')}
+            className={`edit-history-preset-btn ${quickPreset === '2m' ? 'active' : 'inactive'}`}
+            style={{ padding: '9px 4px', fontSize: '11.5px', fontWeight: 600 }}
+          >
+            🗓️ Last 2 Months
+          </button>
+        </div>
 
+        {/* From Month to To Month Selectors */}
         <div
           style={{
+            background: 'var(--subtle-card-bg)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '10px 12px',
             display: 'flex',
-            gap: '12px',
-            flexWrap: 'wrap',
-            paddingTop: '12px',
-            marginTop: '12px',
-            borderTop: '1px solid var(--glass-border)',
-            fontSize: '12px',
+            flexDirection: 'column',
+            gap: '8px',
           }}
         >
-          {isPlanIncludesBf && (
-            <div style={{ color: 'var(--text-secondary)' }}>
-              🍳 Breakfasts: <strong style={{ color: 'var(--accent-breakfast)' }}>{monthlyStats.breakfastDelivered}</strong>
-            </div>
-          )}
-          {isPlanIncludesLunch && (
-            <div style={{ color: 'var(--text-secondary)' }}>
-              🍱 Lunches: <strong style={{ color: 'var(--accent-lunch)' }}>{monthlyStats.lunchDelivered}</strong>
-            </div>
-          )}
-          <div style={{ color: 'var(--text-secondary)' }}>
-            🏖️ Cook Off: <strong style={{ color: '#f87171' }}>{monthlyStats.cookOffDays} days</strong>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>
+            Choose Custom Month Range:
           </div>
-          <div style={{ color: 'var(--text-secondary)' }}>
-            📝 Logged Days: <strong style={{ color: '#60a5fa' }}>{monthlyStats.loggedDaysCount}</strong>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div>
+              <label style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                From Month:
+              </label>
+              <select
+                className="ios-input"
+                value={fromMonth}
+                onChange={(e) => {
+                  setFromMonth(e.target.value);
+                  setQuickPreset('custom');
+                }}
+                style={{ padding: '8px 10px', fontSize: '12.5px', width: '100%' }}
+              >
+                {monthOptions.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {m.fullLabel || m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                To Month:
+              </label>
+              <select
+                className="ios-input"
+                value={toMonth}
+                onChange={(e) => {
+                  setToMonth(e.target.value);
+                  setQuickPreset('custom');
+                }}
+                style={{ padding: '8px 10px', fontSize: '12.5px', width: '100%' }}
+              >
+                {monthOptions.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {m.fullLabel || m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Active Range Confirmation Banner */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '11px',
+              paddingTop: '6px',
+              borderTop: '1px solid var(--glass-border)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <span>📅 <strong>Range:</strong> {startDate} to {endDate}</span>
+            <span style={{ color: '#34d399', fontWeight: 600 }}>{periodDates.length} Days Recorded</span>
           </div>
         </div>
       </div>
 
-      {/* 4. COMBINED FOOD STATEMENT & WHATSAPP SUMMARY */}
+      {/* 3. COLLATED FOOD STATEMENT & WHATSAPP SUMMARY */}
       <div
         className="ios-card statement-card"
         style={{ padding: '16px' }}
@@ -761,13 +640,13 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                   Food Statement &amp; WhatsApp Summary
                 </h3>
                 <InfoPopover
-                  title="PDF Statement & WhatsApp Text"
+                  title="Collated Food Statement"
                   color="#34d399"
-                  content="Sends an official PDF statement to your cook along with a short, clean companion message summarizing monthly meals, skips, and billing."
+                  content="This statement dynamically collates your active Breakfast and Lunch plans for the selected date range. You can send the official PDF to your cook or copy the formatted text."
                 />
               </div>
-              <span style={{ fontSize: '11.5px', color: 'var(--accent-lunch)', fontWeight: 600 }}>
-                {monthlyStats.monthLabel} · Statement PDF goes with concise text summary
+              <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
+                📅 {startDate} to {endDate} ({rangeLabel})
               </span>
             </div>
           </div>
@@ -784,22 +663,109 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               flexShrink: 0,
             }}
           >
-            PDF + Text
+            Collated
           </span>
         </div>
 
-        {/* Shortened Bare Minimum WhatsApp Text Preview */}
+        {/* 4 Clean Metric Cards for the Selected Period */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '8px',
+            marginBottom: '12px',
+          }}
+        >
+          {/* Card 1: Debited in period */}
+          <div style={{ background: 'var(--subtle-card-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px' }}>
+            <div style={{ fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Total Debited</div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-lunch)', margin: '2px 0 1px' }}>
+              {currency}{statementData.totalSpent.toLocaleString()}
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              {statementData.effectiveDaysConsumed} days used in period
+            </div>
+          </div>
+
+          {/* Card 2: Meals Served */}
+          <div style={{ background: 'var(--subtle-card-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px' }}>
+            <div style={{ fontSize: '9.5px', color: '#059669', fontWeight: 700, textTransform: 'uppercase' }}>Meals Served</div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: '#34d399', margin: '2px 0 1px' }}>
+              {statementData.breakfastDelivered + statementData.lunchDelivered}
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+              🍳 {statementData.breakfastDelivered} Breakfast · 🍱 {statementData.lunchDelivered} Lunch
+            </div>
+          </div>
+
+          {/* Card 3: Carry-over credit */}
+          <div style={{ background: 'var(--subtle-card-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px' }}>
+            <div style={{ fontSize: '9.5px', color: '#b45309', fontWeight: 700, textTransform: 'uppercase' }}>Carry-Over Credit</div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: '#fbbf24', margin: '2px 0 1px' }}>
+              +{statementData.carryOverDaysSaved}d
+            </div>
+            <div style={{ fontSize: '10px', color: '#fbbf24' }}>
+              {currency}{statementData.totalCarriedOverValue.toLocaleString()} saved
+            </div>
+          </div>
+
+          {/* Card 4: Net Balance */}
+          <div style={{ background: 'var(--subtle-card-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px' }}>
+            <div style={{ fontSize: '9.5px', color: '#0369a1', fontWeight: 700, textTransform: 'uppercase' }}>Net Plan Balance</div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: '#38bdf8', margin: '2px 0 1px' }}>
+              {currency}{statementData.netRemainingBalance.toLocaleString()}
+            </div>
+            <div style={{ fontSize: '10px', color: '#38bdf8' }}>
+              {statementData.remainingDays} days remaining
+            </div>
+          </div>
+        </div>
+
+        {/* Collated Active Subscriptions Pill Strip */}
+        {Boolean(statementData.collatedPlans && statementData.collatedPlans.length > 0) && (
+          <div style={{ display: 'grid', gridTemplateColumns: statementData.collatedPlans.length > 1 ? 'repeat(auto-fit, minmax(200px, 1fr))' : '1fr', gap: '6px', marginBottom: '12px' }}>
+            {statementData.collatedPlans.map((plan) => (
+              <div
+                key={plan.id}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: '6px',
+                  padding: '7px 10px',
+                  fontSize: '11px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {plan.mealType === 'Breakfast' ? '🍳' : '🍱'} {plan.title}
+                  </span>
+                  <div style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>
+                    Rate: {currency}{plan.rate}/plate ({plan.persons}p) · {plan.daysDelivered}d used
+                  </div>
+                </div>
+                <strong style={{ color: '#34d399', fontSize: '11.5px' }}>
+                  {currency}{plan.remainingBalance.toLocaleString()} left
+                </strong>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* WhatsApp Companion Text Preview */}
         <div className="code-preview-box">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              💬 WhatsApp Companion Message (Goes with PDF)
+              💬 WhatsApp Companion Message (for {startDate} to {endDate})
             </span>
             <span style={{ fontSize: '10.5px', color: 'var(--accent-lunch)', fontWeight: 600 }}>
               To {config.catererName || 'Cook'}
             </span>
           </div>
           <div className="code-text" style={{ whiteSpace: 'pre-line', fontFamily: 'monospace', fontSize: '11.5px' }}>
-            {monthlySummaryText}
+            {companionMessageText}
           </div>
         </div>
 
@@ -881,7 +847,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         </button>
       </div>
 
-      {/* 5. MONTHLY ACTIVITY LOGS (FILTERED TO SELECTED MONTH) */}
+      {/* 4. ACTIVITY LOGS (FILTERED TO SELECTED PERIOD) */}
       <div className="ios-card">
         <div
           style={{
@@ -904,7 +870,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
             >
               <Calendar size={16} color="var(--text-muted)" />
               <span>
-                Activity Logs · {monthlyStats.monthLabel}
+                Activity Logs · {rangeLabel}
               </span>
             </h3>
             <InfoPopover
@@ -915,7 +881,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
           </div>
         </div>
 
-        {monthDates.length === 0 ? (
+        {periodDates.length === 0 ? (
           <div
             style={{
               fontSize: '12px',
@@ -929,10 +895,10 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               color="var(--text-muted)"
               style={{ margin: '0 auto 8px auto', opacity: 0.4 }}
             />
-            <div>No meal activity recorded for {monthlyStats.monthLabel}.</div>
+            <div>No meal activity recorded for {rangeLabel}.</div>
             {Boolean(activePackage && activePackage.status === 'active') ? (
               <div style={{ fontSize: '11px', marginTop: '4px', color: '#a78bfa' }}>
-                Use the "Edit Past History" section above to log meals for any day in this month.
+                Use the "Edit Past History" section above to log meals for any day in this period.
               </div>
             ) : (
               <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-muted)' }}>
@@ -1210,7 +1176,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
               );
             })}
 
-            {monthDates.length > 7 && (
+            {periodDates.length > 7 && (
               <button
                 type="button"
                 onClick={() => setShowAllLogs(!showAllLogs)}
@@ -1235,7 +1201,7 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
                 ) : (
                   <>
                     <ChevronDown size={14} />
-                    <span>View Full Month Activity</span>
+                    <span>View All Activity ({periodDates.length} Days)</span>
                   </>
                 )}
               </button>
@@ -1251,7 +1217,8 @@ export const ExpenseBreakdown: React.FC<ExpenseBreakdownProps> = ({
         activePackage={activePackage}
         packages={packages}
         config={config}
-        initialMonthKey={selectedMonthKey}
+        initialMonthKey={currentMonthKey}
+        initialRange={{ startDate, endDate, label: rangeLabel }}
       />
     </div>
   );

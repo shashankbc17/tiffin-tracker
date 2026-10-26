@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { DayRecord, PackagePlan, RateConfig } from '../../types';
 import {
@@ -35,6 +35,7 @@ interface StatementExportModalProps {
   packages?: PackagePlan[];
   config: RateConfig;
   initialMonthKey?: string;
+  initialRange?: { startDate: string; endDate: string; label?: string };
 }
 
 export const StatementExportModal: React.FC<StatementExportModalProps> = ({
@@ -45,16 +46,32 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
   packages,
   config,
   initialMonthKey,
+  initialRange,
 }) => {
   const { dateStr: todayStr } = getIstNow();
   const currentMonthKey = todayStr.slice(0, 7);
   const monthOptions = getLast6Months(6);
 
-  // Period mode: 'month' | 'package' | 'all'
+  // Period mode: 'month' | 'package' | 'all' | 'custom'
   const hasMultiplePlans = Boolean(packages && packages.length > 1);
-  const [periodType, setPeriodType] = useState<'month' | 'package' | 'all'>(
-    hasMultiplePlans ? 'all' : 'month'
+  const [periodType, setPeriodType] = useState<'month' | 'package' | 'all' | 'custom'>(
+    initialRange ? 'custom' : hasMultiplePlans ? 'all' : 'month'
   );
+  const [customRange, setCustomRange] = useState<{ startDate: string; endDate: string; label?: string } | undefined>(
+    initialRange
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialRange) {
+        setPeriodType('custom');
+        setCustomRange(initialRange);
+      }
+      if (initialMonthKey) {
+        setSelectedMonthKey(initialMonthKey);
+      }
+    }
+  }, [isOpen, initialRange, initialMonthKey]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
     activePackage?.id || null
   );
@@ -81,7 +98,8 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
     targetPkg,
     config,
     'Household Account',
-    packages
+    packages,
+    customRange
   );
 
   const handleShareToWhatsApp = async () => {
@@ -243,7 +261,9 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
             <div>
               <select
                 value={
-                  periodType === 'all'
+                  periodType === 'custom'
+                    ? '__custom__'
+                    : periodType === 'all'
                     ? '__all__'
                     : periodType === 'package'
                     ? `__pkg_${targetPkg?.id || 'active'}__`
@@ -251,7 +271,9 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
                 }
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val === '__all__') {
+                  if (val === '__custom__') {
+                    setPeriodType('custom');
+                  } else if (val === '__all__') {
                     setPeriodType('all');
                   } else if (val.startsWith('__pkg_')) {
                     const pkgId = val.replace(/^__pkg_/, '').replace(/__$/, '');
@@ -276,6 +298,11 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
                   boxSizing: 'border-box',
                 }}
               >
+                {Boolean(customRange) && (
+                  <option value="__custom__" style={{ background: '#0f172a', color: '#34d399', fontWeight: 700 }}>
+                    🎯 Selected Period: {customRange?.label || `${customRange?.startDate} to ${customRange?.endDate}`}
+                  </option>
+                )}
                 {Boolean(packages && packages.length > 1) && (
                   <option value="__all__" style={{ background: '#0f172a', color: '#34d399', fontWeight: 700 }}>
                     📋 All Plans Collated (Full Subscription Cycle)

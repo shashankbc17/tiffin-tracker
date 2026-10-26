@@ -72,13 +72,14 @@ export interface StatementSummaryData {
  * Compile bank-style statement data for a given month ('YYYY-MM'), package, or all active plans
  */
 export function generateBankStatementData(
-  periodType: 'month' | 'package' | 'all',
+  periodType: 'month' | 'package' | 'all' | 'custom',
   monthKey: string, // e.g. '2026-10'
   records: Record<string, DayRecord>,
   pkg: PackagePlan | null,
   config: RateConfig,
   subscriberName = 'Household Account',
-  packages?: PackagePlan[]
+  packages?: PackagePlan[],
+  customRange?: { startDate: string; endDate: string; label?: string }
 ): StatementSummaryData {
   const currency = config.currency || '₹';
   const { dateStr: todayStr, formattedDate: todayFormatted } = getIstNow();
@@ -145,7 +146,22 @@ export function generateBankStatementData(
     todayStr
   );
 
-  if (periodType === 'month') {
+  if (periodType === 'custom' && customRange) {
+    startDate = customRange.startDate;
+    endDate = customRange.endDate;
+    periodLabel = customRange.label || `${startDate} to ${endDate}`;
+
+    // Target dates: every date in range [startDate, endDate]
+    const cur = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    while (cur <= end) {
+      const y = cur.getFullYear();
+      const m = String(cur.getMonth() + 1).padStart(2, '0');
+      const d = String(cur.getDate()).padStart(2, '0');
+      targetDates.push(`${y}-${m}-${d}`);
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else if (periodType === 'month') {
     const [y, m] = monthKey.split('-').map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
     const dateObj = new Date(y, m - 1, 1);
@@ -387,7 +403,7 @@ export function generateBankStatementData(
 
   // Generate unique statement ID
   const hashSeed = (startDate + endDate).replace(/-/g, '').slice(-4) || '9999';
-  const statementId = `TF-STMT-${monthKey.replace('-', '')}-${hashSeed}`;
+  const statementId = `TF-STMT-${startDate.replace(/-/g, '').slice(2, 6)}-${hashSeed}`;
 
   return {
     statementId,

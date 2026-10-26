@@ -97,6 +97,7 @@ export const App: React.FC = () => {
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isHomeEditMode, setIsHomeEditMode] = useState(false);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
+  const [statementRange, setStatementRange] = useState<{ startDate: string; endDate: string; label?: string } | undefined>(undefined);
 
   // Persist tab navigation across refreshes
   useEffect(() => {
@@ -991,7 +992,10 @@ export const App: React.FC = () => {
             packages={packages}
             records={records}
             onOpenDayDetails={(dateStr) => setHistoryDetailDate(dateStr)}
-            onOpenStatementModal={() => setIsStatementModalOpen(true)}
+            onOpenStatementModal={(_monthKey, range) => {
+              setStatementRange(range);
+              setIsStatementModalOpen(true);
+            }}
           />
         )}
 
@@ -1088,11 +1092,15 @@ export const App: React.FC = () => {
       {isStatementModalOpen && (
         <StatementExportModal
           isOpen={isStatementModalOpen}
-          onClose={() => setIsStatementModalOpen(false)}
+          onClose={() => {
+            setIsStatementModalOpen(false);
+            setStatementRange(undefined);
+          }}
           records={records}
           activePackage={activePackage}
           packages={packages}
           config={config}
+          initialRange={statementRange}
         />
       )}
     </div>
