@@ -57,6 +57,7 @@ export interface PackagePlan {
   status: 'active' | 'completed' | 'paused';
   notes?: string;
   createdAt?: string;
+  updatedAt?: string;
   topUps?: TopUpRecord[];
 }
 

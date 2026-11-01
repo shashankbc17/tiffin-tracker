@@ -27,7 +27,8 @@ import {
   getIstNow,
   runAutoDeliveryCheck,
   isMealActiveOnDate,
-  addDays
+  addDays,
+  revertTopUpFromPackage
 } from './services/carryOverEngine';
 import { 
   loginWithGoogle, 
@@ -387,9 +388,21 @@ export const App: React.FC = () => {
   // 3. Heal Oct 12 breakfast to delivered (late delivery confirmed in chat)
   // 4. Update lunch skip records with descriptive comments
   useEffect(() => {
-    // 1. Check if breakfast package needs defaultPersons / rate / budget reconciliation
+    // 1. Check if breakfast/lunch packages need default reconciliation or reverting recent test top-ups
     let pkgsModified = false;
     const reconciledPkgs = packages.map((p) => {
+      // Revert recent top-ups on lunch package back to verified clean 20-day plan (@ ₹120/day)
+      if (p.id === 'pkg_lunch_oct09' && (p.totalDays !== 20 || p.totalAmountPaid !== 2400 || (p.topUps && p.topUps.length > 0))) {
+        pkgsModified = true;
+        return {
+          ...p,
+          totalDays: 20,
+          totalAmountPaid: 2400,
+          topUps: [],
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
       if (p.includesBreakfast && !p.includesLunch) {
         let changed = false;
         const updated = { ...p };
@@ -490,6 +503,12 @@ export const App: React.FC = () => {
       // Check lunch skip notes
       if (lunchSkipDescriptions[dateStr] && newL && newL.status === 'skipped' && (!newL.notes || newL.notes === 'Carried over' || newL.notes === 'Out of town')) {
         newL.notes = lunchSkipDescriptions[dateStr];
+        recModified = true;
+      }
+
+      // Revert and clean up any recent top-up notes on records if present
+      if (rec.notes && (rec.notes.includes('2280') || rec.notes.includes('2,280') || (rec.notes.includes('Topped up') && dateStr !== '2026-09-26'))) {
+        rec.notes = undefined;
         recModified = true;
       }
 
@@ -781,6 +800,37 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleRevertTopUp = (packageId: string, topUpId: string) => {
+    const target = packages.find((p) => p.id === packageId);
+    if (!target) return;
+
+    const { updatedPkg, revertedTopUp } = revertTopUpFromPackage(target, topUpId);
+    const nextPackages = packages.map((p) => (p.id === packageId ? updatedPkg : p));
+    setPackages(nextPackages);
+    saveLocalPackages(nextPackages);
+
+    let nextRecords = { ...records };
+    let recordsChanged = false;
+    if (revertedTopUp) {
+      const rec = nextRecords[revertedTopUp.date];
+      if (rec && rec.notes && (rec.notes.includes(String(revertedTopUp.amount)) || rec.notes.includes('Topped up'))) {
+        rec.notes = undefined;
+        rec.updatedAt = new Date().toISOString();
+        recordsChanged = true;
+        nextRecords[revertedTopUp.date] = { ...rec };
+        setRecords(nextRecords);
+        saveLocalRecords(nextRecords);
+        if (user) {
+          syncSingleRecordToCloud(user.uid, rec);
+        }
+      }
+    }
+
+    if (user) {
+      syncUserDataToCloud(user.uid, config, nextPackages, recordsChanged ? nextRecords : records, activePackageId);
+    }
+  };
+
   const handleSaveConfig = (newConfig: RateConfig) => {
     setConfig(newConfig);
     saveLocalConfig(newConfig);
@@ -1007,6 +1057,7 @@ export const App: React.FC = () => {
                 onOpenNewPackage={handleOpenCreateModal}
                 onEditPackage={handleOpenEditModal}
                 onOpenTopUp={() => handleOpenTopUp(activePackage)}
+                onRevertTopUp={handleRevertTopUp}
                 onDeletePackage={handleDeletePackage}
               />
 
@@ -1038,6 +1089,7 @@ export const App: React.FC = () => {
             onSavePackage={handleSavePackage}
             onEditPackage={handleOpenEditModal}
             onOpenTopUp={(pkg) => handleOpenTopUp(pkg)}
+            onRevertTopUp={handleRevertTopUp}
             onDeletePackage={(id) => handleDeletePackageById(id, false)}
             onOpenCreateModal={handleOpenCreateModal}
           />

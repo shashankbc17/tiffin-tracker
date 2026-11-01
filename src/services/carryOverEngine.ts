@@ -851,8 +851,35 @@ export function applyTopUpToPackage(
     lunchRate: params.lunchRate ?? pkg.lunchRate,
     defaultPersons: params.defaultPersons ?? pkg.defaultPersons,
     topUps: [...(pkg.topUps || []), newTopUp],
+    updatedAt: new Date().toISOString(),
   };
 
   return { updatedPkg, newTopUp };
 }
+
+/**
+ * Revert a top-up transaction from a PackagePlan by its TopUp ID
+ */
+export function revertTopUpFromPackage(
+  pkg: PackagePlan,
+  topUpId: string
+): { updatedPkg: PackagePlan; revertedTopUp: TopUpRecord | null } {
+  const targetTopUp = pkg.topUps?.find((t) => t.id === topUpId);
+  if (!targetTopUp) return { updatedPkg: pkg, revertedTopUp: null };
+
+  const newTotalDays = Math.max(1, pkg.totalDays - targetTopUp.addedDays);
+  const newTotalAmount = Math.max(0, (pkg.totalAmountPaid || 0) - targetTopUp.amount);
+  const remainingTopUps = (pkg.topUps || []).filter((t) => t.id !== topUpId);
+
+  const updatedPkg: PackagePlan = {
+    ...pkg,
+    totalDays: newTotalDays,
+    totalAmountPaid: newTotalAmount,
+    topUps: remainingTopUps,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return { updatedPkg, revertedTopUp: targetTopUp };
+}
+
 

@@ -550,7 +550,9 @@ export function mergeRecords(
 }
 
 /**
- * Intelligent 2-Way Merge for packages
+ * Intelligent 2-Way Merge for packages across devices.
+ * Uses Last-Write-Wins based on pkg.updatedAt timestamp,
+ * ensuring local plan edits and top-ups never get wiped out by older cloud snapshots!
  */
 export function mergePackages(
   localPackages: PackagePlan[],
@@ -560,14 +562,40 @@ export function mergePackages(
   if (!localPackages || localPackages.length === 0) return cloudPackages || [];
 
   const pkgMap = new Map<string, PackagePlan>();
-  for (const p of cloudPackages) {
-    pkgMap.set(p.id, p);
-  }
-  for (const p of localPackages) {
-    if (!pkgMap.has(p.id)) {
-      pkgMap.set(p.id, p);
+  const allIds = new Set([
+    ...cloudPackages.map((p) => p.id),
+    ...localPackages.map((p) => p.id),
+  ]);
+
+  for (const id of allIds) {
+    const local = localPackages.find((p) => p.id === id);
+    const cloud = cloudPackages.find((p) => p.id === id);
+
+    if (local && !cloud) {
+      pkgMap.set(id, local);
+    } else if (cloud && !local) {
+      pkgMap.set(id, cloud);
+    } else if (local && cloud) {
+      const localTime = local.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+      const cloudTime = cloud.updatedAt ? new Date(cloud.updatedAt).getTime() : 0;
+
+      if (localTime > cloudTime) {
+        pkgMap.set(id, local);
+      } else if (cloudTime > localTime) {
+        pkgMap.set(id, cloud);
+      } else {
+        // Tie-breaker: if local has more top-ups, local is newer
+        const localTopUps = local.topUps?.length || 0;
+        const cloudTopUps = cloud.topUps?.length || 0;
+        if (localTopUps >= cloudTopUps) {
+          pkgMap.set(id, local);
+        } else {
+          pkgMap.set(id, cloud);
+        }
+      }
     }
   }
+
   return Array.from(pkgMap.values());
 }
 

@@ -31,6 +31,7 @@ interface PlanManagementViewProps {
   onSavePackage: (pkg: PackagePlan) => void;
   onEditPackage: (pkg: PackagePlan) => void;
   onOpenTopUp?: (pkg: PackagePlan) => void;
+  onRevertTopUp?: (packageId: string, topUpId: string) => void;
   onDeletePackage: (packageId: string) => void;
   onOpenCreateModal?: () => void;
 }
@@ -55,6 +56,7 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
   onSavePackage,
   onEditPackage,
   onOpenTopUp,
+  onRevertTopUp,
   onDeletePackage,
 }) => {
   const currency = config.currency || '₹';
@@ -1010,27 +1012,49 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
                   </div>
                 </div>
 
-                {/* Top-Ups Badge if any */}
+                {/* Top-Ups Badge & Itemized Revert List */}
                 {pkg.topUps && pkg.topUps.length > 0 && (
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
                       background: 'rgba(16, 185, 129, 0.08)',
                       border: '1px solid rgba(16, 185, 129, 0.22)',
                       borderRadius: 'var(--radius-sm)',
-                      padding: '6px 10px',
+                      padding: '8px 10px',
                       fontSize: '11px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#34d399', fontWeight: 600 }}>
-                      <History size={12} />
-                      <span>{pkg.topUps.length} Top-Up(s) Recorded</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#34d399', fontWeight: 700 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <History size={12} />
+                        <span>{pkg.topUps.length} Top-Up(s) Recorded</span>
+                      </div>
+                      <span>
+                        +{currency}{pkg.topUps.reduce((s, t) => s + t.amount, 0).toLocaleString()} (+{pkg.topUps.reduce((s, t) => s + t.addedDays, 0)} days)
+                      </span>
                     </div>
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      +{currency}{pkg.topUps.reduce((s, t) => s + t.amount, 0).toLocaleString()} (+{pkg.topUps.reduce((s, t) => s + t.addedDays, 0)} days)
-                    </span>
+
+                    {pkg.topUps.map((t) => (
+                      <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--text-secondary)', paddingTop: '2px', borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                        <span>• {t.date}: +{currency}{t.amount.toLocaleString()} (+{t.addedDays}d){t.notes ? ` [${t.notes}]` : ''}</span>
+                        {onRevertTopUp && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Revert top-up of ${currency}${t.amount.toLocaleString()} (+${t.addedDays} days) made on ${t.date}?`)) {
+                                onRevertTopUp(pkg.id, t.id);
+                              }
+                            }}
+                            title="Revert this top-up"
+                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '1px 4px', fontSize: '10.5px', fontWeight: 700 }}
+                          >
+                            Revert
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 

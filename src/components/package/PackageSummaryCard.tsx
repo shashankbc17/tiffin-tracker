@@ -32,6 +32,7 @@ interface PackageSummaryCardProps {
   onOpenNewPackage: () => void;
   onEditPackage?: () => void;
   onOpenTopUp?: () => void;
+  onRevertTopUp?: (packageId: string, topUpId: string) => void;
   onDeletePackage?: (deleteLogs: boolean) => void;
   onExtractStatement?: () => void;
 }
@@ -48,6 +49,7 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   onOpenNewPackage,
   onEditPackage,
   onOpenTopUp,
+  onRevertTopUp,
   onDeletePackage,
   onExtractStatement,
 }) => {
@@ -400,6 +402,31 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
               </span>
             </div>
           )}
+
+          {/* Top-Up Active Badge */}
+          {pkg.topUps && pkg.topUps.length > 0 && (
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: '#34d399',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>💰</span>
+                <span>
+                  +{currency}{pkg.topUps.reduce((s, t) => s + t.amount, 0).toLocaleString()} Topped Up (+{pkg.topUps.reduce((s, t) => s + t.addedDays, 0)} days)
+                </span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Progress Bar */}
@@ -696,13 +723,42 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
                           </div>
                         )}
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, color: '#34d399' }}>
-                          +{currency}{t.amount.toLocaleString()}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 800, color: '#34d399' }}>
+                            +{currency}{t.amount.toLocaleString()}
+                          </div>
+                          <div style={{ fontSize: '10.5px', color: 'var(--accent-carryover)', fontWeight: 600 }}>
+                            +{t.addedDays} days
+                          </div>
                         </div>
-                        <div style={{ fontSize: '10.5px', color: 'var(--accent-carryover)', fontWeight: 600 }}>
-                          +{t.addedDays} days
-                        </div>
+
+                        {onRevertTopUp && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Revert top-up of ${currency}${t.amount.toLocaleString()} (+${t.addedDays} days) made on ${t.date}?\n\nThis will restore the previous package budget and validity days.`)) {
+                                onRevertTopUp(pkg.id, t.id);
+                              }
+                            }}
+                            title="Revert / Delete this top-up"
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              border: '1px solid rgba(239, 68, 68, 0.35)',
+                              color: '#f87171',
+                              borderRadius: '50%',
+                              width: '26px',
+                              height: '26px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
