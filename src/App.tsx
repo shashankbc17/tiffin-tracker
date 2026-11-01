@@ -748,6 +748,8 @@ export const App: React.FC = () => {
     }
     setPackages(nextPackages);
     saveLocalPackages(nextPackages);
+    setActivePackageId(updatedPkg.id);
+    saveLocalActivePackageId(updatedPkg.id);
 
     let nextRecords = records;
     if (calendarNote) {
@@ -775,7 +777,7 @@ export const App: React.FC = () => {
     }
 
     if (user) {
-      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, activePackageId);
+      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, updatedPkg.id);
     }
   };
 

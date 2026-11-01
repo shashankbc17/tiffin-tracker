@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PackagePlan, RateConfig, DayRecord } from '../../types';
 import {
   getIstNow,
   addActiveDays,
-  calculateTopUpDays,
   applyTopUpToPackage,
-  isMealActiveOnDate,
-  formatDate,
 } from '../../services/carryOverEngine';
 import {
   X,
   PlusCircle,
-  Calendar,
   Check,
   Sparkles,
   ArrowRight,
@@ -19,7 +15,7 @@ import {
   Coffee,
   Utensils,
   SlidersHorizontal,
-  Info,
+  AlertCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -63,13 +59,14 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
   const currency = config.currency || '₹';
   const { dateStr: todayStr } = getIstNow();
 
-  // Selected package (allows switching between Breakfast / Lunch / Combined)
+  // Selected package tracking (allows switching between plans)
   const [selectedPkgId, setSelectedPkgId] = useState<string>(targetPackage.id);
   const currentPkg = packages.find((p) => p.id === selectedPkgId) || targetPackage;
 
   // Form states
   const [topUpDate, setTopUpDate] = useState<string>(todayStr);
-  const [amountStr, setAmountStr] = useState<string>('1200');
+  const [amountStr, setAmountStr] = useState<string>('2280');
+  const [daysStr, setDaysStr] = useState<string>('19');
   const [mode, setMode] = useState<'same' | 'custom'>('same');
 
   // Custom schedule overrides if user selects "Change / Select Days"
@@ -92,11 +89,54 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
   );
   const [notes, setNotes] = useState<string>('Advance top-up sent via GPay');
   const [syncToCalendar, setSyncToCalendar] = useState<boolean>(true);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Numeric values
-  const amount = Math.max(0, parseInt(amountStr, 10) || 0);
-  const breakfastRate = Math.max(0, parseInt(breakfastRateStr, 10) || 0);
-  const lunchRate = Math.max(0, parseInt(lunchRateStr, 10) || 0);
+  // Synchronize internal state whenever targetPackage or selectedPkgId changes
+  useEffect(() => {
+    if (targetPackage) {
+      setSelectedPkgId(targetPackage.id);
+      syncPackageDefaults(targetPackage);
+    }
+  }, [targetPackage?.id, isOpen]);
+
+  const syncPackageDefaults = (pkg: PackagePlan) => {
+    setIncludesBreakfast(pkg.includesBreakfast);
+    setIncludesLunch(pkg.includesLunch);
+    setBDaysOfWeek(pkg.breakfastDaysOfWeek || pkg.activeDaysOfWeek || [1, 2, 3, 4, 5, 6]);
+    setLDaysOfWeek(pkg.lunchDaysOfWeek || pkg.activeDaysOfWeek || [1, 2, 3, 4, 5, 6]);
+    setBreakfastRateStr(String(pkg.breakfastRate || config.defaultBreakfastRate || 50));
+    setLunchRateStr(String(pkg.lunchRate || config.defaultLunchRate || 120));
+    setPersonsStr(String(pkg.defaultPersons || 1));
+    setMode('same');
+    setValidationError(null);
+
+    // Compute sensible default amount for this package
+    const dailyCost =
+      ((pkg.includesBreakfast ? pkg.breakfastRate : 0) +
+        (pkg.includesLunch ? pkg.lunchRate : 0)) *
+      (pkg.defaultPersons || 1);
+
+    if (dailyCost > 0) {
+      // If lunch package, suggest 19 days (2280) or 20 days (2400) or 10 days (1200)
+      const suggestedDays = pkg.includesLunch && !pkg.includesBreakfast ? 19 : 10;
+      const initialAmt = suggestedDays * dailyCost;
+      setAmountStr(String(initialAmt));
+      setDaysStr(String(suggestedDays));
+    }
+  };
+
+  const handleSelectPlan = (pkgId: string) => {
+    setSelectedPkgId(pkgId);
+    const found = packages.find((p) => p.id === pkgId);
+    if (found) {
+      syncPackageDefaults(found);
+    }
+  };
+
+  // Derived numeric values
+  const amount = parseFloat(amountStr) || 0;
+  const breakfastRate = Math.max(0, parseFloat(breakfastRateStr) || 0);
+  const lunchRate = Math.max(0, parseFloat(lunchRateStr) || 0);
   const persons = Math.max(1, parseInt(personsStr, 10) || 1);
 
   // Compute daily cost based on mode
@@ -107,26 +147,54 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
         (currentPkg.defaultPersons || 1)
       : ((includesBreakfast ? breakfastRate : 0) + (includesLunch ? lunchRate : 0)) * persons;
 
-  const calculatedDays =
-    effectiveDailyCost > 0 && amount > 0
-      ? Math.max(1, Math.round(amount / effectiveDailyCost))
-      : 0;
+  // Bidirectional sync: user changes Amount -> recalculate Days
+  const handleAmountChange = (val: string) => {
+    setAmountStr(val);
+    setValidationError(null);
+    const parsedAmt = parseFloat(val);
+    if (!isNaN(parsedAmt) && parsedAmt > 0 && effectiveDailyCost > 0) {
+      const calcDays = Math.round(parsedAmt / effectiveDailyCost);
+      setDaysStr(String(Math.max(1, calcDays)));
+    }
+  };
 
-  // Added days can also be directly tweaked
-  const [customDaysStr, setCustomDaysStr] = useState<string>('');
-  const addedDays = customDaysStr !== '' ? Math.max(1, parseInt(customDaysStr, 10) || 1) : calculatedDays;
+  // Bidirectional sync: user changes Days -> recalculate Amount
+  const handleDaysChange = (val: string) => {
+    setDaysStr(val);
+    setValidationError(null);
+    const parsedDays = parseInt(val, 10);
+    if (!isNaN(parsedDays) && parsedDays > 0 && effectiveDailyCost > 0) {
+      const calcAmt = parsedDays * effectiveDailyCost;
+      setAmountStr(String(calcAmt));
+    }
+  };
+
+  const addedDays = Math.max(0, parseInt(daysStr, 10) || 0);
 
   // Days of week active for extension projection
   const effectiveActiveDays =
     mode === 'same'
       ? currentPkg.activeDaysOfWeek || [1, 2, 3, 4, 5, 6]
-      : Array.from(new Set([...(includesBreakfast ? bDaysOfWeek : []), ...(includesLunch ? lDaysOfWeek : [])])).sort();
+      : Array.from(
+          new Set([
+            ...(includesBreakfast ? bDaysOfWeek : []),
+            ...(includesLunch ? lDaysOfWeek : []),
+          ])
+        ).sort();
 
   // Projected new dates
-  const newTotalDays = currentPkg.totalDays + addedDays;
-  const newTotalAmount = (currentPkg.totalAmountPaid || 0) + amount;
-  const currentEndDate = addActiveDays(currentPkg.startDate, currentPkg.totalDays, effectiveActiveDays);
-  const projectedEndDate = addActiveDays(currentPkg.startDate, newTotalDays, effectiveActiveDays);
+  const newTotalDays = currentPkg.totalDays + (addedDays > 0 ? addedDays : 0);
+  const newTotalAmount = (currentPkg.totalAmountPaid || 0) + (amount > 0 ? amount : 0);
+  const currentEndDate = addActiveDays(
+    currentPkg.startDate,
+    currentPkg.totalDays,
+    effectiveActiveDays
+  );
+  const projectedEndDate = addActiveDays(
+    currentPkg.startDate,
+    newTotalDays,
+    effectiveActiveDays
+  );
 
   const toggleDay = (day: number, list: number[], setList: (arr: number[]) => void) => {
     if (list.includes(day)) {
@@ -139,14 +207,27 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount <= 0 || addedDays <= 0) return;
 
-    const { updatedPkg, newTopUp } = applyTopUpToPackage(currentPkg, {
+    if (isNaN(amount) || amount <= 0) {
+      setValidationError('Please enter a valid top-up amount greater than 0.');
+      return;
+    }
+
+    if (isNaN(addedDays) || addedDays <= 0) {
+      setValidationError('Please enter a valid number of days to add (at least 1 day).');
+      return;
+    }
+
+    setValidationError(null);
+
+    const { updatedPkg } = applyTopUpToPackage(currentPkg, {
       date: topUpDate,
       amount,
       addedDays,
-      breakfastDaysOfWeek: mode === 'custom' && includesBreakfast ? bDaysOfWeek : currentPkg.breakfastDaysOfWeek,
-      lunchDaysOfWeek: mode === 'custom' && includesLunch ? lDaysOfWeek : currentPkg.lunchDaysOfWeek,
+      breakfastDaysOfWeek:
+        mode === 'custom' && includesBreakfast ? bDaysOfWeek : currentPkg.breakfastDaysOfWeek,
+      lunchDaysOfWeek:
+        mode === 'custom' && includesLunch ? lDaysOfWeek : currentPkg.lunchDaysOfWeek,
       breakfastRate: mode === 'custom' ? breakfastRate : currentPkg.breakfastRate,
       lunchRate: mode === 'custom' ? lunchRate : currentPkg.lunchRate,
       defaultPersons: mode === 'custom' ? persons : currentPkg.defaultPersons,
@@ -171,11 +252,12 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
     onClose();
   };
 
-  const PRESET_AMOUNTS = [
+  // Dynamic preset pills tailored to package daily cost
+  const PRESET_PILLS = [
     { label: `${currency}1,000`, val: 1000 },
     { label: `${currency}1,200`, val: 1200 },
+    { label: `${currency}2,280`, val: 2280 },
     { label: `${currency}2,400`, val: 2400 },
-    { label: `${currency}3,000`, val: 3000 },
   ];
 
   return (
@@ -213,7 +295,7 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Top Up Existing Plan</h2>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Add funds, extend subscription days & log payment history
+                Add funds, extend subscription days &amp; log payment history
               </div>
             </div>
           </div>
@@ -240,33 +322,67 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
         {/* Plan Switcher if multiple plans exist */}
         {packages.length > 1 && (
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>
-              Select Subscription Plan to Top Up:
+            <label
+              style={{
+                fontSize: '11.5px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                marginBottom: '6px',
+                display: 'block',
+              }}
+            >
+              Subscription Plan to Top Up:
             </label>
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                overflowX: 'auto',
+                paddingBottom: '4px',
+              }}
+            >
               {packages.map((p) => {
                 const isSel = p.id === currentPkg.id;
+                const pDaily =
+                  ((p.includesBreakfast ? p.breakfastRate : 0) +
+                    (p.includesLunch ? p.lunchRate : 0)) *
+                  (p.defaultPersons || 1);
+
                 return (
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => {
-                      setSelectedPkgId(p.id);
-                      setCustomDaysStr('');
-                    }}
+                    onClick={() => handleSelectPlan(p.id)}
                     style={{
                       padding: '8px 12px',
                       borderRadius: 'var(--radius-md)',
-                      border: isSel ? '1.5px solid var(--accent-primary)' : '1px solid var(--glass-border)',
-                      background: isSel ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                      border: isSel
+                        ? '1.5px solid var(--accent-primary)'
+                        : '1px solid var(--glass-border)',
+                      background: isSel
+                        ? 'rgba(16, 185, 129, 0.2)'
+                        : 'rgba(255, 255, 255, 0.04)',
                       color: isSel ? '#34d399' : 'var(--text-secondary)',
                       fontSize: '12px',
                       fontWeight: isSel ? 700 : 500,
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
                     }}
                   >
-                    {p.title} ({p.totalDays}d)
+                    <span>{p.title}</span>
+                    <span
+                      style={{
+                        fontSize: '10.5px',
+                        padding: '1px 6px',
+                        borderRadius: 'var(--radius-full)',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      {currency}{pDaily}/day
+                    </span>
                   </button>
                 );
               })}
@@ -274,14 +390,64 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Validation Error Banner */}
+        {validationError && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#fca5a5',
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '10px',
+            }}
+          >
+            <AlertCircle size={16} color="#f87171" style={{ flexShrink: 0 }} />
+            <span>{validationError}</span>
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+        >
           {/* Top-Up Amount & Quick Presets */}
-          <div className="ios-card" style={{ padding: '14px', background: 'rgba(255, 255, 255, 0.03)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          <div
+            className="ios-card"
+            style={{ padding: '14px', background: 'rgba(255, 255, 255, 0.03)' }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '8px',
+              }}
+            >
+              <label
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Top-Up Amount ({currency})
               </label>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: '#34d399',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  fontWeight: 600,
+                }}
+              >
                 Daily Cost: {currency}{effectiveDailyCost}/day
               </span>
             </div>
@@ -290,34 +456,38 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
               <input
                 type="number"
                 min="1"
-                step="50"
+                step="any"
                 value={amountStr}
-                onChange={(e) => {
-                  setAmountStr(e.target.value);
-                  setCustomDaysStr('');
-                }}
+                onChange={(e) => handleAmountChange(e.target.value)}
                 className="ios-input"
-                placeholder="1200"
-                style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-primary)' }}
+                placeholder="2280"
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: 'var(--accent-primary)',
+                }}
                 required
               />
             </div>
 
             {/* Quick Preset Pills */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {PRESET_AMOUNTS.map((pr) => (
+              {PRESET_PILLS.map((pr) => (
                 <button
                   key={pr.val}
                   type="button"
-                  onClick={() => {
-                    setAmountStr(String(pr.val));
-                    setCustomDaysStr('');
-                  }}
+                  onClick={() => handleAmountChange(String(pr.val))}
                   style={{
-                    padding: '5px 10px',
+                    padding: '5px 11px',
                     borderRadius: 'var(--radius-full)',
-                    background: amount === pr.val ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                    border: amount === pr.val ? '1px solid var(--accent-primary)' : '1px solid var(--glass-border)',
+                    background:
+                      amount === pr.val
+                        ? 'rgba(16, 185, 129, 0.25)'
+                        : 'rgba(255, 255, 255, 0.06)',
+                    border:
+                      amount === pr.val
+                        ? '1px solid var(--accent-primary)'
+                        : '1px solid var(--glass-border)',
                     color: amount === pr.val ? '#34d399' : 'var(--text-secondary)',
                     fontSize: '11.5px',
                     fontWeight: 600,
@@ -330,10 +500,18 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
             </div>
           </div>
 
-          {/* Payment Date */}
+          {/* Payment Date & Days Added */}
           <div style={{ display: 'flex', gap: '10px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              <label
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  display: 'block',
+                  marginBottom: '6px',
+                }}
+              >
                 Payment / Top-Up Date
               </label>
               <input
@@ -347,16 +525,26 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
             </div>
 
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              <label
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  display: 'block',
+                  marginBottom: '6px',
+                }}
+              >
                 Days Added to Plan
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <input
                   type="number"
                   min="1"
-                  value={addedDays}
-                  onChange={(e) => setCustomDaysStr(e.target.value)}
+                  step="any"
+                  value={daysStr}
+                  onChange={(e) => handleDaysChange(e.target.value)}
                   className="ios-input"
+                  placeholder="19"
                   style={{ fontSize: '14px', fontWeight: 700, color: '#38bdf8' }}
                   required
                 />
@@ -366,9 +554,20 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
           </div>
 
           {/* Schedule Preference: Keep Same vs Customize */}
-          <div className="ios-card" style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.03)' }}>
-            <label style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>
-              Meal Days & Schedule:
+          <div
+            className="ios-card"
+            style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.03)' }}
+          >
+            <label
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                display: 'block',
+                marginBottom: '8px',
+              }}
+            >
+              Meal Days &amp; Schedule:
             </label>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
@@ -379,8 +578,14 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                   flex: 1,
                   padding: '8px',
                   borderRadius: 'var(--radius-md)',
-                  border: mode === 'same' ? '1.5px solid var(--accent-primary)' : '1px solid var(--glass-border)',
-                  background: mode === 'same' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                  border:
+                    mode === 'same'
+                      ? '1.5px solid var(--accent-primary)'
+                      : '1px solid var(--glass-border)',
+                  background:
+                    mode === 'same'
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : 'rgba(255, 255, 255, 0.04)',
                   color: mode === 'same' ? '#34d399' : 'var(--text-secondary)',
                   fontSize: '11.5px',
                   fontWeight: 600,
@@ -402,8 +607,14 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                   flex: 1,
                   padding: '8px',
                   borderRadius: 'var(--radius-md)',
-                  border: mode === 'custom' ? '1.5px solid var(--accent-primary)' : '1px solid var(--glass-border)',
-                  background: mode === 'custom' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                  border:
+                    mode === 'custom'
+                      ? '1.5px solid var(--accent-primary)'
+                      : '1px solid var(--glass-border)',
+                  background:
+                    mode === 'custom'
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : 'rgba(255, 255, 255, 0.04)',
                   color: mode === 'custom' ? '#34d399' : 'var(--text-secondary)',
                   fontSize: '11.5px',
                   fontWeight: 600,
@@ -420,29 +631,78 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
             </div>
 
             {mode === 'same' ? (
-              <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: '1.5', background: 'rgba(255, 255, 255, 0.02)', padding: '8px 10px', borderRadius: 'var(--radius-sm)' }}>
-                ℹ️ Keeping existing settings:
+              <div
+                style={{
+                  fontSize: '11.5px',
+                  color: 'var(--text-muted)',
+                  lineHeight: '1.5',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                ℹ️ Keeping existing settings for <strong>{currentPkg.title}</strong>:
                 {currentPkg.includesBreakfast && (
-                  <div>• 🍳 Breakfast @ {currency}{currentPkg.breakfastRate}/plate ({currentPkg.breakfastDaysOfWeek?.length || 6} days/wk)</div>
+                  <div>
+                    • 🍳 Breakfast @ {currency}{currentPkg.breakfastRate}/plate (
+                    {currentPkg.breakfastDaysOfWeek?.length || 6} days/wk)
+                  </div>
                 )}
                 {currentPkg.includesLunch && (
-                  <div>• 🍱 Lunch @ {currency}{currentPkg.lunchRate}/plate ({currentPkg.lunchDaysOfWeek?.length || 6} days/wk)</div>
+                  <div>
+                    • 🍱 Lunch @ {currency}{currentPkg.lunchRate}/plate (
+                    {currentPkg.lunchDaysOfWeek?.length || 6} days/wk)
+                  </div>
                 )}
                 <div>• Persons: {currentPkg.defaultPersons || 1} person</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  marginTop: '6px',
+                }}
+              >
                 {/* Breakfast Days Selector */}
-                <div style={{ background: 'rgba(217, 119, 6, 0.08)', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(217, 119, 6, 0.25)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-breakfast)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div
+                  style={{
+                    background: 'rgba(217, 119, 6, 0.08)',
+                    padding: '10px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(217, 119, 6, 0.25)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: 'var(--accent-breakfast)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
                       <Coffee size={14} /> Breakfast Schedule
                     </label>
                     <input
                       type="checkbox"
                       checked={includesBreakfast}
                       onChange={(e) => setIncludesBreakfast(e.target.checked)}
-                      style={{ accentColor: 'var(--accent-breakfast)', width: '16px', height: '16px' }}
+                      style={{
+                        accentColor: 'var(--accent-breakfast)',
+                        width: '16px',
+                        height: '16px',
+                      }}
                     />
                   </div>
 
@@ -460,8 +720,12 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                                 flex: 1,
                                 padding: '5px 0',
                                 borderRadius: '4px',
-                                border: active ? '1px solid var(--accent-breakfast)' : '1px solid var(--glass-border)',
-                                background: active ? 'var(--accent-breakfast)' : 'rgba(255, 255, 255, 0.04)',
+                                border: active
+                                  ? '1px solid var(--accent-breakfast)'
+                                  : '1px solid var(--glass-border)',
+                                background: active
+                                  ? 'var(--accent-breakfast)'
+                                  : 'rgba(255, 255, 255, 0.04)',
                                 color: active ? '#fff' : 'var(--text-muted)',
                                 fontSize: '11px',
                                 fontWeight: 600,
@@ -475,9 +739,12 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Rate/plate:</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            Rate/plate:
+                          </span>
                           <input
                             type="number"
+                            step="any"
                             value={breakfastRateStr}
                             onChange={(e) => setBreakfastRateStr(e.target.value)}
                             className="ios-input"
@@ -490,16 +757,43 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                 </div>
 
                 {/* Lunch Days Selector */}
-                <div style={{ background: 'rgba(5, 150, 105, 0.08)', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(5, 150, 105, 0.25)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-lunch)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div
+                  style={{
+                    background: 'rgba(5, 150, 105, 0.08)',
+                    padding: '10px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(5, 150, 105, 0.25)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: 'var(--accent-lunch)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
                       <Utensils size={14} /> Lunch Schedule
                     </label>
                     <input
                       type="checkbox"
                       checked={includesLunch}
                       onChange={(e) => setIncludesLunch(e.target.checked)}
-                      style={{ accentColor: 'var(--accent-lunch)', width: '16px', height: '16px' }}
+                      style={{
+                        accentColor: 'var(--accent-lunch)',
+                        width: '16px',
+                        height: '16px',
+                      }}
                     />
                   </div>
 
@@ -517,8 +811,12 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                                 flex: 1,
                                 padding: '5px 0',
                                 borderRadius: '4px',
-                                border: active ? '1px solid var(--accent-lunch)' : '1px solid var(--glass-border)',
-                                background: active ? 'var(--accent-lunch)' : 'rgba(255, 255, 255, 0.04)',
+                                border: active
+                                  ? '1px solid var(--accent-lunch)'
+                                  : '1px solid var(--glass-border)',
+                                background: active
+                                  ? 'var(--accent-lunch)'
+                                  : 'rgba(255, 255, 255, 0.04)',
                                 color: active ? '#fff' : 'var(--text-muted)',
                                 fontSize: '11px',
                                 fontWeight: 600,
@@ -532,9 +830,12 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Rate/plate:</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            Rate/plate:
+                          </span>
                           <input
                             type="number"
+                            step="any"
                             value={lunchRateStr}
                             onChange={(e) => setLunchRateStr(e.target.value)}
                             className="ios-input"
@@ -554,33 +855,83 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
             style={{
               padding: '12px 14px',
               borderRadius: 'var(--radius-md)',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%)',
               border: '1px solid rgba(16, 185, 129, 0.35)',
             }}
           >
-            <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#34d399', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Sparkles size={15} /> Extension Preview
+            <div
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 700,
+                color: '#34d399',
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Sparkles size={15} /> Extension Preview for {currentPkg.title}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px',
+                fontSize: '12px',
+              }}
+            >
               <div>
-                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Total Package Days:</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                  Total Package Days:
+                </span>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {currentPkg.totalDays}d <ArrowRight size={11} style={{ display: 'inline', margin: '0 2px' }} /> <span style={{ color: '#34d399' }}>{newTotalDays} Days (+{addedDays}d)</span>
+                  {currentPkg.totalDays}d{' '}
+                  <ArrowRight
+                    size={11}
+                    style={{ display: 'inline', margin: '0 2px' }}
+                  />{' '}
+                  <span style={{ color: '#34d399' }}>
+                    {newTotalDays} Days (+{addedDays}d)
+                  </span>
                 </div>
               </div>
 
               <div>
-                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Total Budget Paid:</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                  Total Budget Paid:
+                </span>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {currency}{(currentPkg.totalAmountPaid || 0).toLocaleString()} <ArrowRight size={11} style={{ display: 'inline', margin: '0 2px' }} /> <span style={{ color: '#34d399' }}>{currency}{newTotalAmount.toLocaleString()}</span>
+                  {currency}{(currentPkg.totalAmountPaid || 0).toLocaleString()}{' '}
+                  <ArrowRight
+                    size={11}
+                    style={{ display: 'inline', margin: '0 2px' }}
+                  />{' '}
+                  <span style={{ color: '#34d399' }}>
+                    {currency}{newTotalAmount.toLocaleString()}
+                  </span>
                 </div>
               </div>
 
-              <div style={{ gridColumn: 'span 2', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Projected Expiry Date:</span>
+              <div
+                style={{
+                  gridColumn: 'span 2',
+                  marginTop: '4px',
+                  paddingTop: '6px',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+              >
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                  Projected Expiry Date:
+                </span>
                 <div style={{ fontWeight: 700, color: 'var(--accent-carryover)' }}>
-                  {currentEndDate} <ArrowRight size={11} style={{ display: 'inline', margin: '0 2px' }} /> <span>{projectedEndDate}</span>
+                  {currentEndDate}{' '}
+                  <ArrowRight
+                    size={11}
+                    style={{ display: 'inline', margin: '0 2px' }}
+                  />{' '}
+                  <span>{projectedEndDate}</span>
                 </div>
               </div>
             </div>
@@ -588,14 +939,22 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
 
           {/* Payment Notes & Reference */}
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                display: 'block',
+                marginBottom: '4px',
+              }}
+            >
               Payment Note / Transaction Reference:
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Sent ₹1,200 via GPay (Srinath 8296444895)"
+              placeholder="e.g. Sent ₹2,280 via GPay (Srinath 8296444895)"
               className="ios-input"
               style={{ fontSize: '12.5px' }}
             />
@@ -608,9 +967,20 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
               id="syncToCalendar"
               checked={syncToCalendar}
               onChange={(e) => setSyncToCalendar(e.target.checked)}
-              style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
+              style={{
+                accentColor: 'var(--accent-primary)',
+                width: '16px',
+                height: '16px',
+              }}
             />
-            <label htmlFor="syncToCalendar" style={{ fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <label
+              htmlFor="syncToCalendar"
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
               Highlight top-up note on calendar date ({topUpDate})
             </label>
           </div>
@@ -628,10 +998,16 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
             <button
               type="submit"
               className="ios-btn ios-btn-primary"
-              style={{ flex: 2, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+              style={{
+                flex: 2,
+                background:
+                  'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              }}
             >
               <PlusCircle size={16} />
-              <span>Confirm Top-Up (+{currency}{amount.toLocaleString()})</span>
+              <span>
+                Confirm Top-Up (+{currency}{amount.toLocaleString()})
+              </span>
             </button>
           </div>
         </form>
