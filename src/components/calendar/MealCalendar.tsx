@@ -352,6 +352,10 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
               dayState = 'nodeliv';
             }
 
+            const hasTopUpOnDay = (packages || (activePackage ? [activePackage] : [])).some(
+              (p) => p.topUps?.some((t) => t.date === curDateStr)
+            );
+
             return (
               <div
                 key={curDateStr}
@@ -364,6 +368,9 @@ export const MealCalendar: React.FC<MealCalendarProps> = ({
                 </span>
 
                 <div className="day-badges-row">
+                  {hasTopUpOnDay && (
+                    <span style={{ fontSize: '9px' }} title="Top-up payment logged on this day">💰</span>
+                  )}
                   {/* Badges reflecting the 4 states */}
                   {dayState === 'skipped' && (
                     isCookOff ? (

@@ -43,6 +43,7 @@ import { DayDetailModal } from './components/calendar/DayDetailModal';
 import { PackageSummaryCard } from './components/package/PackageSummaryCard';
 import { PlanManagementView } from './components/package/PlanManagementView';
 import { NewPackageModal } from './components/package/NewPackageModal';
+import { TopUpModal } from './components/package/TopUpModal';
 import { ExpenseBreakdown } from './components/analytics/ExpenseBreakdown';
 import { SettingsView } from './components/settings/SettingsView';
 import { MfaModal } from './components/common/MfaModal';
@@ -84,6 +85,8 @@ export const App: React.FC = () => {
   const [records, setRecords] = useState<Record<string, DayRecord>>(loadLocalRecords);
 
   const [isNewPackageModalOpen, setIsNewPackageModalOpen] = useState(false);
+  const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
+  const [topUpTargetPackage, setTopUpTargetPackage] = useState<PackagePlan | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isHowToUseModalOpen, setIsHowToUseModalOpen] = useState(false);
   const [profileRevision, setProfileRevision] = useState(0);
@@ -723,6 +726,59 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleOpenTopUp = (pkg?: PackagePlan | null) => {
+    setTopUpTargetPackage(pkg || activePackage);
+    setIsTopUpModalOpen(true);
+  };
+
+  const handleApplyTopUp = (
+    updatedPkg: PackagePlan,
+    topUpDate: string,
+    topUpAmount: number,
+    addedDays: number,
+    calendarNote?: string
+  ) => {
+    const idx = packages.findIndex((p) => p.id === updatedPkg.id);
+    let nextPackages: PackagePlan[];
+    if (idx >= 0) {
+      nextPackages = [...packages];
+      nextPackages[idx] = updatedPkg;
+    } else {
+      nextPackages = [updatedPkg, ...packages];
+    }
+    setPackages(nextPackages);
+    saveLocalPackages(nextPackages);
+
+    let nextRecords = records;
+    if (calendarNote) {
+      const existing = records[topUpDate] || {
+        date: topUpDate,
+        breakfast: { status: 'none', persons: 1, rate: config.defaultBreakfastRate || 50 },
+        lunch: { status: 'none', persons: 1, rate: config.defaultLunchRate || 120 },
+        isCookOff: false,
+      };
+      const mergedNote = existing.notes
+        ? `${existing.notes} · ${calendarNote}`
+        : calendarNote;
+
+      const updatedRecord: DayRecord = {
+        ...existing,
+        notes: mergedNote,
+        updatedAt: new Date().toISOString(),
+      };
+      nextRecords = { ...records, [topUpDate]: updatedRecord };
+      setRecords(nextRecords);
+      saveLocalRecords(nextRecords);
+      if (user) {
+        syncSingleRecordToCloud(user.uid, updatedRecord);
+      }
+    }
+
+    if (user) {
+      syncUserDataToCloud(user.uid, config, nextPackages, nextRecords, activePackageId);
+    }
+  };
+
   const handleSaveConfig = (newConfig: RateConfig) => {
     setConfig(newConfig);
     saveLocalConfig(newConfig);
@@ -948,6 +1004,7 @@ export const App: React.FC = () => {
                 isEditMode={isHomeEditMode}
                 onOpenNewPackage={handleOpenCreateModal}
                 onEditPackage={handleOpenEditModal}
+                onOpenTopUp={() => handleOpenTopUp(activePackage)}
                 onDeletePackage={handleDeletePackage}
               />
 
@@ -978,6 +1035,7 @@ export const App: React.FC = () => {
             onSelectPackage={handleSelectPackage}
             onSavePackage={handleSavePackage}
             onEditPackage={handleOpenEditModal}
+            onOpenTopUp={(pkg) => handleOpenTopUp(pkg)}
             onDeletePackage={(id) => handleDeletePackageById(id, false)}
             onOpenCreateModal={handleOpenCreateModal}
           />
@@ -1030,6 +1088,22 @@ export const App: React.FC = () => {
           onClose={() => {
             setIsNewPackageModalOpen(false);
             setEditingPackage(null);
+          }}
+        />
+      )}
+
+      {/* Top Up Existing Plan Modal */}
+      {isTopUpModalOpen && (
+        <TopUpModal
+          isOpen={isTopUpModalOpen}
+          targetPackage={topUpTargetPackage || activePackage}
+          packages={packages}
+          config={config}
+          records={records}
+          onApplyTopUp={handleApplyTopUp}
+          onClose={() => {
+            setIsTopUpModalOpen(false);
+            setTopUpTargetPackage(null);
           }}
         />
       )}

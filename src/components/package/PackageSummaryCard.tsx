@@ -1,7 +1,23 @@
 import React, { useState } from 'react';
 import { PackagePlan, CarryOverStats, RateConfig, DayRecord } from '../../types';
 import { calculateCarryOver, formatDate, getIstNow } from '../../services/carryOverEngine';
-import { CalendarClock, Sparkles, FastForward, ShieldCheck, Trash2, AlertTriangle, X, Edit3, Clock, FileText, Wallet } from 'lucide-react';
+import {
+  CalendarClock,
+  Sparkles,
+  FastForward,
+  ShieldCheck,
+  Trash2,
+  AlertTriangle,
+  X,
+  Edit3,
+  Clock,
+  FileText,
+  Wallet,
+  PlusCircle,
+  History,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { InfoPopover } from '../common/InfoPopover';
 
 interface PackageSummaryCardProps {
@@ -15,6 +31,7 @@ interface PackageSummaryCardProps {
   isEditMode?: boolean;
   onOpenNewPackage: () => void;
   onEditPackage?: () => void;
+  onOpenTopUp?: () => void;
   onDeletePackage?: (deleteLogs: boolean) => void;
   onExtractStatement?: () => void;
 }
@@ -30,11 +47,13 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
   isEditMode = false,
   onOpenNewPackage,
   onEditPackage,
+  onOpenTopUp,
   onDeletePackage,
   onExtractStatement,
 }) => {
   const currency = config.currency || '₹';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isTopUpHistoryOpen, setIsTopUpHistoryOpen] = useState(true);
 
   const { dateStr: todayStr, hour: istHour } = getIstNow();
   const isUpcomingDate = Boolean(pkg && todayStr < pkg.startDate);
@@ -260,74 +279,101 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             )}
           </div>
 
-          {isEditMode && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-              {onEditPackage && (
-                <button 
-                  onClick={onEditPackage}
-                  title="Edit active plan"
-                  style={{ 
-                    background: 'rgba(59, 130, 246, 0.18)', 
-                    border: '1px solid rgba(59, 130, 246, 0.4)', 
-                    color: '#93c5fd',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  <Edit3 size={11} />
-                  <span>Edit Plan</span>
-                </button>
-              )}
-
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            {onOpenTopUp && (
               <button 
-                onClick={onOpenNewPackage}
+                type="button"
+                onClick={onOpenTopUp}
+                title="Top up funds into this plan"
                 style={{ 
-                  background: 'rgba(255, 255, 255, 0.08)', 
-                  border: '1px solid var(--glass-border)', 
-                  color: 'var(--text-secondary)',
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.28) 100%)', 
+                  border: '1px solid rgba(16, 185, 129, 0.45)', 
+                  color: '#34d399',
                   fontSize: '11px',
-                  fontWeight: 500,
-                  padding: '4px 9px',
+                  fontWeight: 700,
+                  padding: '4px 10px',
                   borderRadius: 'var(--radius-full)',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                   whiteSpace: 'nowrap'
                 }}
               >
-                + Plan
+                <PlusCircle size={12} />
+                <span>+ Top Up</span>
               </button>
+            )}
 
-              {onDeletePackage && (
+            {isEditMode && (
+              <>
+                {onEditPackage && (
+                  <button 
+                    onClick={onEditPackage}
+                    title="Edit active plan"
+                    style={{ 
+                      background: 'rgba(59, 130, 246, 0.18)', 
+                      border: '1px solid rgba(59, 130, 246, 0.4)', 
+                      color: '#93c5fd',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-full)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <Edit3 size={11} />
+                    <span>Edit Plan</span>
+                  </button>
+                )}
+
                 <button 
-                  onClick={() => setShowDeleteConfirm(true)}
-                  title="Delete this plan"
+                  onClick={onOpenNewPackage}
                   style={{ 
-                    background: 'rgba(239, 68, 68, 0.15)', 
-                    border: '1px solid rgba(239, 68, 68, 0.4)', 
-                    color: '#f87171',
-                    borderRadius: 'var(--radius-full)',
-                    padding: '4px 9px',
+                    background: 'rgba(255, 255, 255, 0.08)', 
+                    border: '1px solid var(--glass-border)', 
+                    color: 'var(--text-secondary)',
                     fontSize: '11px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
+                    fontWeight: 500,
+                    padding: '4px 9px',
+                    borderRadius: 'var(--radius-full)',
                     cursor: 'pointer',
-                    flexShrink: 0
+                    whiteSpace: 'nowrap'
                   }}
                 >
-                  <Trash2 size={12} />
-                  <span>Delete</span>
+                  + Plan
                 </button>
-              )}
-            </div>
-          )}
+
+                {onDeletePackage && (
+                  <button 
+                    onClick={() => setShowDeleteConfirm(true)}
+                    title="Delete this plan"
+                    style={{ 
+                      background: 'rgba(239, 68, 68, 0.15)', 
+                      border: '1px solid rgba(239, 68, 68, 0.4)', 
+                      color: '#f87171',
+                      borderRadius: 'var(--radius-full)',
+                      padding: '4px 9px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer',
+                      flexShrink: 0
+                    }}
+                  >
+                    <Trash2 size={12} />
+                    <span>Delete</span>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Row 2: Package Title & Subtitle */}
@@ -509,6 +555,181 @@ export const PackageSummaryCard: React.FC<PackageSummaryCardProps> = ({
             )}
           </div>
         </div>
+
+        {/* Payment & Top-Up History Ledger */}
+        {(() => {
+          const topUps = pkg.topUps || [];
+          const totalTopUpAmount = topUps.reduce((sum, t) => sum + t.amount, 0);
+          const totalTopUpDays = topUps.reduce((sum, t) => sum + t.addedDays, 0);
+          const initialDays = Math.max(1, pkg.totalDays - totalTopUpDays);
+          const initialPaid = Math.max(0, (pkg.totalAmountPaid || 0) - totalTopUpAmount);
+
+          return (
+            <div
+              style={{
+                marginTop: '14px',
+                paddingTop: '12px',
+                borderTop: '1px solid var(--glass-border)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '10px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsTopUpHistoryOpen(!isTopUpHistoryOpen)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  <History size={15} color="var(--accent-primary)" />
+                  <span style={{ fontSize: '13px', fontWeight: 700 }}>
+                    Payment &amp; Top-Up History
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--accent-primary)',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      padding: '1px 6px',
+                      borderRadius: 'var(--radius-full)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {1 + topUps.length}
+                  </span>
+                  {isTopUpHistoryOpen ? <ChevronUp size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                </button>
+
+                {onOpenTopUp && (
+                  <button
+                    type="button"
+                    onClick={onOpenTopUp}
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: '#34d399',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '3px 8px',
+                      borderRadius: 'var(--radius-full)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <PlusCircle size={11} />
+                    <span>+ Add Top-Up</span>
+                  </button>
+                )}
+              </div>
+
+              {isTopUpHistoryOpen && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Initial Payment Item */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid var(--glass-border)',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Initial Subscription Deposit
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                        📅 Started {pkg.startDate} · {initialDays} Days Plan
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {currency}{initialPaid.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                        {initialDays} days
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top-Up Entries */}
+                  {topUps.map((t, idx) => (
+                    <div
+                      key={t.id || idx}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(16, 185, 129, 0.08)',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        fontSize: '12px',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 700, color: '#34d399' }}>Top-Up Advance</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📅 {t.date}</span>
+                        </div>
+                        {t.notes && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            {t.notes}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 800, color: '#34d399' }}>
+                          +{currency}{t.amount.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--accent-carryover)', fontWeight: 600 }}>
+                          +{t.addedDays} days
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Total Cumulative Footer */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '6px 8px',
+                      fontSize: '11.5px',
+                      color: 'var(--text-muted)',
+                      borderTop: '1px dashed var(--glass-border)',
+                      marginTop: '2px',
+                    }}
+                  >
+                    <span>Total Deposited ({pkg.totalDays} Days):</span>
+                    <strong style={{ color: 'var(--text-primary)' }}>
+                      {currency}{(pkg.totalAmountPaid || 0).toLocaleString()}
+                    </strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Extract Bank-Style PDF Statement Button */}
         {onExtractStatement && (

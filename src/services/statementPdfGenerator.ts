@@ -66,6 +66,7 @@ export interface StatementSummaryData {
   cookOffDays: number;
   currency: string;
   rows: StatementLedgerRow[];
+  topUpRows?: { date: string; amount: number; addedDays: number; planTitle: string; notes?: string }[];
 }
 
 /**
@@ -405,6 +406,25 @@ export function generateBankStatementData(
   const hashSeed = (startDate + endDate).replace(/-/g, '').slice(-4) || '9999';
   const statementId = `TF-STMT-${startDate.replace(/-/g, '').slice(2, 6)}-${hashSeed}`;
 
+  // Collect top-ups that fall within this statement period
+  const statementTopUps: { date: string; amount: number; addedDays: number; planTitle: string; notes?: string }[] = [];
+  const pkgsToCheck = packages && packages.length > 0 ? packages : (pkg ? [pkg] : []);
+  for (const p of pkgsToCheck) {
+    if (p.topUps) {
+      for (const t of p.topUps) {
+        if (t.date >= startDate && t.date <= endDate) {
+          statementTopUps.push({
+            date: t.date,
+            amount: t.amount,
+            addedDays: t.addedDays,
+            planTitle: p.title,
+            notes: t.notes,
+          });
+        }
+      }
+    }
+  }
+
   return {
     statementId,
     periodLabel,
@@ -431,6 +451,7 @@ export function generateBankStatementData(
     cookOffDays,
     currency,
     rows,
+    topUpRows: statementTopUps.sort((a, b) => a.date.localeCompare(b.date)),
   };
 }
 
@@ -496,6 +517,15 @@ export function generateFullBankStatementText(data: StatementSummaryData): strin
     ledgerLines.push(dayText);
   }
 
+  let topUpsText = '';
+  if (data.topUpRows && data.topUpRows.length > 0) {
+    const topUpLines = data.topUpRows.map((t) => {
+      const notesPart = t.notes ? ` [${t.notes}]` : '';
+      return `• 💰 *${t.date}:* +${currency}${t.amount.toLocaleString()} (+${t.addedDays} days) · ${t.planTitle}${notesPart}`;
+    });
+    topUpsText = `\n💳 *ADVANCE & TOP-UP PAYMENTS RECORDED:*\n${topUpLines.join('\n')}\n`;
+  }
+
   return `🍽️ *TIFFINFLOW FOOD & SUBSCRIPTION ACCOUNT STATEMENT*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 *Statement Ref:* ${data.statementId}
@@ -513,7 +543,7 @@ ${plansText}
 • Total Consumed / Debited: ${currency}${data.totalSpent.toLocaleString()} (🍳 ${data.breakfastDelivered} Breakfast + 🍱 ${data.lunchDelivered} Lunch)
 • Carry-over Credit Saved: ${currency}${data.totalCarriedOverValue.toLocaleString()} (${data.carryOverDaysSaved} days preserved)
 • Net Remaining Balance: *${currency}${data.netRemainingBalance.toLocaleString()}*
-
+${topUpsText}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 📑 *ITEMIZED DAILY MEAL LEDGER & COMMENTS:*
 ${ledgerLines.length > 0 ? ledgerLines.join('\n') : 'No recorded meals in this period.'}

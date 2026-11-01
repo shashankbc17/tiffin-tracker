@@ -47,6 +47,23 @@ export function generateVerifiedWhatsAppPlansAndRecords(): {
     totalAmountPaid: 3400, // ₹2,400 initial 20-day plan + ₹1,000 cash advance on Sept 26
     status: 'active',
     notes: 'Started Sept 21. 2 persons per day @ ₹50/plate. Extended with ₹1,000 cash advance on Sept 26.',
+    topUps: [
+      {
+        id: 'topup_sep26_1000',
+        date: '2026-09-26',
+        amount: 1000,
+        addedDays: 8,
+        previousTotalDays: 20,
+        newTotalDays: 28,
+        previousTotalAmount: 2400,
+        newTotalAmount: 3400,
+        breakfastDaysOfWeek: [1, 2, 3, 4, 5, 6],
+        breakfastRate: 50,
+        defaultPersons: 2,
+        notes: 'Advance top-up sent via GPay to extend breakfast plan by 8 days',
+        createdAt: '2026-09-26T22:17:00.000Z',
+      },
+    ],
   };
 
   const lunchPkg: PackagePlan = {

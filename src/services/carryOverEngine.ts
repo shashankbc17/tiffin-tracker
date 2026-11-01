@@ -1,4 +1,4 @@
-import { DayRecord, PackagePlan, CarryOverStats, RateConfig } from '../types';
+import { DayRecord, PackagePlan, CarryOverStats, RateConfig, TopUpRecord } from '../types';
 
 /**
  * Format a Date object into 'YYYY-MM-DD'
@@ -791,5 +791,68 @@ Hi ${caterer},
 • Logged Days: ${monthStats.loggedDaysCount} active days
 
 Attached is the official Food Statement PDF with itemized daily logs.`;
+}
+
+/**
+ * Calculate how many subscription delivery days are funded by a top-up amount
+ */
+export function calculateTopUpDays(amount: number, dailyCost: number): number {
+  if (dailyCost <= 0 || amount <= 0) return 0;
+  return Math.max(1, Math.round(amount / dailyCost));
+}
+
+/**
+ * Apply a top-up transaction to an existing PackagePlan, returning an updated plan and record
+ */
+export function applyTopUpToPackage(
+  pkg: PackagePlan,
+  params: {
+    date: string;
+    amount: number;
+    addedDays: number;
+    breakfastDaysOfWeek?: number[];
+    lunchDaysOfWeek?: number[];
+    breakfastRate?: number;
+    lunchRate?: number;
+    defaultPersons?: number;
+    notes?: string;
+  }
+): { updatedPkg: PackagePlan; newTopUp: TopUpRecord } {
+  const previousTotalDays = pkg.totalDays;
+  const newTotalDays = previousTotalDays + params.addedDays;
+  const previousTotalAmount = pkg.totalAmountPaid || 0;
+  const newTotalAmount = previousTotalAmount + params.amount;
+
+  const newTopUp: TopUpRecord = {
+    id: `topup_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    date: params.date,
+    amount: params.amount,
+    addedDays: params.addedDays,
+    previousTotalDays,
+    newTotalDays,
+    previousTotalAmount,
+    newTotalAmount,
+    breakfastDaysOfWeek: params.breakfastDaysOfWeek ?? pkg.breakfastDaysOfWeek,
+    lunchDaysOfWeek: params.lunchDaysOfWeek ?? pkg.lunchDaysOfWeek,
+    breakfastRate: params.breakfastRate ?? pkg.breakfastRate,
+    lunchRate: params.lunchRate ?? pkg.lunchRate,
+    defaultPersons: params.defaultPersons ?? pkg.defaultPersons,
+    notes: params.notes,
+    createdAt: new Date().toISOString(),
+  };
+
+  const updatedPkg: PackagePlan = {
+    ...pkg,
+    totalDays: newTotalDays,
+    totalAmountPaid: newTotalAmount,
+    breakfastDaysOfWeek: params.breakfastDaysOfWeek ?? pkg.breakfastDaysOfWeek,
+    lunchDaysOfWeek: params.lunchDaysOfWeek ?? pkg.lunchDaysOfWeek,
+    breakfastRate: params.breakfastRate ?? pkg.breakfastRate,
+    lunchRate: params.lunchRate ?? pkg.lunchRate,
+    defaultPersons: params.defaultPersons ?? pkg.defaultPersons,
+    topUps: [...(pkg.topUps || []), newTopUp],
+  };
+
+  return { updatedPkg, newTopUp };
 }
 

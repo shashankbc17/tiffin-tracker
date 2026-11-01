@@ -632,6 +632,21 @@ export const StatementExportModal: React.FC<StatementExportModalProps> = ({
               </div>
             </div>
 
+            {/* ADVANCE & TOP-UP PAYMENTS RECORDED */}
+            {statementData.topUpRows && statementData.topUpRows.length > 0 && (
+              <div style={{ margin: '8px 14px', padding: '8px 10px', background: '#ecfdf5', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#065f46', marginBottom: '4px' }}>
+                  💳 Advance &amp; Top-Up Payments Received in this Period:
+                </div>
+                {statementData.topUpRows.map((t, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#047857', padding: '2px 0' }}>
+                    <span>• {t.date}: +{statementData.currency}{t.amount.toLocaleString()} (+{t.addedDays}d) - {t.planTitle}{t.notes ? ` [${t.notes}]` : ''}</span>
+                    <strong style={{ color: '#065f46' }}>+{statementData.currency}{t.amount.toLocaleString()}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* LEDGER TRANSACTIONS TITLE */}
             <div
               style={{

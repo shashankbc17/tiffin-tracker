@@ -21,6 +21,25 @@ export interface DayRecord {
   isCleared?: boolean;
 }
 
+export interface TopUpRecord {
+  id: string;
+  date: string; // ISO format 'YYYY-MM-DD' when payment was made
+  amount: number; // e.g. 1000, 1200
+  addedDays: number; // additional delivery days added to plan
+  previousTotalDays: number;
+  newTotalDays: number;
+  previousTotalAmount: number;
+  newTotalAmount: number;
+  // Snapshot of meal schedule opted during this top-up:
+  breakfastDaysOfWeek?: number[];
+  lunchDaysOfWeek?: number[];
+  breakfastRate?: number;
+  lunchRate?: number;
+  defaultPersons?: number;
+  notes?: string; // e.g. "GPay to Srinath 8296444895"
+  createdAt?: string;
+}
+
 export interface PackagePlan {
   id: string;
   title: string;
@@ -38,6 +57,7 @@ export interface PackagePlan {
   status: 'active' | 'completed' | 'paused';
   notes?: string;
   createdAt?: string;
+  topUps?: TopUpRecord[];
 }
 
 export interface RateConfig {

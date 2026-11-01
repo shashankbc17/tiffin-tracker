@@ -237,6 +237,55 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           </div>
         )}
 
+        {/* Top-Up Payment on this date banner */}
+        {(() => {
+          const topUpsOnDay = (packages || (activePackage ? [activePackage] : []))
+            .flatMap((p) => (p.topUps || []).map((t) => ({ ...t, planTitle: p.title })))
+            .filter((t) => t.date === dateStr);
+
+          if (topUpsOnDay.length === 0) return null;
+
+          return topUpsOnDay.map((t) => (
+            <div
+              key={t.id}
+              style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '10px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>💰</span>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#34d399', fontSize: '12.5px' }}>
+                    Top-Up Paid: {config.currency || '₹'}{t.amount.toLocaleString()} (+{t.addedDays} Days)
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {t.planTitle} · {t.notes || 'Advance payment to caterer'}
+                  </div>
+                </div>
+              </div>
+              <span
+                style={{
+                  fontSize: '10.5px',
+                  fontWeight: 700,
+                  color: '#a7f3d0',
+                  background: 'rgba(16, 185, 129, 0.25)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                Logged
+              </span>
+            </div>
+          ));
+        })()}
+
         {/* Cook Holiday Quick Toggle */}
         <div 
           onClick={handleCookOffToggle}

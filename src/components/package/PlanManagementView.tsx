@@ -15,6 +15,9 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
+  PlusCircle,
+  Wallet,
+  History,
 } from 'lucide-react';
 import { InfoPopover } from '../common/InfoPopover';
 
@@ -27,6 +30,7 @@ interface PlanManagementViewProps {
   onSelectPackage: (packageId: string) => void;
   onSavePackage: (pkg: PackagePlan) => void;
   onEditPackage: (pkg: PackagePlan) => void;
+  onOpenTopUp?: (pkg: PackagePlan) => void;
   onDeletePackage: (packageId: string) => void;
   onOpenCreateModal?: () => void;
 }
@@ -50,6 +54,7 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
   onSelectPackage,
   onSavePackage,
   onEditPackage,
+  onOpenTopUp,
   onDeletePackage,
 }) => {
   const currency = config.currency || '₹';
@@ -1005,7 +1010,31 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
                   </div>
                 </div>
 
-                {/* Card Actions: Edit & Delete */}
+                {/* Top-Ups Badge if any */}
+                {pkg.topUps && pkg.topUps.length > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.22)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '6px 10px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#34d399', fontWeight: 600 }}>
+                      <History size={12} />
+                      <span>{pkg.topUps.length} Top-Up(s) Recorded</span>
+                    </div>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      +{currency}{pkg.topUps.reduce((s, t) => s + t.amount, 0).toLocaleString()} (+{pkg.topUps.reduce((s, t) => s + t.addedDays, 0)} days)
+                    </span>
+                  </div>
+                )}
+
+                {/* Card Actions: Top-Up, Edit & Delete */}
                 <div
                   style={{
                     display: 'flex',
@@ -1015,6 +1044,27 @@ export const PlanManagementView: React.FC<PlanManagementViewProps> = ({
                     borderTop: '1px solid var(--glass-border)',
                   }}
                 >
+                  {onOpenTopUp && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenTopUp(pkg)}
+                      className="ios-btn ios-btn-secondary"
+                      style={{
+                        padding: '5px 12px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: 'var(--accent-primary)',
+                        borderColor: 'rgba(16, 185, 129, 0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <PlusCircle size={13} />
+                      <span>Top Up</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => onEditPackage(pkg)}
